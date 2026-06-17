@@ -1,0 +1,79 @@
+name: Research Worker
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+
+jobs:
+  research-worker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Pick top research task
+        id: task
+        run: |
+          RESPONSE=$(curl -s \
+            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/research_queue?select=id,priority,status,assigned_to,task&status=eq.todo&order=priority.desc&limit=1")
+
+          echo "$RESPONSE"
+          TASK_ID=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'] if d else '')")
+          TASK_TEXT=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['task'] if d else '')")
+
+          echo "task_id=$TASK_ID" >> $GITHUB_OUTPUT
+          echo "task_text=$TASK_TEXT" >> $GITHUB_OUTPUT
+
+      - name: Write research result
+        if: steps.task.outputs.task_id != ''
+        run: |
+          python3 - <<'PY'
+          import os, json, urllib.request
+
+          url = os.environ["SUPABASE_URL"]
+          key = os.environ["SUPABASE_KEY"]
+          task_id = os.environ["TASK_ID"]
+          task_text = os.environ["TASK_TEXT"]
+
+          payload = [{
+              "task_id": int(task_id),
+              "agent_name": "GitHubAction-ResearchWorker",
+              "summary": "Cloud worker picked and processed task placeholder.",
+              "findings": {
+                  "task": task_text,
+                  "status": "cloud_execution_ok",
+                  "note": "This proves GitHub Actions can write research results to Supabase without Mac."
+              },
+              "next_task": "Replace placeholder with real SQL analysis worker."
+          }]
+
+          req = urllib.request.Request(
+              f"{url}/rest/v1/research_results",
+              data=json.dumps(payload).encode("utf-8"),
+              headers={
+                  "apikey": key,
+                  "Authorization": f"Bearer {key}",
+                  "Content-Type": "application/json",
+                  "Prefer": "return=minimal"
+              },
+              method="POST"
+          )
+          urllib.request.urlopen(req).read()
+          PY
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          TASK_ID: ${{ steps.task.outputs.task_id }}
+          TASK_TEXT: ${{ steps.task.outputs.task_text }}
+
+      - name: Mark task done
+        if: steps.task.outputs.task_id != ''
+        run: |
+          curl -s -X PATCH \
+            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d '{"status":"done","result":"Processed by GitHubAction-ResearchWorker"}' \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/research_queue?id=eq.${{ steps.task.outputs.task_id }}"
