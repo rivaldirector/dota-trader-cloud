@@ -14,8 +14,8 @@ jobs:
         id: task
         run: |
           RESPONSE=$(curl -s \
-            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
             "${{ secrets.SUPABASE_URL }}/rest/v1/research_queue?select=id,priority,status,assigned_to,task&status=eq.todo&order=priority.desc&limit=1")
 
           echo "$RESPONSE"
@@ -32,7 +32,7 @@ jobs:
           import os, json, urllib.request
 
           url = os.environ["SUPABASE_URL"]
-          key = os.environ["SUPABASE_KEY"]
+          key = os.environ["SUPABASE_SERVICE_KEY"]
           task_id = os.environ["TASK_ID"]
           task_text = os.environ["TASK_TEXT"]
 
@@ -63,7 +63,7 @@ jobs:
           PY
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           TASK_ID: ${{ steps.task.outputs.task_id }}
           TASK_TEXT: ${{ steps.task.outputs.task_text }}
 
@@ -71,8 +71,8 @@ jobs:
         if: steps.task.outputs.task_id != ''
         run: |
           curl -s -X PATCH \
-            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
             -H "Content-Type: application/json" \
             -H "Prefer: return=minimal" \
             -d '{"status":"done","result":"Processed by GitHubAction-ResearchWorker"}' \
