@@ -1,0 +1,21 @@
+name: Cloud Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-supabase:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check Supabase secrets
+        run: |
+          echo "SUPABASE_URL exists: ${{ secrets.SUPABASE_URL != '' }}"
+          echo "SUPABASE_KEY exists: ${{ secrets.SUPABASE_KEY != '' }}"
+
+      - name: Ping Supabase
+        run: |
+          curl -s \
+            -H "apikey: ${{ secrets.SUPABASE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/research_queue?select=id,status,assigned_to,task&limit=3"
