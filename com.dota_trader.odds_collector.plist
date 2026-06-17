@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.dota_trader.odds_collector</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/yanpushkaryov/Downloads/dota_trader_v2/scripts/collect_odds.py</string>
+    </array>
+
+    <!-- Запускать сразу при загрузке -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Перезапускать если упал -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Рабочая директория -->
+    <key>WorkingDirectory</key>
+    <string>/Users/yanpushkaryov/Downloads/dota_trader_v2</string>
+
+    <!-- Логи -->
+    <key>StandardOutPath</key>
+    <string>/Users/yanpushkaryov/Downloads/dota_trader_v2/storage/odds_collector.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/yanpushkaryov/Downloads/dota_trader_v2/storage/odds_collector_err.log</string>
+
+    <!-- Throttle: не рестартовать чаще чем раз в 60 секунд -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+</dict>
+</plist>

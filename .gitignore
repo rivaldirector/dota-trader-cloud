@@ -1,0 +1,14 @@
+.env
+.env.*
+data/
+storage/
+__pycache__/
+*.pyc
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.zip
+.DS_Store

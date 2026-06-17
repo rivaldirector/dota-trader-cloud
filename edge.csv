@@ -1,0 +1,499 @@
+Строим walk-forward предсказания...
+  Предсказаний: 3007
+Ищем odds для 3007 матчей...
+  Найдено с odds: 493
+begin_at,match,team_1,team_2,model_prob,open_mkt,close_mkt,edge_open,edge_close,result,bookmaker,open_odds_t1,close_odds_t1
+2025-06-24,Round 4: WG vs OG,Wildcard Gaming,OG,0.5153,0.4634,0.7091,0.0519,-0.1938,1,Bet365,2.0,1.333
+2025-06-28,Upper bracket final: GG vs Liquid,Gaimin Gladiators,Team Liquid,0.5196,0.5366,0.7942,-0.017,-0.2746,1,Bet365,1.727,1.166
+2025-06-29,4P vs QUANT,4Pirates,Quantum,0.4905,0.866,0.9629,-0.3755,-0.4724,1,Bet365,1.083,1.001
+2025-06-30,Z10 vs QUANT,Zero Tenacity,Quantum,0.4811,0.7315,0.8828,-0.2504,-0.4017,1,Bet365,1.285,1.062
+2025-07-02,AIM vs Z10,Aim Possible,Zero Tenacity,0.3301,0.2766,0.0371,0.0535,0.293,0,Bet365,3.4,26.0
+2025-07-03,Upper bracket quarterfinal 2: RUNA vs TN,Runa Team,Team Next Level,0.6467,0.6627,0.3549,-0.016,0.2918,0,Bet365,1.4,2.625
+2025-07-04,Upper bracket semifinal 1: TFG vs CARST,Tech Free Gaming,Carstensz,0.6421,0.866,0.8438,-0.2239,-0.2017,1,Bet365,1.083,1.111
+2025-07-06,Upper bracket final: TFG vs IVO,Tech Free Gaming,Ivory,0.5681,0.6627,0.134,-0.0946,0.4341,0,Bet365,1.4,7.0
+2025-07-07,Lower bracket final: TFG vs YG,Tech Free Gaming,Yangon Galacticos,0.5835,0.7942,0.0934,-0.2107,0.4901,0,Bet365,1.166,10.0
+2025-07-08,Liquid vs SR,Team Liquid,Shopify Rebellion,0.7066,0.7831,0.4233,-0.0765,0.2833,1,Bet365,1.2,2.2
+2025-07-09,HEROIC vs SR,Heroic,Shopify Rebellion,0.5696,0.5767,0.7091,-0.0071,-0.1395,1,Bet365,1.615,1.333
+2025-07-11,PARI vs SR,PARIVISION,Shopify Rebellion,0.6577,0.9066,0.9066,-0.2489,-0.2489,1,Bet365,1.03,1.03
+2025-07-12,Round 1 match 3: HEROIC vs TLN,Heroic,Talon Esports,0.4786,0.5889,0.3373,-0.1103,0.1413,0,Bet365,1.571,2.75
+2025-07-12,Round 1 match 2: TY vs SR,Team Yandex,Shopify Rebellion,0.545,0.5576,0.766,-0.0126,-0.221,1,Bet365,1.666,1.222
+2025-07-13,Round 2 match 2: Tundra vs TLN,Tundra Esports,Talon Esports,0.4915,0.7234,0.8553,-0.2319,-0.3638,1,Bet365,1.3,1.1
+2025-07-20,C911 vs YG,Call911,Yangon Galacticos,0.3753,0.234,0.2766,0.1413,0.0987,0,Bet365,4.0,3.4
+2025-07-21,C911 vs IVO,Call911,Ivory,0.29,0.1447,0.9369,0.1453,-0.6469,0,Bet365,6.5,1.01
+2025-07-22,CARST vs C911,Carstensz,Call911,0.5477,0.6876,0.9629,-0.1399,-0.4152,1,Bet365,1.363,1.001
+2025-07-24,WG vs 4P,Wildcard Gaming,4Pirates,0.5223,0.3373,0.3373,0.185,0.185,1,Bet365,2.75,2.75
+2025-07-25,WG vs RUNA,Wildcard Gaming,Runa Team,0.4432,0.5889,0.5889,-0.1457,-0.1457,0,Bet365,1.571,1.571
+2025-07-28,Upper bracket quarterfinal 3: MOUZ vs 4P,MOUZ,4Pirates,0.4619,0.6451,0.6876,-0.1832,-0.2257,1,Bet365,1.444,1.363
+2025-07-28,Upper bracket quarterfinal 3: PSN.UA vs ,Passion UA,Wildcard Gaming,0.6432,0.2766,0.2169,0.3666,0.4263,0,Bet365,3.4,4.333
+2025-07-28,Upper bracket quarterfinal 4: TNL vs LVL,Team Next Level,Level UP,0.5722,0.7315,0.0558,-0.1593,0.5164,0,Bet365,1.285,17.0
+2025-07-29,TY vs GG,Team Yandex,Gaimin Gladiators,0.3862,0.2766,0.1172,0.1096,0.269,0,Bet365,3.4,8.0
+2025-07-30,Upper bracket final: WG vs Z10,Wildcard Gaming,Zero Tenacity,0.4791,0.6627,0.0371,-0.1836,0.442,0,Bet365,1.4,26.0
+2025-07-30,Upper bracket final: MOUZ vs PSN.UA,MOUZ,Passion UA,0.5024,0.7831,0.078,-0.2807,0.4244,0,Bet365,1.2,12.0
+2025-07-31,Upper bracket quarterfinal 2: GG vs PARI,Gaimin Gladiators,PARIVISION,0.367,0.4111,0.625,-0.0441,-0.258,1,Bet365,2.25,1.5
+2025-08-01,Upper bracket semifinal 2: TT vs GG,Team Tidebound,Gaimin Gladiators,0.5585,0.5,0.2766,0.0585,0.2819,1,Bet365,1.833,3.4
+2025-08-11,LVLUP vs WG,Level UP,Wildcard Gaming,0.489,0.3549,0.7831,0.1341,-0.2941,1,Bet365,2.625,1.2
+2025-08-15,LVLUP vs AIM,Level UP,Aim Possible,0.5828,0.5576,0.7831,0.0252,-0.2003,1,Bet365,1.666,1.2
+2025-08-17,Upper bracket quarterfinal 2: 4P vs TNL,4Pirates,Team Next Level,0.5537,0.6451,0.3549,-0.0914,0.1988,0,Bet365,1.444,2.625
+2025-08-19,Lower bracket quarterfinal 1: PSN.UA vs ,Passion UA,Level UP,0.569,0.6876,0.6451,-0.1186,-0.0761,1,Bet365,1.363,1.444
+2025-08-20,TS vs GG,Team Spirit,Gaimin Gladiators,0.6972,0.6451,0.8141,0.0521,-0.1169,1,Bet365,1.444,1.142
+2025-08-21,GG vs FLC,Gaimin Gladiators,Team Falcons,0.3654,0.4634,0.5,-0.098,-0.1346,0,Bet365,2.0,1.833
+2025-08-22,Upper bracket final: L1GA vs TNL,L1ga Team,Team Next Level,0.4105,0.6627,0.766,-0.2522,-0.3555,0,Bet365,1.4,1.222
+2025-09-02,Upper bracket final: OG vs YeS,OG,Yellow Submarine,0.491,0.7315,0.6077,-0.2405,-0.1167,1,Bet365,1.285,1.533
+2025-09-04,Round 1: TS vs WG,Team Spirit,Wildcard Gaming,0.8268,0.8964,0.7942,-0.0696,0.0326,1,Bet365,1.04,1.166
+2025-09-04,Round 2: AUR vs WG,Aurora,Wildcard Gaming,0.6545,0.766,0.7234,-0.1115,-0.0689,1,Bet365,1.222,1.3
+2025-09-04,Round 2: Liquid vs TT,Team Liquid,Team Tidebound,0.5236,0.4634,0.5,0.0602,0.0236,0,Bet365,2.0,1.833
+2025-09-05,Round 4: WG vs HEROIC,Wildcard Gaming,Heroic,0.4098,0.3373,0.3923,0.0725,0.0175,0,Bet365,2.75,2.375
+2025-09-08,Lower bracket round 1 match 2: Mongolz v,The Mongolz,Veroja,0.6059,0.8141,0.8438,-0.2082,-0.2379,1,Bet365,1.142,1.111
+2025-09-10,Lower bracket final: Mongolz vs IVO,The Mongolz,Ivory,0.442,0.4111,0.0371,0.0309,0.4049,0,Bet365,2.25,26.0
+2025-09-12,Lower bracket round 1 match 2: TT vs NGX,Team Tidebound,Nigma Galaxy,0.679,0.5576,0.7942,0.1214,-0.1152,0,Bet365,1.666,1.166
+2025-09-15,LYNX vs PSN.UA,Team Lynx,Passion UA,0.3799,0.2169,0.0889,0.163,0.291,0,Bet365,4.333,10.5
+2025-09-15,TNL vs KALMY,Team Next Level,Kalmychata,0.603,0.6077,0.9369,-0.0047,-0.3339,0,Bet365,1.533,1.01
+2025-09-23,Quarterfinal 3: PSN.UA vs YeS,Passion UA,Yellow Submarine,0.4364,0.6451,0.7831,-0.2087,-0.3467,0,Bet365,1.444,1.2
+2025-09-24,Upper bracket semifinal 1: XctN vs YG,Execration,Yangon Galacticos,0.4008,0.6451,0.7942,-0.2443,-0.3934,1,Bet365,1.444,1.166
+2025-09-28,Lower bracket final: YeS vs AUR,Yellow Submarine,Aurora,0.4629,0.2058,0.1172,0.2571,0.3457,0,Bet365,4.5,8.0
+2025-09-30,Lower bracket semifinal: TLN vs XctN,Talon Esports,Execration,0.4703,0.6538,0.799,-0.1835,-0.3287,1,GGBet,1.43,1.17
+2025-10-02,Upper bracket quarterfinal match 4: Na`V,Natus Vincere,Team Tea,0.5563,0.5366,0.75,0.0197,-0.1937,1,Bet365,1.727,1.25
+2025-10-04,Upper bracket final: RUNA vs Na`Vi,Runa Team,Natus Vincere,0.6996,0.2685,0.234,0.4311,0.4656,0,Bet365,3.5,4.0
+2025-10-10,Upper bracket quarterfinal 4: PSN.UA vs ,Passion UA,Team Tea,0.4885,0.2766,0.0934,0.2119,0.3951,0,Bet365,3.4,10.0
+2025-10-13,PSN.UA vs OG,Passion UA,OG,0.434,0.1698,0.234,0.2642,0.2,1,Bet365,5.5,4.0
+2025-10-14,AUREUS vs XctN,Team Aureus,Execration,0.5498,0.5366,0.9442,0.0132,-0.3944,1,Bet365,1.727,1.005
+2025-10-15,AUR vs AUREUS,Aurora,Team Aureus,0.3486,0.6627,0.0889,-0.3141,0.2597,0,Bet365,1.4,10.5
+2025-10-15,Liquid vs XctN,Team Liquid,Execration,0.4679,0.6627,0.875,-0.1948,-0.4071,1,Bet365,1.4,1.071
+2025-10-15,TS vs AUREUS,Team Spirit,Team Aureus,0.4161,0.7234,0.866,-0.3073,-0.4499,1,Bet365,1.3,1.083
+2025-10-16,TT vs NAVI.J,Team Tea,NAVI Junior,0.5203,0.6876,0.875,-0.1673,-0.3547,1,Bet365,1.363,1.071
+2025-10-16,Liquid vs AUREUS,Team Liquid,Team Aureus,0.3458,0.5767,0.7091,-0.2309,-0.3633,1,Bet365,1.615,1.333
+2025-10-16,HEROIC vs AUREUS,Heroic,Team Aureus,0.4366,0.6451,0.922,-0.2085,-0.4854,1,Bet365,1.444,1.015
+2025-10-17,Mongolz vs YG,The Mongolz,Yangon Galacticos,0.3945,0.2766,0.9629,0.1179,-0.5684,1,Bet365,3.4,1.001
+2025-10-17,WB vs BAL,Winter Bear,Balaclavas,0.4716,0.5,0.375,-0.0284,0.0966,0,Bet365,1.833,2.5
+2025-10-17,Na`Vi vs AUREUS,Natus Vincere,Team Aureus,0.4729,0.5767,0.4853,-0.1038,-0.0124,1,Bet365,1.615,1.909
+2025-10-18,CARST vs Mongolz,Carstensz,The Mongolz,0.3896,0.4111,0.0934,-0.0215,0.2962,0,Bet365,2.25,10.0
+2025-10-18,KALMY vs BAL,Kalmychata,Balaclavas,0.674,0.8828,0.9629,-0.2088,-0.2889,1,Bet365,1.062,1.001
+2025-10-18,Tundra vs AUREUS,Tundra Esports,Team Aureus,0.545,0.7234,0.6451,-0.1784,-0.1001,0,Bet365,1.3,1.444
+2025-10-18,FLC vs AUREUS,Team Falcons,Team Aureus,0.6655,0.7942,0.9278,-0.1287,-0.2623,1,Bet365,1.166,1.012
+2025-10-18,AUR vs XctN,Aurora,Execration,0.515,0.625,0.9545,-0.11,-0.4395,1,Bet365,1.5,1.002
+2025-10-19,Mongolz vs ESS,The Mongolz,Team Essence,0.6117,0.866,0.9111,-0.2543,-0.2994,1,Bet365,1.083,1.025
+2025-10-19,Qualification match 1: MOUZ vs AUREUS,MOUZ,Team Aureus,0.582,0.7942,0.8438,-0.2122,-0.2618,1,Bet365,1.166,1.111
+2025-10-20,WB vs 20Twice,Winter Bear,20Twice,0.4848,0.4634,0.0558,0.0214,0.429,0,Bet365,2.0,17.0
+2025-10-21,RNX vs ESS,REKONIX,Team Essence,0.7954,0.8901,0.9629,-0.0947,-0.1675,1,Bet365,1.05,1.001
+2025-10-21,BAL vs 20Twice,Balaclavas,20Twice,0.5193,0.5366,0.1698,-0.0173,0.3495,0,Bet365,1.727,5.5
+2025-10-22,Lower bracket round 1 match 3: PSN.UA vs,Passion UA,Zero Tenacity,0.5188,0.6077,0.7315,-0.0889,-0.2127,1,Bet365,1.533,1.285
+2025-10-23,Lower bracket round 2 match 2: PSN.UA vs,Passion UA,4Pirates,0.5775,0.4111,0.4424,0.1664,0.1351,1,Bet365,2.25,2.1
+2025-10-23,TT vs WB,Team Tea,Winter Bear,0.6007,0.8553,0.9442,-0.2546,-0.3435,1,Bet365,1.1,1.005
+2025-10-24,Upper bracket quarterfinal 2: TT vs L1GA,Team Tea,L1ga Team,0.5305,0.5366,0.6627,-0.0061,-0.1322,1,Bet365,1.727,1.4
+2025-10-25,Upper bracket semifinal 2: RNX vs Mongol,REKONIX,The Mongolz,0.6832,0.7831,0.9629,-0.0999,-0.2797,1,Bet365,1.2,1.001
+2025-10-26,Lower bracket quarterfinal 1: Mongolz vs,The Mongolz,Kopite,0.5297,0.4111,0.234,0.1186,0.2957,0,Bet365,2.25,4.0
+2025-10-26,Grand final: TEAR vs Roar,Tearlaments,Roar Gaming,0.6144,0.6761,0.8711,-0.0617,-0.2567,1,GGBet,1.38,1.07
+2025-10-31,Grand final: TaiLung Mafia vs Peru Rejec,TaiLung Mafia,Peru Rejects,0.5462,0.4634,0.0371,0.0828,0.5091,0,Bet365,2.0,26.0
+2025-11-03,PSN.UA vs KALMY,Passion UA,Kalmychata,0.4271,0.3923,0.078,0.0348,0.3491,1,Bet365,2.375,12.0
+2025-11-03,LVLUP vs MW,Level UP,Most Wanted,0.3314,0.3744,0.156,-0.043,0.1754,0,GGBet,2.49,8.06
+2025-11-04,L1GA vs LVLUP,L1ga Team,Level UP,0.5546,0.6627,0.2685,-0.1081,0.2861,0,Bet365,1.4,3.5
+2025-11-05,KALMY vs TT,Kalmychata,Team Tea,0.4765,0.4233,0.0455,0.0532,0.431,0,Bet365,2.2,21.0
+2025-11-08,4P vs KALMY,4Pirates,Kalmychata,0.4733,0.5889,0.6077,-0.1156,-0.1344,0,Bet365,1.571,1.533
+2025-11-09,YeS vs 4P,Yellow Submarine,4Pirates,0.5721,0.4444,0.891,0.1277,-0.3189,1,GGBet,2.1,1.05
+2025-11-09,4P vs LVLUP,4Pirates,Level UP,0.5283,0.7831,0.0558,-0.2548,0.4725,1,Bet365,1.2,17.0
+2025-11-10,KOP vs RNX,Kopite,REKONIX,0.1833,0.1447,0.0455,0.0386,0.1378,0,Bet365,6.5,21.0
+2025-11-10,RUNA vs LVLUP,Runa Team,Level UP,0.7202,0.8141,0.2169,-0.0939,0.5033,1,Bet365,1.142,4.333
+2025-11-11,KALMY vs LVLUP,Kalmychata,Level UP,0.5385,0.3124,0.4634,0.2261,0.0751,1,Bet365,3.0,2.0
+2025-11-11,KALMY vs RUNA,Kalmychata,Runa Team,0.3196,0.2766,0.0889,0.043,0.2307,0,Bet365,3.4,10.5
+2025-11-12,Upper bracket quarterfinal 1: YeS vs RUN,Yellow Submarine,Runa Team,0.4145,0.6404,0.2412,-0.2259,0.1733,0,GGBet,1.46,8.18
+2025-11-12,Upper bracket quarterfinal 2: MW vs 4P,Most Wanted,4Pirates,0.705,0.5928,0.8603,0.1122,-0.1553,1,GGBet,1.58,1.09
+2025-11-13,RNX vs Komodo,REKONIX,Komodo,0.8303,0.9066,0.9629,-0.0763,-0.1326,1,Bet365,1.03,1.001
+2025-11-13,Lower bracket quarterfinal 2: 4P vs RUNA,4Pirates,Runa Team,0.2962,0.5,0.25,-0.2038,0.0462,0,Bet365,1.833,3.75
+2025-11-13,Upper bracket quarterfinal 1: Z10 vs RJe,Zero Tenacity,Royal Jelly,0.6413,0.6876,0.9545,-0.0463,-0.3132,1,Bet365,1.363,1.002
+2025-11-13,Upper bracket quarterfinal 2: MW vs RUNA,Most Wanted,Runa Team,0.5598,0.5576,0.9545,0.0022,-0.3947,1,Bet365,1.666,1.002
+2025-11-14,Lower bracket semifinal: RUNA vs Z10,Runa Team,Zero Tenacity,0.4542,0.6876,0.0849,-0.2334,0.3693,0,Bet365,1.363,11.0
+2025-11-15,Round 1: MOUZ vs Roar,MOUZ,Roar Gaming,0.7638,0.8553,0.9278,-0.0915,-0.164,1,Bet365,1.1,1.012
+2025-11-15,Upper bracket semifinal match 1: Z10 vs ,Zero Tenacity,Most Wanted,0.4212,0.5,0.1172,-0.0788,0.304,0,Bet365,1.833,8.0
+2025-11-15,Lower bracket round 1 match 1: RJelly vs,Royal Jelly,Runa Team,0.3903,0.3373,0.0455,0.053,0.3448,0,Bet365,2.75,21.0
+2025-11-15,Lower bracket quarterfinal match 1: PSN.,Passion UA,Runa Team,0.5014,0.5,0.1859,0.0014,0.3155,0,Bet365,1.833,5.0
+2025-11-16,Round 2: HEROIC vs Roar,Heroic,Roar Gaming,0.7075,0.8828,0.9278,-0.1753,-0.2203,1,Bet365,1.062,1.012
+2025-11-16,Lower bracket semifinal: RUNA vs LYNX,Runa Team,Team Lynx,0.6904,0.7234,0.0631,-0.033,0.6273,0,Bet365,1.3,15.0
+2025-11-17,Round 3: PARI vs TT,PARIVISION,Team Tidebound,0.3416,0.5889,0.8302,-0.2473,-0.4886,1,Bet365,1.571,1.125
+2025-11-25,OG vs XctN,OG,Execration,0.5656,0.6451,0.8553,-0.0795,-0.2897,1,Bet365,1.444,1.1
+2025-11-25,TT vs TEAR,Team Tidebound,Tearlaments,0.5778,0.75,0.25,-0.1722,0.3278,0,Bet365,1.25,3.75
+2025-11-25,TEAR vs XctN,Tearlaments,Execration,0.6613,0.3923,0.0934,0.269,0.5679,0,Bet365,2.375,10.0
+2025-11-25,FLC vs TT,Team Falcons,Team Tidebound,0.7387,0.7234,0.9629,0.0153,-0.2242,1,Bet365,1.3,1.001
+2025-11-26,TT vs XctN,Team Tidebound,Execration,0.6457,0.6077,0.9066,0.038,-0.2609,1,Bet365,1.533,1.03
+2025-11-26,TY vs TEAR,Team Yandex,Tearlaments,0.6312,0.7315,0.9442,-0.1003,-0.313,1,Bet365,1.285,1.005
+2025-11-26,Tundra vs TEAR,Tundra Esports,Tearlaments,0.6943,0.8302,0.9278,-0.1359,-0.2335,1,Bet365,1.125,1.012
+2025-11-27,MOUZ vs TT,MOUZ,Team Tidebound,0.6791,0.6627,0.0889,0.0164,0.5902,0,Bet365,1.4,10.5
+2025-11-27,HEROIC vs XctN,Heroic,Execration,0.5652,0.6876,0.75,-0.1224,-0.1848,1,Bet365,1.363,1.25
+2025-11-27,OG vs TEAR,OG,Tearlaments,0.5398,0.7091,0.8964,-0.1693,-0.3566,1,Bet365,1.333,1.04
+2025-11-28,HEROIC vs TT,Heroic,Team Tidebound,0.4202,0.5366,0.9369,-0.1164,-0.5167,1,Bet365,1.727,1.01
+2025-11-28,HEROIC vs TEAR,Heroic,Tearlaments,0.6337,0.75,0.8964,-0.1163,-0.2627,1,Bet365,1.25,1.04
+2025-11-28,Na`Vi vs TEAR,Natus Vincere,Tearlaments,0.6217,0.75,0.7831,-0.1283,-0.1614,1,Bet365,1.25,1.2
+2025-11-29,Tundra vs TT,Tundra Esports,Team Tidebound,0.6411,0.6627,0.9151,-0.0216,-0.274,1,Bet365,1.4,1.02
+2025-11-29,MOUZ vs TEAR,MOUZ,Tearlaments,0.7944,0.7831,0.9369,0.0113,-0.1425,1,Bet365,1.2,1.01
+2025-11-29,FLC vs TEAR,Team Falcons,Tearlaments,0.9013,0.8302,0.8141,0.0711,0.0872,1,Bet365,1.125,1.142
+2025-11-29,TY vs XctN,Team Yandex,Execration,0.7579,0.6627,0.1859,0.0952,0.572,0,Bet365,1.4,5.0
+2025-11-30,Qualification match 2: TT vs Na`Vi,Team Tidebound,Natus Vincere,0.557,0.5,0.1099,0.057,0.4471,0,Bet365,1.833,8.5
+2025-12-01,KALMY vs WB,Kalmychata,Winter Bear,0.4964,0.8828,0.5576,-0.3864,-0.0612,1,Bet365,1.062,1.666
+2025-12-02,KALMY vs LYNX,Kalmychata,Team Lynx,0.488,0.4111,0.2909,0.0769,0.1971,1,Bet365,2.25,3.25
+2025-12-03,Lower bracket round 1 match 2: 4P vs L1G,4Pirates,L1ga Team,0.2711,0.6975,0.2612,-0.4264,0.0099,0,GGBet,1.34,8.74
+2025-12-04,Z10 vs WB,Zero Tenacity,Winter Bear,0.6801,0.766,0.866,-0.0859,-0.1859,1,Bet365,1.222,1.083
+2025-12-04,Lower bracket quarterfinal 1:  Pipsqueak, Pipsqueak+4,Runa Team,0.5882,0.3124,0.0889,0.2758,0.4993,0,Bet365,3.0,10.5
+2025-12-04,Lower bracket quarterfinal 2: PSN.UA vs ,Passion UA,L1ga Team,0.4771,0.6077,0.125,-0.1306,0.3521,0,Bet365,1.533,7.5
+2025-12-05,Lower bracket semifinal: RUNA vs L1GA,Runa Team,L1ga Team,0.4604,0.6451,0.5147,-0.1847,-0.0543,0,Bet365,1.444,1.8
+2025-12-09,KALMY vs Z10,Kalmychata,Zero Tenacity,0.3722,0.375,0.9151,-0.0028,-0.5429,1,Bet365,2.5,1.02
+2025-12-10,Round 1: OG vs TT,OG,Team Tidebound,0.4629,0.5767,0.0558,-0.1138,0.4071,1,Bet365,1.615,17.0
+2025-12-11,Round 2: PSN.UA vs  Pipsqueak+4,Passion UA, Pipsqueak+4,0.4454,0.234,0.9629,0.2114,-0.5175,0,Bet365,4.0,1.001
+2025-12-14,Round 5: TY vs TT,Team Yandex,Team Tidebound,0.6139,0.5147,0.9369,0.0992,-0.323,1,Bet365,1.8,1.01
+2025-12-14,Grand final: YeS vs MW,Yellow Submarine,Most Wanted,0.3377,0.2058,0.0934,0.1319,0.2443,0,Bet365,4.5,10.0
+2025-12-15,Round 6: TT vs AUR,Team Tidebound,Aurora,0.5344,0.5366,0.6077,-0.0022,-0.0733,1,Bet365,1.727,1.533
+2025-12-18,CARST vs KOP,Carstensz,Kopite,0.5784,0.7234,0.4634,-0.145,0.115,1,Bet365,1.3,2.0
+2025-12-18,Upper bracket quarterfinal 2: TY vs VP,Team Yandex,Virtus.pro,0.6684,0.6077,0.6451,0.0607,0.0233,1,Bet365,1.533,1.444
+2025-12-19,VER vs Komodo,Veroja,Komodo,0.497,0.7831,0.9545,-0.2861,-0.4575,1,Bet365,1.2,1.002
+2025-12-21,KOP vs VER,Kopite,Veroja,0.4535,0.4111,0.6876,0.0424,-0.2341,0,Bet365,2.25,1.363
+2025-12-21,Komodo vs IVO,Komodo,Ivory,0.2463,0.125,0.2766,0.1213,-0.0303,0,Bet365,7.5,3.4
+2025-12-22,KOP vs YG,Kopite,Yangon Galacticos,0.2765,0.2766,0.0371,-0.0001,0.2394,0,Bet365,3.4,26.0
+2025-12-22,L1GA vs MW,L1ga Team,Most Wanted,0.4116,0.3373,0.9629,0.0743,-0.5513,0,Bet365,2.75,1.001
+2025-12-23,KALMY vs  Pipsqueak+4,Kalmychata, Pipsqueak+4,0.3657,0.4424,0.078,-0.0767,0.2877,1,Bet365,2.1,12.0
+2025-12-24,Komodo vs KOP,Komodo,Kopite,0.5045,0.3549,0.375,0.1496,0.1295,1,Bet365,2.625,2.5
+2025-12-24,Upper bracket semifinal 2: YeS vs KALMY,Yellow Submarine,Kalmychata,0.5205,0.3549,0.922,0.1656,-0.4015,0,Bet365,2.625,1.015
+2025-12-24,L1GA vs Peru Rejects,L1ga Team,Peru Rejects,0.611,0.4424,0.2909,0.1686,0.3201,1,Bet365,2.1,3.25
+2025-12-26,Lower bracket quarterfinal 2: CARST vs V,Carstensz,Veroja,0.4071,0.3124,0.2909,0.0947,0.1162,0,Bet365,3.0,3.25
+2025-12-27,MW vs  Pipsqueak+4,Most Wanted, Pipsqueak+4,0.5534,0.4634,0.9629,0.09,-0.4095,0,Bet365,2.0,1.001
+2025-12-27,Lower Bracket Final: MW vs LYNX,Most Wanted,Team Lynx,0.6736,0.6451,0.875,0.0285,-0.2014,1,Bet365,1.444,1.071
+2025-12-27,KALMY vs SpiritAc,Kalmychata,Spirit Academy,0.7611,0.8054,0.0958,-0.0443,0.6653,0,GGBet,1.16,9.72
+2025-12-28,SpiritAc vs MW,Spirit Academy,Most Wanted,0.2333,0.2333,0.3045,0.0,-0.0712,1,GGBet,4.01,3.06
+2025-12-28,Grand final: KALMY vs MW,Kalmychata,Most Wanted,0.4773,0.5767,0.9369,-0.0994,-0.4596,1,Bet365,1.615,1.01
+2025-12-29,Upper Bracket Semifinals 1: VER vs YG,Veroja,Yangon Galacticos,0.4477,0.5,0.9442,-0.0523,-0.4965,1,Bet365,1.833,1.005
+2025-12-30,Lower bracket semifinal: IVO vs KOP,Ivory,Kopite,0.8334,0.7234,0.875,0.11,-0.0416,1,Bet365,1.3,1.071
+2025-12-30,Lower bracket final: KALMY vs VP.P,Kalmychata,VP.Prodigy,0.6103,0.7942,0.9545,-0.1839,-0.3442,1,Bet365,1.166,1.002
+2025-12-30,Grand final: L1GA vs KALMY,L1ga Team,Kalmychata,0.5631,0.4424,0.4424,0.1207,0.1207,1,Bet365,2.1,2.1
+2026-01-02,Round of 16 match 6: Z10 vs 4P,Zero Tenacity,4Pirates,0.6701,0.3124,0.3549,0.3577,0.3152,1,Bet365,3.0,2.625
+2026-01-07,Semifinal 2: LYNX vs LVLUP,Team Lynx,Level UP,0.6469,0.3923,0.9442,0.2546,-0.2973,1,Bet365,2.375,1.005
+2026-01-17,Lower bracket round 1 match 2: YG vs RNX,Yangon Galacticos,REKONIX,0.2039,0.2169,0.0455,-0.013,0.1584,0,Bet365,4.333,21.0
+2026-01-19,Lower bracket quarterfinal 1: Z10 vs MOU,Zero Tenacity,MOUZ,0.2958,0.3124,0.3373,-0.0166,-0.0415,0,Bet365,3.0,2.75
+2026-01-19,Lower bracket round 2 match 1: HEROIC vs,Heroic,Estar Backs,0.5441,0.8302,0.8828,-0.2861,-0.3387,1,Bet365,1.125,1.062
+2026-01-27,Upper bracket semifinal 2: YeS vs VP,Yellow Submarine,Virtus.pro,0.4952,0.2006,0.1027,0.2946,0.3925,1,BetVictor,4.6,9.0
+2026-01-28,Upper bracket semifinal 2: Amaru Gaming ,Amaru Gaming,Peru Rejects,0.5269,0.1736,0.2093,0.3533,0.3176,0,GGBet,5.38,4.27
+2026-02-02,NAVI.J vs VAL,NAVI Junior,Valinor,0.2821,0.3112,0.1019,-0.0291,0.1802,0,GGBet,3.01,11.99
+2026-02-03,FLC vs RNX,Team Falcons,REKONIX,0.6183,0.7942,0.7942,-0.1759,-0.1759,1,Bet365,1.166,1.166
+2026-02-03,FLC vs HEROIC,Team Falcons,Heroic,0.7042,0.8141,0.7831,-0.1099,-0.0789,1,Bet365,1.142,1.2
+2026-02-03,GL vs OG,GamerLegion,OG,0.3559,0.3124,0.0889,0.0435,0.267,0,Bet365,3.0,10.5
+2026-02-03,RNX vs Liquid,REKONIX,Team Liquid,0.5419,0.2685,0.0631,0.2734,0.4788,0,Bet365,3.5,15.0
+2026-02-04,HEROIC vs OG,Heroic,OG,0.3716,0.4634,0.9278,-0.0918,-0.5562,1,Bet365,2.0,1.012
+2026-02-04,L1GA vs strongboys,L1ga Team,strongboys,0.6069,0.4111,0.0455,0.1958,0.5614,0,Bet365,2.25,21.0
+2026-02-04,OG vs Na`Vi,OG,Natus Vincere,0.5316,0.5576,0.7831,-0.026,-0.2515,0,Bet365,1.666,1.2
+2026-02-05,TS vs RNX,Team Spirit,REKONIX,0.6639,0.7234,0.9111,-0.0595,-0.2472,1,Bet365,1.3,1.025
+2026-02-06,Round 1 match 1: HEROIC vs RNX,Heroic,REKONIX,0.5943,0.766,0.8302,-0.1717,-0.2359,1,Bet365,1.222,1.125
+2026-02-09,Roar vs CARST,Roar Gaming,Carstensz,0.6049,0.4213,0.4106,0.1836,0.1943,0,MelBet,2.22,2.275
+2026-02-09,NAVI.J vs strongboys,NAVI Junior,strongboys,0.1779,0.1861,0.1212,-0.0082,0.0567,0,GGBet,5.03,8.34
+2026-02-10,WB vs VAL,Winter Bear,Valinor,0.5421,0.625,0.9442,-0.0829,-0.4021,1,Bet365,1.5,1.005
+2026-02-10,VAL vs L1GA,Valinor,L1ga Team,0.3291,0.3124,0.3124,0.0167,0.0167,0,Bet365,3.0,3.0
+2026-02-11,LYNX vs TS.A,Team Lynx,Spirit Academy,0.5808,0.6152,0.884,-0.0344,-0.3032,1,GGBet,1.52,1.06
+2026-02-11,L1GA vs NAVI.J,L1ga Team,NAVI Junior,0.8471,0.6876,0.3124,0.1595,0.5347,1,Bet365,1.363,3.0
+2026-02-12,VAL vs strongboys,Valinor,strongboys,0.3278,0.375,0.0849,-0.0472,0.2429,0,Bet365,2.5,11.0
+2026-02-12,NAVI.J vs WB,NAVI Junior,Winter Bear,0.2053,0.2797,0.2797,-0.0744,-0.0744,0,CashPoint,3.27,3.27
+2026-02-14,CARST vs KOM,Carstensz,Komodo,0.6106,0.8141,0.0558,-0.2035,0.5548,1,Bet365,1.142,17.0
+2026-02-15,Lower bracket quarterfinal 1: WB vs L1GA,Winter Bear,L1ga Team,0.4193,0.5576,0.7234,-0.1383,-0.3041,1,Bet365,1.666,1.3
+2026-02-16,Upper bracket final: LYNX vs strongboys,Team Lynx,strongboys,0.4847,0.5,0.922,-0.0153,-0.4373,1,Bet365,1.833,1.015
+2026-02-16,Lower bracket final: WB vs strongboys,Winter Bear,strongboys,0.4935,0.5,0.9151,-0.0065,-0.4216,1,Bet365,1.833,1.02
+2026-02-17,YG vs KOM,Yangon Galacticos,Komodo,0.7381,0.7831,0.9111,-0.045,-0.173,1,Bet365,1.2,1.025
+2026-02-17,TS vs MOUZ,Team Spirit,MOUZ,0.5821,0.6077,0.0722,-0.0256,0.5099,1,Bet365,1.533,13.0
+2026-02-17,FLC vs Na`Vi,Team Falcons,Natus Vincere,0.5889,0.75,0.1172,-0.1611,0.4717,1,Bet365,1.25,8.0
+2026-02-17,FLC vs XctN,Team Falcons,Execration,0.7467,0.7942,0.7831,-0.0475,-0.0364,1,Bet365,1.166,1.2
+2026-02-17,Na`Vi vs GL,Natus Vincere,GamerLegion,0.635,0.6451,0.866,-0.0101,-0.231,1,Bet365,1.444,1.083
+2026-02-18,Upper bracket semifinal 1: YG vs A&F,Yangon Galacticos,Aomqu and friends,0.5766,0.7831,0.9629,-0.2065,-0.3863,1,Bet365,1.2,1.001
+2026-02-18,MOUZ vs XctN,MOUZ,Execration,0.5974,0.75,0.9545,-0.1526,-0.3571,1,Bet365,1.25,1.002
+2026-02-19,Tundra vs XctN,Tundra Esports,Execration,0.7687,0.7831,0.9442,-0.0144,-0.1755,1,Bet365,1.2,1.005
+2026-02-19,Na`Vi vs MOUZ,Natus Vincere,MOUZ,0.5705,0.5,0.9111,0.0705,-0.3406,0,Bet365,1.833,1.025
+2026-02-19,TS vs XctN,Team Spirit,Execration,0.7277,0.766,0.3124,-0.0383,0.4153,1,Bet365,1.222,3.0
+2026-02-19,Upper bracket round 16 match 3: BTC vs A,BTC Gaming,Amaru Gaming,0.4673,0.3545,0.1264,0.1128,0.3409,1,GGBet,2.64,10.02
+2026-02-20,Na`Vi vs XctN,Natus Vincere,Execration,0.6783,0.6451,0.5767,0.0332,0.1016,1,Bet365,1.444,1.615
+2026-02-21,Upper bracket round 16 match 8: WB vs TS,Winter Bear,Spirit Academy,0.7654,0.4278,0.3814,0.3376,0.384,1,CashPoint,2.14,2.4
+2026-02-24,IVO vs VER,Ivory,Veroja,0.6726,0.625,0.8438,0.0476,-0.1712,0,Bet365,1.5,1.111
+2026-02-24,Upper bracket semifinal 2: LYNX vs WB,Team Lynx,Winter Bear,0.4452,0.5767,0.1036,-0.1315,0.3416,1,Bet365,1.615,9.0
+2026-02-24,FLC vs MOUZ,Team Falcons,MOUZ,0.653,0.6451,0.9629,0.0079,-0.3099,1,Bet365,1.444,1.001
+2026-03-01,Elimination match: AVLNC vs Under,Avalanche eSports,Under Effect,0.4274,0.4167,0.1285,0.0107,0.2989,1,GGBet,2.24,7.26
+2026-03-04,LiXO eSports vs NAVI.J,LiXO eSports,NAVI Junior,0.8186,0.7593,0.857,0.0593,-0.0384,1,GGBet,1.23,1.09
+2026-03-04,DGS vs LVLUP,DOGSENT,Level UP,0.6155,0.5503,0.1399,0.0652,0.4756,0,GGBet,1.7,6.7
+2026-03-04,Upper bracket quarterfinal 3: Amaru Gami,Amaru Gaming,Avalanche eSports,0.5565,0.8331,0.8958,-0.2766,-0.3393,1,GGBet,1.12,1.04
+2026-03-05,Lower bracket round 1 match 2: AVLNC vs ,Avalanche eSports,Estar Backs,0.4033,0.1602,0.1355,0.2431,0.2678,0,GGBet,5.82,6.89
+2026-03-05,Upper bracket semifinal 2: Amaru Gaming ,Amaru Gaming,x5 Gaming,0.55,0.2284,0.1102,0.3216,0.4398,0,MelBet,4.0,8.32
+2026-03-07,YG vs CR,Yangon Galacticos,Cloud Rising,0.7059,0.7831,0.7831,-0.0772,-0.0772,1,Bet365,1.2,1.2
+2026-03-07,Round 1: PARI vs YeS,PARIVISION,Yellow Submarine,0.6269,0.8553,0.9111,-0.2284,-0.2842,1,Bet365,1.1,1.025
+2026-03-07,Round 1: AUR vs MOUZ,Aurora,MOUZ,0.7475,0.5889,0.7942,0.1586,-0.0467,1,Bet365,1.571,1.166
+2026-03-07,Round 1: TY vs HEROIC,Team Yandex,Heroic,0.4918,0.5366,0.3549,-0.0448,0.1369,0,Bet365,1.727,2.625
+2026-03-07,Lower bracket semifinal: EB vs Amaru Gam,Estar Backs,Amaru Gaming,0.5419,0.6675,0.2671,-0.1256,0.2748,1,GGBet,1.4,7.71
+2026-03-09,Round 3: OG vs MOUZ,OG,MOUZ,0.5252,0.5366,0.5147,-0.0114,0.0105,1,Bet365,1.727,1.8
+2026-03-09,Round 3: TS vs HEROIC,Team Spirit,Heroic,0.5934,0.5576,0.5767,0.0358,0.0167,1,Bet365,1.666,1.615
+2026-03-10,Round 4: HEROIC vs Na`Vi,Heroic,Natus Vincere,0.4852,0.5,0.3373,-0.0148,0.1479,1,Bet365,1.833,2.75
+2026-03-12,LYNX vs VP.P,Team Lynx,VP.Prodigy,0.5765,0.7234,0.1859,-0.1469,0.3906,1,Bet365,1.3,5.0
+2026-03-14,CARST vs CR,Carstensz,Cloud Rising,0.6016,0.5576,0.5576,0.044,0.044,1,Bet365,1.666,1.666
+2026-03-15,ESS vs CD,Team Essence,Cloud Dawning,0.4044,0.4111,0.3549,-0.0067,0.0495,0,Bet365,2.25,2.625
+2026-03-16,CR vs IVO,Cloud Rising,Ivory,0.2885,0.25,0.6876,0.0385,-0.3991,0,Bet365,3.75,1.363
+2026-03-16,CARST vs CD,Carstensz,Cloud Dawning,0.5061,0.6876,0.7831,-0.1815,-0.277,1,Bet365,1.363,1.2
+2026-03-16,Z10 vs NAVI.J,Zero Tenacity,NAVI Junior,0.8658,0.3549,0.1859,0.5109,0.6799,1,Bet365,2.625,5.0
+2026-03-16,TS.A vs Z10,Spirit Academy,Zero Tenacity,0.1661,0.1879,0.1363,-0.0218,0.0298,0,GGBet,4.97,7.29
+2026-03-16,WB vs DGS,Winter Bear,DOGSENT,0.7005,0.7234,0.2058,-0.0229,0.4947,0,Bet365,1.3,4.5
+2026-03-17,LiXO eSports vs VP.P,LiXO eSports,VP.Prodigy,0.6812,0.3373,0.2169,0.3439,0.4643,0,Bet365,2.75,4.333
+2026-03-17,VP.P vs NAVI.J,VP.Prodigy,NAVI Junior,0.7334,0.1453,0.0634,0.5881,0.67,1,GGBet,6.41,16.11
+2026-03-18,YG vs CD,Yangon Galacticos,Cloud Dawning,0.6872,0.6627,0.9066,0.0245,-0.2194,1,Bet365,1.4,1.03
+2026-03-18,Lower bracket quarterfinal 1: LYNX vs L1,Team Lynx,L1ga Team,0.5101,0.3549,0.9442,0.1552,-0.4341,0,Bet365,2.625,1.005
+2026-03-20,CR vs ESS,Cloud Rising,Team Essence,0.5034,0.3124,0.8141,0.191,-0.3107,1,Bet365,3.0,1.142
+2026-03-20,L1GA vs TS.A,L1ga Team,Spirit Academy,0.8287,0.6829,0.8767,0.1458,-0.048,1,GGBet,1.37,1.07
+2026-03-20,DGS vs RE,DOGSENT,Rune Eaters,0.3067,0.25,0.078,0.0567,0.2287,0,Bet365,3.75,12.0
+2026-03-21,ESS vs YG,Team Essence,Yangon Galacticos,0.2063,0.2169,0.2685,-0.0106,-0.0622,1,Bet365,4.333,3.5
+2026-03-21,LiXO eSports vs LYNX,LiXO eSports,Team Lynx,0.3749,0.1447,0.0371,0.2302,0.3378,0,Bet365,6.5,26.0
+2026-03-21,RE vs LVLUP,Rune Eaters,Level UP,0.7293,0.7121,0.8852,0.0172,-0.1559,1,GGBet,1.31,1.06
+2026-03-22,MOUZ vs RNX,MOUZ,REKONIX,0.5571,0.6627,0.2766,-0.1056,0.2805,1,Bet365,1.4,3.4
+2026-03-22,OG vs NGX,OG,Nigma Galaxy,0.5272,0.3124,0.5889,0.2148,-0.0617,1,Bet365,3.0,1.571
+2026-03-22,Z10 vs LiXO eSports,Zero Tenacity,LiXO eSports,0.6231,0.7831,0.8141,-0.16,-0.191,1,Bet365,1.2,1.142
+2026-03-23,Upper bracket quarterfinal 1: VP.P vs WB,VP.Prodigy,Winter Bear,0.5229,0.6876,0.6876,-0.1647,-0.1647,1,Bet365,1.363,1.363
+2026-03-23,Tundra vs GL,Tundra Esports,GamerLegion,0.8463,0.75,0.7091,0.0963,0.1372,1,Bet365,1.25,1.333
+2026-03-23,RNX vs TY,REKONIX,Team Yandex,0.1901,0.2909,0.2169,-0.1008,-0.0268,0,Bet365,3.25,4.333
+2026-03-23,Upper bracket quarterfinal 2: Z10 vs LVL,Zero Tenacity,Level UP,0.7643,0.5889,0.6451,0.1754,0.1192,1,Bet365,1.571,1.444
+2026-03-23,Upper bracket quarterfinal 4: RE vs LiXO,Rune Eaters,LiXO eSports,0.6705,0.8553,0.9545,-0.1848,-0.284,1,Bet365,1.1,1.002
+2026-03-23,NGX vs FLC,Nigma Galaxy,Team Falcons,0.3743,0.3124,0.134,0.0619,0.2403,0,Bet365,3.0,7.0
+2026-03-24,GL vs TY,GamerLegion,Team Yandex,0.2074,0.2909,0.4853,-0.0835,-0.2779,0,Bet365,3.25,1.909
+2026-03-24,RNX vs GL,REKONIX,GamerLegion,0.4461,0.4853,0.4853,-0.0392,-0.0392,0,Bet365,1.909,1.909
+2026-03-25,TY vs MOUZ,Team Yandex,MOUZ,0.7397,0.4424,0.5,0.2973,0.2397,1,Bet365,2.1,1.833
+2026-03-25,Lower bracket round 1 match 1: WB vs LVL,Winter Bear,Level UP,0.6769,0.4233,0.875,0.2536,-0.1981,1,Bet365,2.2,1.071
+2026-03-25,Lower bracket quarterfinal 1: RE vs WB,Rune Eaters,Winter Bear,0.6219,0.625,0.866,-0.0031,-0.2441,0,Bet365,1.5,1.083
+2026-03-26,Grand final: GLYPH vs IVO,GLYPH,Ivory,0.5728,0.875,0.9629,-0.3022,-0.3901,1,Bet365,1.071,1.001
+2026-04-02,Quarterfinals match 1: RNX vs VER,REKONIX,Veroja,0.5002,0.766,0.9629,-0.2658,-0.4627,1,Bet365,1.222,1.001
+2026-04-02,Quarterfinals match 2: XctN vs IVO,Execration,Ivory,0.4887,0.6077,0.8901,-0.119,-0.4014,1,Bet365,1.533,1.05
+2026-04-03,CARST vs ESS,Carstensz,Team Essence,0.6137,0.5889,0.9066,0.0248,-0.2929,1,Bet365,1.571,1.03
+2026-04-03,RE vs VP.P,Rune Eaters,VP.Prodigy,0.5669,0.625,0.9369,-0.0581,-0.37,1,Bet365,1.5,1.01
+2026-04-04,NGX vs PIPS+4,Nigma Galaxy, Pipsqueak+4,0.5199,0.6768,0.1025,-0.1569,0.4174,0,GGBet,1.38,9.11
+2026-04-04,YeS vs Z10,Yellow Submarine,Zero Tenacity,0.6135,0.5,0.7831,0.1135,-0.1696,1,Bet365,1.833,1.2
+2026-04-04,RE vs TS.A,Rune Eaters,Spirit Academy,0.7757,0.637,0.6643,0.1387,0.1114,1,GGBet,1.47,1.41
+2026-04-04,VP vs PR,Virtus.pro,Power Rangers,0.3147,0.7983,0.8998,-0.4836,-0.5851,1,GGBet,1.17,1.04
+2026-04-04,YeS vs NAVI.J,Yellow Submarine,NAVI Junior,0.9211,0.4424,0.4424,0.4787,0.4787,1,Bet365,2.1,2.1
+2026-04-04,GL vs Z10,GamerLegion,Zero Tenacity,0.4228,0.5807,0.859,-0.1579,-0.4362,1,GGBet,1.61,1.09
+2026-04-05,IVO vs ESS,Ivory,Team Essence,0.7965,0.7831,0.2169,0.0134,0.5796,1,Bet365,1.2,4.333
+2026-04-05,VP vs PIPS+4,Virtus.pro, Pipsqueak+4,0.4068,0.7115,0.8881,-0.3047,-0.4813,1,GGBet,1.31,1.05
+2026-04-05,NGX vs PR,Nigma Galaxy,Power Rangers,0.4584,0.7381,0.867,-0.2797,-0.4086,1,GGBet,1.27,1.08
+2026-04-05,VP vs L1GA,Virtus.pro,L1ga Team,0.3817,0.5669,0.2724,-0.1852,0.1093,0,GGBet,1.65,5.77
+2026-04-06,CD vs IVO,Cloud Dawning,Ivory,0.2564,0.25,0.0371,0.0064,0.2193,0,Bet365,3.75,26.0
+2026-04-06,L1GA vs PIPS+4,L1ga Team, Pipsqueak+4,0.5973,0.4634,0.1859,0.1339,0.4114,1,Bet365,2.0,5.0
+2026-04-06,GL vs VP.P,GamerLegion,VP.Prodigy,0.595,0.7875,0.9025,-0.1925,-0.3075,1,GGBet,1.19,1.04
+2026-04-06,VP vs NGX,Virtus.pro,Nigma Galaxy,0.4191,0.4111,0.4233,0.008,-0.0042,0,Bet365,2.25,2.2
+2026-04-06,NAVI.J vs LYNX,NAVI Junior,Team Lynx,0.1091,0.136,0.0848,-0.0269,0.0243,0,GGBet,6.86,11.66
+2026-04-06,GL vs YeS,GamerLegion,Yellow Submarine,0.3075,0.5253,0.9102,-0.2178,-0.6027,1,GGBet,1.78,1.03
+2026-04-07,PIPS+4 vs PR, Pipsqueak+4,Power Rangers,0.4653,0.528,0.1019,-0.0627,0.3634,0,GGBet,1.77,9.17
+2026-04-07,YeS vs L1GA,Yellow Submarine,L1ga Team,0.5953,0.4111,0.0455,0.1842,0.5498,0,Bet365,2.25,21.0
+2026-04-08,Upper bracket quarterfinal 1: PARI vs GL,PARIVISION,GamerLegion,0.6828,0.7244,0.8701,-0.0416,-0.1873,1,GGBet,1.29,1.07
+2026-04-08,Upper bracket quarterfinal 2: TS vs NGX,Team Spirit,Nigma Galaxy,0.6929,0.75,0.766,-0.0571,-0.0731,0,Bet365,1.25,1.222
+2026-04-08,Upper bracket quarterfinal 4: MOUZ vs HE,MOUZ,Heroic,0.3498,0.5576,0.2685,-0.2078,0.0813,1,Bet365,1.666,3.5
+2026-04-09,TS.A vs VP.P,Spirit Academy,VP.Prodigy,0.3577,0.4119,0.7533,-0.0542,-0.3956,1,GGBet,2.27,2.27
+2026-04-10,Lower bracket quarterfinal 2: NGX vs Liq,Nigma Galaxy,Team Liquid,0.2274,0.2766,0.134,-0.0492,0.0934,1,Bet365,3.4,7.0
+2026-04-10,Quarterfinal 2: GLYPH vs ESS,GLYPH,Team Essence,0.8856,0.875,0.875,0.0106,0.0106,1,Bet365,1.071,1.071
+2026-04-10,Lower bracket quarterfinal 1: L1GA vs GL,L1ga Team,GamerLegion,0.5379,0.5556,0.2104,-0.0177,0.3275,0,GGBet,1.68,7.88
+2026-04-10,Lower bracket semifinal: GL vs NGX,GamerLegion,Nigma Galaxy,0.4908,0.2766,0.5366,0.2142,-0.0458,0,Bet365,3.4,1.727
+2026-04-11,Lower bracket final: MOUZ vs NGX,MOUZ,Nigma Galaxy,0.4344,0.5187,0.1976,-0.0843,0.2368,0,GGBet,1.8,7.88
+2026-04-12,Upper bracket quarterfinal 2: IVO vs YG,Ivory,Yangon Galacticos,0.5431,0.5,0.5576,0.0431,-0.0145,1,Bet365,1.833,1.666
+2026-04-12,Upper bracket quarterfinal 3: XctN vs CA,Execration,Carstensz,0.6101,0.8302,0.5767,-0.2201,0.0334,0,Bet365,1.125,1.615
+2026-04-12,Upper bracket round 1 match 1: Liquid vs,Team Liquid,ALIS VENTORUS,0.8859,0.8901,0.9545,-0.0042,-0.0686,1,Bet365,1.05,1.002
+2026-04-12,Upper bracket semifinal 1: OG vs IVO,OG,Ivory,0.5626,0.8553,0.1099,-0.2927,0.4527,0,Bet365,1.1,8.5
+2026-04-12,Upper bracket round 1 match 3: VP vs Z10,Virtus.pro,Zero Tenacity,0.363,0.6876,0.9111,-0.3246,-0.5481,1,Bet365,1.363,1.025
+2026-04-12,Upper bracket round 1 match 4: MOUZ vs L,MOUZ,Team Lynx,0.4322,0.875,0.7942,-0.4428,-0.362,1,Bet365,1.071,1.166
+2026-04-12,Upper bracket round 2 match 1: Liquid vs,Team Liquid,Natus Vincere,0.6755,0.6876,0.1099,-0.0121,0.5656,0,Bet365,1.363,8.5
+2026-04-13,Lower bracket round 1 match 1: GLYPH vs ,GLYPH,Yangon Galacticos,0.7114,0.875,0.8302,-0.1636,-0.1188,1,Bet365,1.071,1.125
+2026-04-13,Lower bracket round 2 match 2: OG vs RNX,OG,REKONIX,0.5957,0.6876,0.9151,-0.0919,-0.3194,0,Bet365,1.363,1.02
+2026-04-13,Lower bracket round 2 match 2: CD vs Roa,Cloud Dawning,Roar Gaming,0.334,0.324,0.179,0.01,0.155,0,MelBet,2.888,5.23
+2026-04-13,Lower bracket round 1 match 1: AVE vs NG,ALIS VENTORUS,Nigma Galaxy,0.2413,0.125,0.1036,0.1163,0.1377,1,Bet365,7.5,9.0
+2026-04-13,Upper bracket quarterfinal 1: YeS vs TS.,Yellow Submarine,Spirit Academy,0.8778,0.837,0.883,0.0408,-0.0052,1,GGBet,1.12,1.06
+2026-04-13,Upper bracket quarterfinal 3: x5 vs EG,x5 Gaming,Earth Gaming,0.4731,0.7847,0.7847,-0.3116,-0.3116,1,FonBet,1.18,1.18
+2026-04-13,Upper bracket quarterfinal 4: ZG vs BIZ,Zetta Games,Biz Gaming,0.5272,0.5964,0.7044,-0.0692,-0.1772,1,GGBet,1.57,1.33
+2026-04-14,Lower bracket final: TR vs Roar,Team Resilience,Roar Gaming,0.5132,0.7111,0.375,-0.1979,0.1382,0,FonBet,1.3,2.45
+2026-04-14,Grand final: IVO vs RNX,Ivory,REKONIX,0.5266,0.2169,0.0371,0.3097,0.4895,0,Bet365,4.333,26.0
+2026-04-14,Lower bracket round 2 match 2: Liquid vs,Team Liquid,Team Lynx,0.7138,0.8141,0.8302,-0.1003,-0.1164,1,Bet365,1.142,1.125
+2026-04-14,Lower bracket round 2 match 1: MOUZ vs A,MOUZ,ALIS VENTORUS,0.6743,0.875,0.9545,-0.2007,-0.2802,1,Bet365,1.071,1.002
+2026-04-14,Lower bracket round 1 match 1: EB vs EE,Estar Backs,Ember Enjoyers,0.5675,0.6154,0.6977,-0.0479,-0.1302,1,FonBet,1.5,1.3
+2026-04-14,Lower bracket round 3: Liquid vs MOUZ,Team Liquid,MOUZ,0.7489,0.5889,0.1859,0.16,0.563,1,Bet365,1.571,5.0
+2026-04-15,Upper bracket semifinal 1: YeS vs LYNX,Yellow Submarine,Team Lynx,0.6028,0.5889,0.0455,0.0139,0.5573,0,Bet365,1.571,21.0
+2026-04-15,Lower bracket quarterfinal 1: EB vs x5,Estar Backs,x5 Gaming,0.6013,0.3846,0.3505,0.2167,0.2508,1,FonBet,2.4,2.65
+2026-04-16,Lower bracket round 1 match 1: TS.A vs M,Spirit Academy,MODUS,0.3441,0.2183,0.1171,0.1258,0.227,0,GGBet,4.26,8.97
+2026-04-16,Lower bracket semifinal: EB vs EG,Estar Backs,Earth Gaming,0.577,0.7828,0.8767,-0.2058,-0.2997,1,GGBet,1.19,1.07
+2026-04-18,Round 1: PARI vs MOUZ,PARIVISION,MOUZ,0.7425,0.75,0.8828,-0.0075,-0.1403,1,Bet365,1.25,1.062
+2026-04-18,Round 1: Tundra vs HEROIC,Tundra Esports,Heroic,0.7668,0.6876,0.766,0.0792,0.0008,0,Bet365,1.363,1.222
+2026-04-19,Roar vs NGX,Roar Gaming,Nigma Galaxy,0.3577,0.1698,0.125,0.1879,0.2327,0,Bet365,5.5,7.5
+2026-04-19,MODUS vs IVO,MODUS,Ivory,0.3246,0.5576,0.9545,-0.233,-0.6299,1,Bet365,1.666,1.002
+2026-04-19,Round 2: MOUZ vs GL,MOUZ,GamerLegion,0.4402,0.4424,0.2169,-0.0022,0.2233,0,Bet365,2.1,4.333
+2026-04-19,RE vs Roar,Rune Eaters,Roar Gaming,0.4884,0.5366,0.9442,-0.0482,-0.4558,1,Bet365,1.727,1.005
+2026-04-19,Round 2: TY vs SAR,Team Yandex,South America Reject,0.8373,0.75,0.5147,0.0873,0.3226,0,Bet365,1.25,1.8
+2026-04-19,Z10 vs EB,Zero Tenacity,Estar Backs,0.4272,0.75,0.8553,-0.3228,-0.4281,1,Bet365,1.25,1.1
+2026-04-19,Round 2: PARI vs HEROIC,PARIVISION,Heroic,0.5989,0.766,0.8828,-0.1671,-0.2839,1,Bet365,1.222,1.062
+2026-04-19,BTC vs PR,BTC Gaming,Power Rangers,0.3472,0.1891,0.1292,0.1581,0.218,0,GGBet,4.93,7.75
+2026-04-19,L1GA vs EB,L1ga Team,Estar Backs,0.5731,0.7234,0.8302,-0.1503,-0.2571,1,Bet365,1.3,1.125
+2026-04-20,LYNX vs IVO,Team Lynx,Ivory,0.6703,0.7942,0.7942,-0.1239,-0.1239,1,Bet365,1.166,1.166
+2026-04-20,MODUS vs Roar,MODUS,Roar Gaming,0.4838,0.7831,0.7831,-0.2993,-0.2993,1,Bet365,1.2,1.2
+2026-04-20,Round 3: HEROIC vs VP,Heroic,Virtus.pro,0.697,0.625,0.25,0.072,0.447,1,Bet365,1.5,3.75
+2026-04-20,RE vs NGX,Rune Eaters,Nigma Galaxy,0.3052,0.2169,0.1859,0.0883,0.1193,0,Bet365,4.333,5.0
+2026-04-20,Roar vs IVO,Roar Gaming,Ivory,0.4375,0.375,0.375,0.0625,0.0625,1,Bet365,2.5,2.5
+2026-04-20,Round 3: TY vs Na`Vi,Team Yandex,Natus Vincere,0.6308,0.6451,0.5576,-0.0143,0.0732,0,Bet365,1.444,1.666
+2026-04-20,EB vs BTC,Estar Backs,BTC Gaming,0.6614,0.6529,0.8323,0.0085,-0.1709,1,GGBet,1.43,1.12
+2026-04-20,AVE vs Z10,ALIS VENTORUS,Zero Tenacity,0.3365,0.2058,0.1859,0.1307,0.1506,1,Bet365,4.5,5.0
+2026-04-20,Round 3: MOUZ vs Tundra,MOUZ,Tundra Esports,0.1708,0.2766,0.3373,-0.1058,-0.1665,1,Bet365,3.4,2.75
+2026-04-20,SAR vs EB,South America Reject,Estar Backs,0.4649,0.8302,0.8302,-0.3653,-0.3653,1,Bet365,1.125,1.125
+2026-04-20,L1GA vs BTC,L1ga Team,BTC Gaming,0.7657,0.781,0.8997,-0.0153,-0.134,1,GGBet,1.2,1.04
+2026-04-20,Z10 vs PR,Zero Tenacity,Power Rangers,0.4007,0.5,0.4634,-0.0993,-0.0627,1,Bet365,1.833,2.0
+2026-04-21,Lower bracket quarterfinal 1: Satan vs C,Satan666,Cloud Dawning,0.5596,0.4424,0.4424,0.1172,0.1172,1,Bet365,2.1,2.1
+2026-04-21,Round 4: TS vs Na`Vi,Team Spirit,Natus Vincere,0.4881,0.625,0.5889,-0.1369,-0.1008,1,Bet365,1.5,1.571
+2026-04-21,Round 4: Liquid vs HEROIC,Team Liquid,Heroic,0.618,0.5366,0.8302,0.0814,-0.2122,1,Bet365,1.727,1.125
+2026-04-21,IVO vs RE,Ivory,Rune Eaters,0.5112,0.234,0.0371,0.2772,0.4741,0,Bet365,4.0,26.0
+2026-04-21,NGX vs LYNX,Nigma Galaxy,Team Lynx,0.5415,0.7942,0.7942,-0.2527,-0.2527,1,Bet365,1.166,1.166
+2026-04-21,Round 4: VP vs MOUZ,Virtus.pro,MOUZ,0.43,0.5,0.4634,-0.07,-0.0334,0,Bet365,1.833,2.0
+2026-04-21,SAR vs L1GA,South America Reject,L1ga Team,0.4247,0.625,0.9545,-0.2003,-0.5298,1,Bet365,1.5,1.002
+2026-04-21,BTC vs AVE,BTC Gaming,ALIS VENTORUS,0.4912,0.7011,0.2867,-0.2099,0.2045,0,GGBet,1.33,3.26
+2026-04-22,Lower bracket semifinal: Satan vs IVO,Satan666,Ivory,0.4139,0.1792,0.3838,0.2347,0.0301,0,GGBet,5.22,2.44
+2026-04-22,Round 5: GL vs HEROIC,GamerLegion,Heroic,0.4207,0.4424,0.5,-0.0217,-0.0793,0,Bet365,2.1,1.833
+2026-04-22,Roar vs LYNX,Roar Gaming,Team Lynx,0.3025,0.2169,0.2169,0.0856,0.0856,0,Bet365,4.333,4.333
+2026-04-22,Round 5: SAR vs MOUZ,South America Reject,MOUZ,0.5003,0.4111,0.4634,0.0892,0.0369,1,Bet365,2.25,2.0
+2026-04-22,NGX vs MODUS,Nigma Galaxy,MODUS,0.7509,0.8302,0.9545,-0.0793,-0.2036,1,Bet365,1.125,1.002
+2026-04-22,BTC vs SAR,BTC Gaming,South America Reject,0.2681,0.1338,0.1081,0.1343,0.16,0,GGBet,6.99,8.91
+2026-04-22,EB vs AVE,Estar Backs,ALIS VENTORUS,0.5946,0.2766,0.2766,0.318,0.318,1,Bet365,3.4,3.4
+2026-04-23,Grand final: CARST vs IVO,Carstensz,Ivory,0.4724,0.3124,0.2766,0.16,0.1958,1,Bet365,3.0,3.4
+2026-04-23,Upper bracket quarterfinal 1: PARI vs SA,PARIVISION,South America Reject,0.7366,0.7942,0.766,-0.0576,-0.0294,1,Bet365,1.166,1.222
+2026-04-23,Upper bracket quarterfinal 2: AUR vs HER,Aurora,Heroic,0.6879,0.75,0.866,-0.0621,-0.1781,1,Bet365,1.25,1.083
+2026-04-23,EB vs PR,Estar Backs,Power Rangers,0.4676,0.1859,0.1859,0.2817,0.2817,0,Bet365,5.0,5.0
+2026-04-23,AVE vs L1GA,ALIS VENTORUS,L1ga Team,0.3433,0.1859,0.1859,0.1574,0.1574,0,Bet365,5.0,5.0
+2026-04-23,Z10 vs BTC,Zero Tenacity,BTC Gaming,0.7314,0.8083,0.8902,-0.0769,-0.1588,1,GGBet,1.16,1.05
+2026-04-24,Lower bracket round 1 match 1: SAR vs HE,South America Reject,Heroic,0.3804,0.4424,0.234,-0.062,0.1464,1,Bet365,2.1,4.0
+2026-04-25,Lower bracket quarterfinal 1: Liquid vs ,Team Liquid,South America Reject,0.7378,0.6627,0.875,0.0751,-0.1372,1,Bet365,1.4,1.071
+2026-04-26,Lower bracket round 1 match 3: RE vs LYN,Rune Eaters,Team Lynx,0.4288,0.4634,0.0934,-0.0346,0.3354,0,Bet365,2.0,10.0
+2026-04-26,Lower bracket round 1 match 4: SAR vs AV,South America Reject,ALIS VENTORUS,0.699,0.875,0.9151,-0.176,-0.2161,1,Bet365,1.071,1.02
+2026-04-28,Lower bracket round 2 match 2: LYNX vs S,Team Lynx,South America Reject,0.4734,0.1698,0.0455,0.3036,0.4279,0,Bet365,5.5,21.0
+2026-04-28,Lower bracket quarterfinal 1: PR vs L1GA,Power Rangers,L1ga Team,0.4649,0.5,0.8828,-0.0351,-0.4179,1,Bet365,1.833,1.062
+2026-04-28,enjoy boys vs AVE,enjoy boys,ALIS VENTORUS,0.496,0.4111,0.4424,0.0849,0.0536,1,Bet365,2.25,2.1
+2026-04-29,enjoy boys vs RE,enjoy boys,Rune Eaters,0.4462,0.125,0.4233,0.3212,0.0229,0,Bet365,7.5,2.2
+2026-04-29,Lower bracket quarterfinal 2: Z10 vs SAR,Zero Tenacity,South America Reject,0.456,0.2169,0.0371,0.2391,0.4189,0,Bet365,4.333,26.0
+2026-04-29,AVE vs PR,ALIS VENTORUS,Power Rangers,0.2603,0.1859,0.0631,0.0744,0.1972,0,Bet365,5.0,15.0
+2026-04-30,DGS vs MODUS,DOGSENT,MODUS,0.4147,0.2766,0.2169,0.1381,0.1978,0,Bet365,3.4,4.333
+2026-04-30,Lower bracket semifinal: PR vs SAR,Power Rangers,South America Reject,0.4688,0.2169,0.0371,0.2519,0.4317,0,Bet365,4.333,26.0
+2026-05-01,Lower bracket round 1 match 1: Roar vs M,Roar Gaming,Mideng Dreamer,0.4922,0.7107,0.6972,-0.2185,-0.205,1,MelBet,1.315,1.34
+2026-05-01,Lower bracket round 1 match 2: CD vs REF,Cloud Dawning,Team Refuser,0.3739,0.1099,0.1099,0.264,0.264,1,Bet365,8.5,8.5
+2026-05-01,Grand final: NGX vs SAR,Nigma Galaxy,South America Reject,0.5568,0.5,0.1036,0.0568,0.4532,0,Bet365,1.833,9.0
+2026-05-02,MODUS vs AIM,MODUS,Aim Possible,0.6783,0.7831,0.766,-0.1048,-0.0877,0,Bet365,1.2,1.222
+2026-05-02,YeS vs SAR,Yellow Submarine,South America Reject,0.4292,0.3813,0.3716,0.0479,0.0576,1,GGBet,2.45,2.52
+2026-05-03,L1GA vs RNX,L1ga Team,REKONIX,0.5779,0.4331,0.1404,0.1448,0.4375,0,GGBet,2.16,10.1
+2026-05-03,NGX vs Z10,Nigma Galaxy,Zero Tenacity,0.6869,0.6627,0.766,0.0242,-0.0791,1,Bet365,1.4,1.222
+2026-05-03,MOUZ vs YeS,MOUZ,Yellow Submarine,0.3969,0.6077,0.7942,-0.2108,-0.3973,0,Bet365,1.533,1.166
+2026-05-04,Z10 vs RNX,Zero Tenacity,REKONIX,0.4654,0.3964,0.7038,0.069,-0.2384,1,GGBet,2.36,1.33
+2026-05-05,PR vs Team Stels,Power Rangers,Team Stels,0.7489,0.8353,0.875,-0.0864,-0.1261,1,GGBet,1.12,1.07
+2026-05-05,AIM vs LYNX,Aim Possible,Team Lynx,0.2481,0.3549,0.8901,-0.1068,-0.642,1,Bet365,2.625,1.05
+2026-05-05,enjoy boys vs PR,enjoy boys,Power Rangers,0.2322,0.125,0.6876,0.1072,-0.4554,1,Bet365,7.5,1.363
+2026-05-06,MOUZ vs PlayTime,MOUZ,PlayTime,0.5125,0.5,0.0841,0.0125,0.4284,0,FonBet,1.85,11.0
+2026-05-07,LYNX vs MODUS,Team Lynx,MODUS,0.6764,0.5366,0.1099,0.1398,0.5665,0,Bet365,1.727,8.5
+2026-05-07,L1GA vs MOUZ,L1ga Team,MOUZ,0.565,0.3549,0.5767,0.2101,-0.0117,1,Bet365,2.625,1.615
+2026-05-08,Satan vs GLYPH,Satan666,GLYPH,0.199,0.2587,0.1137,-0.0597,0.0853,0,GGBet,3.61,9.82
+2026-05-08,Upper bracket quarterfinal 2: YeS vs RNX,Yellow Submarine,REKONIX,0.6589,0.6821,0.2732,-0.0232,0.3857,0,GGBet,1.37,7.82
+2026-05-08,Upper bracket quarterfinal 4: PARI vs L1,PARIVISION,L1ga Team,0.6961,0.7923,0.927,-0.0962,-0.2309,1,GGBet,1.18,1.02
+2026-05-09,Lower bracket round 1 match 1: YeS vs Tu,Yellow Submarine,Tundra Esports,0.3427,0.1698,0.0934,0.1729,0.2493,1,Bet365,5.5,10.0
+2026-05-09,Grind vs 5SM,Grind Back,5 Silly Mice,0.6956,0.891,0.891,-0.1954,-0.1954,1,FonBet,1.04,1.04
+2026-05-09,Lower bracket round 1 match 2: NGX vs L1,Nigma Galaxy,L1ga Team,0.6486,0.599,0.8374,0.0496,-0.1888,1,GGBet,1.56,1.12
+2026-05-10,5SM vs Satan,5 Silly Mice,Satan666,0.4959,0.3778,0.2547,0.1181,0.2412,0,GGBet,2.47,4.39
+2026-05-10,Lower bracket round 1 match 2: MODUS vs ,MODUS,enjoy boys,0.5272,0.75,0.9629,-0.2228,-0.4357,1,Bet365,1.25,1.001
+2026-05-10,Lower bracket quarterfinal 1: PlayTime v,PlayTime,Yellow Submarine,0.3596,0.5372,0.8705,-0.1776,-0.5109,1,GGBet,1.74,1.07
+2026-05-10,Lower bracket quarterfinal 1: RE vs PR,Rune Eaters,Power Rangers,0.3658,0.3373,0.0455,0.0285,0.3203,0,Bet365,2.75,21.0
+2026-05-11,Lower bracket semifinal: PR vs MODUS,Power Rangers,MODUS,0.69,0.75,0.9442,-0.06,-0.2542,1,Bet365,1.25,1.005
+2026-05-11,Lower bracket final: LYNX vs PR,Team Lynx,Power Rangers,0.4191,0.4111,0.4111,0.008,0.008,0,Bet365,2.25,2.25
+2026-05-12,Lower bracket quarterfinal 2: Satan vs C,Satan666,Carstensz,0.4063,0.375,0.375,0.0313,0.0313,0,Bet365,2.5,2.5
+2026-05-13,FLC vs VP,Team Falcons,Virtus.pro,0.7649,0.766,0.9151,-0.0011,-0.1502,1,Bet365,1.222,1.02
+2026-05-13,Na`Vi vs NGX,Natus Vincere,Nigma Galaxy,0.4233,0.5366,0.9629,-0.1133,-0.5396,1,Bet365,1.727,1.001
+2026-05-14,Grand final: Grind vs GLYPH,Grind Back,GLYPH,0.4239,0.5333,0.3063,-0.1094,0.1176,0,GGBet,1.75,4.53
+2026-05-14,NGX vs PlayTime,Nigma Galaxy,PlayTime,0.624,0.4111,0.0455,0.2129,0.5785,0,Bet365,2.25,21.0
+2026-05-14,Na`Vi vs RNX,Natus Vincere,REKONIX,0.6491,0.766,0.2766,-0.1169,0.3725,1,Bet365,1.222,3.4
+2026-05-14,GL vs Liquid,GamerLegion,Team Liquid,0.2468,0.3373,0.25,-0.0905,-0.0032,0,Bet365,2.75,3.75
+2026-05-14,PlayTime vs RNX,PlayTime,REKONIX,0.5951,0.7234,0.9442,-0.1283,-0.3491,1,Bet365,1.3,1.005
+2026-05-14,NGX vs Tundra,Nigma Galaxy,Tundra Esports,0.4179,0.1859,0.0558,0.232,0.3621,0,Bet365,5.0,17.0
+2026-05-15,GL vs TS,GamerLegion,Team Spirit,0.2995,0.3124,0.0558,-0.0129,0.2437,0,Bet365,3.0,17.0
+2026-05-15,VP vs Liquid,Virtus.pro,Team Liquid,0.2075,0.25,0.0371,-0.0425,0.1704,0,Bet365,3.75,26.0
+2026-05-15,RNX vs Tundra,REKONIX,Tundra Esports,0.2415,0.1698,0.9369,0.0717,-0.6954,1,Bet365,5.5,1.01
+2026-05-15,PARI vs Na`Vi,PARIVISION,Natus Vincere,0.6789,0.75,0.9629,-0.0711,-0.284,1,Bet365,1.25,1.001
+2026-05-15,VP vs TS,Virtus.pro,Team Spirit,0.2542,0.2766,0.0371,-0.0224,0.2171,0,Bet365,3.4,26.0
+2026-05-15,AUR vs GL,Aurora,GamerLegion,0.7767,0.7831,0.9629,-0.0064,-0.1862,1,Bet365,1.2,1.001
+2026-05-16,PARI vs NGX,PARIVISION,Nigma Galaxy,0.7292,0.8302,0.9629,-0.101,-0.2337,1,Bet365,1.125,1.001
+2026-05-16,VP vs GL,Virtus.pro,GamerLegion,0.4696,0.5889,0.0631,-0.1193,0.4065,0,Bet365,1.571,15.0
+2026-05-16,Liquid vs ex-HEROIC,Team Liquid,ex-HEROIC,0.8594,0.7942,0.9629,0.0652,-0.1035,1,Bet365,1.166,1.001
+2026-05-16,RNX vs NGX,REKONIX,Nigma Galaxy,0.3464,0.3373,0.0455,0.0091,0.3009,0,Bet365,2.75,21.0
+2026-05-16,Tundra vs Na`Vi,Tundra Esports,Natus Vincere,0.54,0.5889,0.125,-0.0489,0.415,0,Bet365,1.571,7.5
+2026-05-16,PARI vs PlayTime,PARIVISION,PlayTime,0.8012,0.8141,0.3124,-0.0129,0.4888,0,Bet365,1.142,3.0
+2026-05-17,FLC vs GL,Team Falcons,GamerLegion,0.7883,0.875,0.9066,-0.0867,-0.1183,1,Bet365,1.071,1.03
+2026-05-17,TS vs ex-HEROIC,Team Spirit,ex-HEROIC,0.8265,0.8553,0.9629,-0.0288,-0.1364,1,Bet365,1.1,1.001
+2026-05-17,AUR vs VP,Aurora,Virtus.pro,0.8299,0.8141,0.9066,0.0158,-0.0767,1,Bet365,1.142,1.03
+2026-05-17,PARI vs RNX,PARIVISION,REKONIX,0.8377,0.875,0.9545,-0.0373,-0.1168,1,Bet365,1.071,1.002
+2026-05-18,PlayTime vs Tundra,PlayTime,Tundra Esports,0.3755,0.4111,0.8964,-0.0356,-0.5209,0,Bet365,2.25,1.04
+2026-05-19,Upper Bracket Quarterfinal 4: Na`Vi vs A,Natus Vincere,Aurora,0.4097,0.4634,0.1099,-0.0537,0.2998,0,Bet365,2.0,8.5
+2026-05-20,Lower Bracket Round 1 Match 1: Tundra vs,Tundra Esports,Virtus.pro,0.7849,0.75,0.9278,0.0349,-0.1429,1,Bet365,1.25,1.012
+2026-05-21,Lower Bracket Round 1 Match 4: Na`Vi vs ,Natus Vincere,PlayTime,0.6329,0.625,0.0722,0.0079,0.5607,0,Bet365,1.5,13.0
+2026-05-23,Lower Bracket Quarterfinals 2: FLC vs Pl,Team Falcons,PlayTime,0.6835,0.75,0.7942,-0.0665,-0.1107,1,Bet365,1.25,1.166
+2026-05-26,FLC vs GLYPH,Team Falcons,GLYPH,0.6802,0.7942,0.0455,-0.114,0.6347,0,Bet365,1.166,21.0
+2026-05-26,PARI vs OG,PARIVISION,OG,0.8781,0.6876,0.7234,0.1905,0.1547,1,Bet365,1.363,1.3
+2026-05-26,FLC vs OG,Team Falcons,OG,0.7958,0.7315,0.9369,0.0643,-0.1411,1,Bet365,1.285,1.01
+2026-05-26,Tundra vs TS,Tundra Esports,Team Spirit,0.5071,0.4233,0.25,0.0838,0.2571,0,Bet365,2.2,3.75
+2026-05-26,Liquid vs TY,Team Liquid,Team Yandex,0.5281,0.5767,0.866,-0.0486,-0.3379,0,Bet365,1.615,1.083
+2026-05-26,GLYPH vs AUR,GLYPH,Aurora,0.2968,0.2685,0.8901,0.0283,-0.5933,1,Bet365,3.5,1.05
+2026-05-26,PARI vs TY,PARIVISION,Team Yandex,0.6917,0.6077,0.125,0.084,0.5667,0,Bet365,1.533,7.5
+2026-05-26,Liquid vs Tundra,Team Liquid,Tundra Esports,0.5399,0.5,0.2058,0.0399,0.3341,0,Bet365,1.833,4.5
+2026-05-27,GLYPH vs TS,GLYPH,Team Spirit,0.4449,0.234,0.0455,0.2109,0.3994,0,Bet365,4.0,21.0
+2026-05-27,OG vs TY,OG,Team Yandex,0.1856,0.3549,0.0558,-0.1693,0.1298,0,Bet365,2.625,17.0
+2026-05-27,PARI vs Tundra,PARIVISION,Tundra Esports,0.695,0.6077,0.9111,0.0873,-0.2161,1,Bet365,1.533,1.025
+2026-05-27,OG vs Tundra,OG,Tundra Esports,0.2338,0.375,0.9278,-0.1412,-0.694,1,Bet365,2.5,1.012
+2026-05-27,GLYPH vs Liquid,GLYPH,Team Liquid,0.4018,0.25,0.1698,0.1518,0.232,0,Bet365,3.75,5.5
+2026-05-27,AUR vs TS,Aurora,Team Spirit,0.5506,0.5,0.8141,0.0506,-0.2635,1,Bet365,1.833,1.142
+2026-05-27,FLC vs TY,Team Falcons,Team Yandex,0.5279,0.5576,0.5,-0.0297,0.0279,1,Bet365,1.666,1.833
+2026-05-28,GLYPH vs PARI,GLYPH,PARIVISION,0.2066,0.234,0.234,-0.0274,-0.0274,0,Bet365,4.0,4.0
+2026-05-28,FLC vs TS,Team Falcons,Team Spirit,0.6738,0.5,0.8141,0.1738,-0.1403,1,Bet365,1.833,1.142
+2026-05-28,TY vs Tundra,Team Yandex,Tundra Esports,0.5978,0.5889,0.9278,0.0089,-0.33,1,Bet365,1.571,1.012
+2026-05-28,OG vs GLYPH,OG,GLYPH,0.3317,0.5,0.8964,-0.1683,-0.5647,1,Bet365,1.833,1.04
+2026-05-28,LGD vs PARI,LGD Gaming,PARIVISION,0.1222,0.3124,0.3124,-0.1902,-0.1902,1,Bet365,3.0,3.0
+2026-05-28,FLC vs Tundra,Team Falcons,Tundra Esports,0.6935,0.5889,0.8964,0.1046,-0.2029,1,Bet365,1.571,1.04
+2026-05-28,LGD vs OG,LGD Gaming,OG,0.547,0.5767,0.1172,-0.0297,0.4298,0,Bet365,1.615,8.0
+2026-05-28,AUR vs PARI,Aurora,PARIVISION,0.394,0.4424,0.0371,-0.0484,0.3569,0,Bet365,2.1,26.0
+2026-05-28,TS vs Liquid,Team Spirit,Team Liquid,0.3909,0.5,0.9545,-0.1091,-0.5636,1,Bet365,1.833,1.002
+2026-05-29,TS vs PARI,Team Spirit,PARIVISION,0.2451,0.4233,0.375,-0.1782,-0.1299,1,Bet365,2.2,2.5
+2026-05-29,TY vs GLYPH,Team Yandex,GLYPH,0.6939,0.75,0.922,-0.0561,-0.2281,1,Bet365,1.25,1.015
+2026-05-29,AUR vs OG,Aurora,OG,0.7745,0.7234,0.8901,0.0511,-0.1156,1,Bet365,1.3,1.05
+2026-05-29,Liquid vs PARI,Team Liquid,PARIVISION,0.3444,0.4424,0.2058,-0.098,0.1386,0,Bet365,2.1,4.5
+2026-05-29,Tundra vs GLYPH,Tundra Esports,GLYPH,0.5977,0.6627,0.3373,-0.065,0.2604,1,Bet365,1.4,2.75
+2026-05-29,FLC vs PARI,Team Falcons,PARIVISION,0.4094,0.5,0.0558,-0.0906,0.3536,0,Bet365,1.833,17.0
+2026-05-29,Tundra vs LGD,Tundra Esports,LGD Gaming,0.6079,0.5,0.75,0.1079,-0.1421,0,Bet365,1.833,1.25
+2026-05-29,Liquid vs OG,Team Liquid,OG,0.7425,0.6627,0.8964,0.0798,-0.1539,1,Bet365,1.4,1.04
+2026-05-30,Quarterfinal 2: AUR vs Tundra,Aurora,Tundra Esports,0.6826,0.6627,0.866,0.0199,-0.1834,1,Bet365,1.4,1.083
+2026-05-30,Quarterfinal 1: TS vs OG,Team Spirit,OG,0.7353,0.7942,0.9629,-0.0589,-0.2276,1,Bet365,1.166,1.001
+2026-05-30,Semifinal 1: TS vs TY,Team Spirit,Team Yandex,0.4833,0.4424,0.9545,0.0409,-0.4712,0,Bet365,2.1,1.002
+2026-05-30,Semifinal 2: Liquid vs AUR,Team Liquid,Aurora,0.4085,0.4634,0.0722,-0.0549,0.3363,0,Bet365,2.0,13.0
+2026-05-31,Upper bracket quarterfinal 4: Na`Vi vs F,Natus Vincere,Flame Team,0.8244,0.8351,0.8676,-0.0107,-0.0432,1,GGBet,1.12,1.08
+2026-05-31,Upper bracket semifinal 2: Z10 vs Na`Vi,Zero Tenacity,Natus Vincere,0.3032,0.3075,0.1463,-0.0043,0.1569,0,GGBet,3.04,7.88
+2026-05-31,Upper bracket semifinal 1: LGD vs PIPS+4,LGD Gaming, Pipsqueak+4,0.6506,0.8298,0.754,-0.1792,-0.1034,1,GGBet,1.13,1.24
+2026-06-01,Upper bracket quarterfinal 2: RE vs MODU,Rune Eaters,MODUS,0.543,0.5576,0.9629,-0.0146,-0.4199,0,Bet365,1.666,1.001
+2026-06-01,Lower bracket quarterfinal 1: Z10 vs LYN,Zero Tenacity,Team Lynx,0.5149,0.4111,0.134,0.1038,0.3809,0,Bet365,2.25,7.0
+2026-06-01,Lower bracket quarterfinal 2: PIPS+4 vs , Pipsqueak+4,Flame Team,0.6,0.8083,0.8879,-0.2083,-0.2879,1,GGBet,1.16,1.05
+2026-06-01,Lower bracket semifinal: PIPS+4 vs LYNX, Pipsqueak+4,Team Lynx,0.4563,0.6876,0.9629,-0.2313,-0.5066,1,Bet365,1.363,1.001
+2026-06-02,Upper bracket semifinal 1: EB vs Chandog,Estar Backs,Chandogs,0.6304,0.6234,0.6234,0.007,0.007,1,FonBet,1.48,1.48
+2026-06-02,Upper bracket final: LGD vs Na`Vi,LGD Gaming,Natus Vincere,0.3997,0.5733,0.6538,-0.1736,-0.2541,1,GGBet,1.63,1.43
+2026-06-02,Upper bracket final: NGX vs SIFR,Nigma Galaxy,sifr00,0.7443,0.9545,0.9545,-0.2102,-0.2102,1,Bet365,1.002,1.002
+2026-06-02,Lower bracket final: PIPS+4 vs Na`Vi, Pipsqueak+4,Natus Vincere,0.2946,0.2636,0.7341,0.031,-0.4395,1,GGBet,3.52,3.52
+2026-06-03,Upper Bracket Quarterfinal 1: RNX vs Gri,REKONIX,Grind Back,0.4129,0.472,0.8969,-0.0591,-0.484,1,GGBet,1.98,1.04
+2026-06-03,Upper Bracket Quarterfinal 2: GLYPH vs C,GLYPH,Carstensz,0.6258,0.8141,0.9545,-0.1883,-0.3287,1,Bet365,1.142,1.002
+2026-06-03,Upper Bracket Quarterfinal 3: Dfam vs Xc,D family,Execration,0.4847,0.2632,0.0557,0.2215,0.429,0,888Sport,3.5,17.0
+2026-06-04,Upper bracket quarterfinal 1: AUR vs TY,Aurora,Team Yandex,0.5922,0.4634,0.0558,0.1288,0.5364,0,Bet365,2.0,17.0
+2026-06-04,Lower Bracket Semifinal: CARST vs RNX,Carstensz,REKONIX,0.4479,0.1859,0.0455,0.262,0.4024,0,Bet365,5.0,21.0
+2026-06-04,Upper Bracket Final: GLYPH vs XctN,GLYPH,Execration,0.6486,0.7192,0.786,-0.0706,-0.1374,1,GGBet,1.3,1.19
+2026-06-04,Upper bracket quarterfinal 2: FLC vs Liq,Team Falcons,Team Liquid,0.5883,0.5767,0.9111,0.0116,-0.3228,1,Bet365,1.615,1.025
+2026-06-05,Lower Bracket Final: XctN vs RNX,Execration,REKONIX,0.3926,0.5,0.3549,-0.1074,0.0377,0,Bet365,1.833,2.625
+2026-06-05,Grand Final: GLYPH vs RNX,GLYPH,REKONIX,0.5582,0.5187,0.3082,0.0395,0.25,0,GGBet,1.8,3.03
+2026-06-05,Lower bracket quarterfinal 2: LGD vs Liq,LGD Gaming,Team Liquid,0.4088,0.5,0.9545,-0.0912,-0.5457,1,Bet365,1.833,1.002
+2026-06-05,Lower bracket quarterfinal 1: FLC vs AUR,Team Falcons,Aurora,0.4822,0.4233,0.0631,0.0589,0.4191,0,Bet365,2.2,15.0
+2026-06-06,Lower bracket semifinal: AUR vs LGD,Aurora,LGD Gaming,0.6977,0.6876,0.25,0.0101,0.4477,0,Bet365,1.363,3.75
+2026-06-07,Grand final: TY vs LGD,Team Yandex,LGD Gaming,0.6246,0.7091,0.9545,-0.0845,-0.3299,1,Bet365,1.333,1.002
+2026-06-08,CARST vs Dfam,Carstensz,D family,0.641,0.6479,0.8782,-0.0069,-0.2372,1,GGBet,1.44,1.06
+2026-06-08,VP.P vs Z10,VP.Prodigy,Zero Tenacity,0.2916,0.2685,0.0722,0.0231,0.2194,0,Bet365,3.5,13.0
+2026-06-10,Semifinal 2: CARST vs Grind,Carstensz,Grind Back,0.4409,0.2678,0.1073,0.1731,0.3336,1,GGBet,3.5,8.74
+2026-06-10,Quarterfinal 1: L1GA vs Z10,L1ga Team,Zero Tenacity,0.4991,0.6876,0.625,-0.1885,-0.1259,1,Bet365,1.363,1.5
+2026-06-10,Quarterfinal 2: VP.P vs MODUS,VP.Prodigy,MODUS,0.4497,0.4111,0.4111,0.0386,0.0386,1,Bet365,2.25,2.25
+2026-06-10,Quarterfinal 4: LVLUP vs YeS,Level UP,Yellow Submarine,0.1367,0.2706,0.2021,-0.1339,-0.0654,0,GGBet,3.45,4.62
+2026-06-10,Seeding match: YG vs CARST,Yangon Galacticos,Carstensz,0.4119,0.6876,0.9442,-0.2757,-0.5323,0,Bet365,1.363,1.005
+2026-06-10,Semifinal 1: L1GA vs VP.P,L1ga Team,VP.Prodigy,0.7275,0.6876,0.3124,0.0399,0.4151,1,Bet365,1.363,3.0
+2026-06-10,Grand final: L1GA vs RE,L1ga Team,Rune Eaters,0.6603,0.6578,0.8814,0.0025,-0.2211,1,GGBet,1.42,1.06
+2026-06-10,3rd place match: VP.P vs YeS,VP.Prodigy,Yellow Submarine,0.2405,0.3325,0.1286,-0.092,0.1119,0,GGBet,2.81,7.25
+2026-06-12,Quarterfinal 3: ICxI vs Nemiga,Inner Circle x Insan,Nemiga Gaming,0.5568,0.5889,0.1698,-0.0321,0.387,1,Bet365,1.571,5.5
+2026-06-12,Semifinal 2: ICxI vs MODUS,Inner Circle x Insan,MODUS,0.5893,0.5889,0.0722,0.0004,0.5171,1,Bet365,1.571,13.0
+2026-06-12,Quarterfinal 3: x5 vs ZG,x5 Gaming,Zetta Games,0.537,0.5328,0.0926,0.0042,0.4444,1,MelBet,1.736,9.99
+2026-06-13,ILL vs PR,Ilbirs eSports,Power Rangers,0.169,0.1447,0.1172,0.0243,0.0518,1,Bet365,6.5,8.0
+2026-06-14,Mentality Monster vs DB,Mentality Monster,Direborn,0.468,0.4697,0.05,-0.0017,0.418,0,888Sport,1.95,19.0
+
