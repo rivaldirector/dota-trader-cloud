@@ -208,3 +208,73 @@ def elo_edge_analysis():
         "odds_loaded": len(odds),
         "bins": result,
     }
+
+@app.get("/debug/data-links")
+def debug_data_links():
+    predictions = sb(
+        "GET",
+        "predictions?select=*&limit=10"
+    )
+
+    current_odds = sb(
+        "GET",
+        "current_odds?select=*&limit=10"
+    )
+
+    odds_snapshots = sb(
+        "GET",
+        "odds_snapshots?select=*&limit=10"
+    )
+
+    matches = sb(
+        "GET",
+        "matches?select=*&limit=10"
+    )
+
+    prediction_match_ids = [
+        p.get("match_id")
+        for p in predictions
+    ]
+
+    current_odds_match_ids = [
+        o.get("match_id")
+        for o in current_odds
+    ]
+
+    odds_snapshots_match_ids = [
+        o.get("match_id")
+        for o in odds_snapshots
+    ]
+
+    matches_ids = [
+        m.get("id")
+        for m in matches
+    ]
+
+    return {
+        "predictions_sample": predictions,
+        "current_odds_sample": current_odds,
+        "odds_snapshots_sample": odds_snapshots,
+        "matches_sample": matches,
+        "ids": {
+            "prediction_match_ids": prediction_match_ids,
+            "current_odds_match_ids": current_odds_match_ids,
+            "odds_snapshots_match_ids": odds_snapshots_match_ids,
+            "matches_ids": matches_ids,
+            "prediction_vs_current_odds_overlap": list(
+                set(map(str, prediction_match_ids))
+                &
+                set(map(str, current_odds_match_ids))
+            ),
+            "prediction_vs_odds_snapshots_overlap": list(
+                set(map(str, prediction_match_ids))
+                &
+                set(map(str, odds_snapshots_match_ids))
+            ),
+            "prediction_vs_matches_overlap": list(
+                set(map(str, prediction_match_ids))
+                &
+                set(map(str, matches_ids))
+            ),
+        },
+    }
