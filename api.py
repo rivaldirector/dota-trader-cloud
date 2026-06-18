@@ -6,23 +6,21 @@ import urllib.error
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-
 app = FastAPI(
     title="Dota Trader Orchestrator API",
     version="0.1.1",
 )
 
-
-# -------------------------
-# ENV
-# -------------------------
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
 
-# -------------------------
-# SUPABASE CLIENT
-# -------------------------
+class TaskRequest(BaseModel):
+    task: str
+    priority: int = 1000
+    assigned_to: str = "GPT"
+
+
 def sb(method, path, payload=None):
     data = None if payload is None else json.dumps(payload).encode()
 
@@ -46,26 +44,11 @@ def sb(method, path, payload=None):
         raise HTTPException(status_code=500, detail=body)
 
 
-# -------------------------
-# MODELS
-# -------------------------
-class TaskRequest(BaseModel):
-    task: str
-    priority: int = 1000
-    assigned_to: str = "GPT"
-
-
-# -------------------------
-# HEALTH
-# -------------------------
 @app.get("/health")
 def health():
     return {"ok": True}
 
 
-# -------------------------
-# TASKS
-# -------------------------
 @app.post("/tasks")
 def create_task(body: TaskRequest):
     rows = sb("POST", "research_queue", [{
@@ -74,45 +57,45 @@ def create_task(body: TaskRequest):
         "assigned_to": body.assigned_to,
         "task": body.task,
     }])
-
     return {"created": True, "task": rows[0] if rows else None}
 
 
-@app.get("/tasks/latest")
-def latest_tasks():
-    return sb(
-        "GET",
-        "research_queue?select=id,created_at,priority,status,assigned_to,task&order=id.desc&limit=10"
-    )
-
-
-# -------------------------
-# DB DEBUG
-# -------------------------
 @app.get("/db/summary")
 def db_summary():
     return {
         "matches": sb("GET", "matches?select=*&limit=3"),
-        "odds": sb("GET", "current_odds?select=*&limit=3"),
+        "current_odds": sb("GET", "current_odds?select=*&limit=3"),
         "predictions": sb("GET", "predictions?select=*&limit=3"),
-        "queue": sb("GET", "research_queue?select=*&limit=3"),
+        "odds_snapshots": sb("GET", "odds_snapshots?select=*&limit=3"),
     }
 
 
-# -------------------------
-# ELO EDGE ANALYTICS
-# -------------------------
 @app.get("/analysis/elo-edge")
 def elo_edge_analysis():
 
-    predictions = sb("GET", "predictions?select=*&limit=5000")
-    odds = sb("GET", "current_odds?select=*&limit=5000")
+    predictions = sb("GET", "predictions?select=*&limit=10000")
+    odds = sb("GET", "current_odds?select=*&limit=10000")
+
+    def norm(x):
+        return str(x or "").lower().strip()
+
+    def norm_id(x):
+        return str(x).strip()
+
+    def valid_odds(x):
+        try:
+            x = float(x)
+            return 1.01 <= x <= 10
+        except:
+            return False
 
     odds_by_match = {}
     for o in odds:
         mid = o.get("match_id")
-        if mid:
-            odds_by_match.setdefault(str(mid), []).append(o)
+        if not mid:
+            continue
+        mid = norm_id(mid)
+        odds_by_match.setdefault(mid, []).append(o)
 
     bins = {
         "0-2%": [],
@@ -123,18 +106,8 @@ def elo_edge_analysis():
         "10%+": [],
     }
 
-    def norm(x):
-        return str(x or "").lower().strip()
-
-    def to_bool(x):
-        if isinstance(x, bool):
-            return x
-        if isinstance(x, str):
-            return x.lower() in ["true", "1", "yes", "won", "win"]
-        return bool(x)
-
-    def get_bin(edge):
-        e = edge * 100
+    def edge_bin(e):
+        e = e * 100
         if e < 0:
             return None
         if e < 2:
@@ -149,10 +122,15 @@ def elo_edge_analysis():
             return "8-10%"
         return "10%+"
 
+    matched = 0
+
     for p in predictions:
+
         mid = p.get("match_id")
         if not mid:
             continue
+
+        mid = norm_id(mid)
 
         model_prob = p.get("predicted_probability")
         team = p.get("predicted_team")
@@ -166,7 +144,10 @@ def elo_edge_analysis():
         except:
             continue
 
-        for o in odds_by_match.get(str(mid), []):
+        if mid not in odds_by_match:
+            continue
+
+        for o in odds_by_match[mid]:
 
             odd = None
 
@@ -177,23 +158,20 @@ def elo_edge_analysis():
             else:
                 continue
 
-            try:
-                odd = float(odd)
-            except:
+            if not valid_odds(odd):
                 continue
 
-            if odd <= 1:
-                continue
+            odd = float(odd)
 
             implied = 1 / odd
             edge = model_prob - implied
-            b = get_bin(edge)
 
+            b = edge_bin(edge)
             if not b:
                 continue
 
-            won = to_bool(is_win)
-            profit = (odd - 1) if won else -1
+            won = bool(is_win)
+            profit = odd - 1 if won else -1
 
             bins[b].append({
                 "match_id": mid,
@@ -203,12 +181,15 @@ def elo_edge_analysis():
                 "implied_prob": implied,
                 "edge": edge,
                 "won": won,
-                "profit": profit
+                "profit": profit,
             })
+
+            matched += 1
 
     result = {}
 
     for k, bets in bins.items():
+
         if not bets:
             result[k] = {
                 "bets": 0,
@@ -228,24 +209,22 @@ def elo_edge_analysis():
             "wins": wins,
             "winrate": round(wins / len(bets) * 100, 2),
             "roi": round(profit / len(bets) * 100, 2),
-            "avg_odds": round(avg_odds, 3)
+            "avg_odds": round(avg_odds, 3),
         }
 
     return {
-        "analysis": "elo_edge",
+        "analysis": "elo_edge_v3",
         "predictions": len(predictions),
         "odds": len(odds),
-        "bins": result
+        "matched_pairs": matched,
+        "bins": result,
     }
 
 
-# -------------------------
-# DEBUG DATA LINKS
-# -------------------------
 @app.get("/debug/data-links")
-def debug_links():
+def debug():
     return {
         "predictions": sb("GET", "predictions?select=*&limit=5"),
         "odds": sb("GET", "current_odds?select=*&limit=5"),
-        "matches": sb("GET", "matches?select=*&limit=5")
+        "matches": sb("GET", "matches?select=*&limit=5"),
     }
