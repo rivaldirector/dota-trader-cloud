@@ -1,0 +1,55 @@
+name: Dota Trader — Cloud Harvest
+
+on:
+  # GPT triggers this via: POST /repos/rivaldirector/dota-trader-cloud/dispatches
+  # Body: {"event_type": "harvest", "client_payload": {"phase": "upcoming"}}
+  repository_dispatch:
+    types: [harvest]
+
+  # Manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: "Phase: all / upcoming / ended / live"
+        default: "all"
+        required: false
+
+  # Fallback schedule — every 6h in case GPT is offline
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Run Supabase Harvest
+        env:
+          BETSAPI_TOKEN:     ${{ secrets.BETSAPI_TOKEN }}
+          SUPABASE_URL:      ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          # Phase from dispatch payload, or manual input, or default "all"
+          HARVEST_PHASE: ${{ github.event.client_payload.phase || github.event.inputs.phase || 'all' }}
+        run: |
+          echo "BETSAPI_TOKEN=${BETSAPI_TOKEN}"          > .env
+          echo "SUPABASE_URL=${SUPABASE_URL}"           >> .env
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+          echo "HARVEST_PHASE=${HARVEST_PHASE}"         >> .env
+
+          python3 scripts/supabase_harvest.py
+
+      - name: Summary
+        if: always()
+        run: echo "Harvest finished at $(date -u)"

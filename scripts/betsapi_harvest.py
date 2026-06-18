@@ -279,8 +279,13 @@ def parse_event(e: dict, status: str) -> dict:
     away   = (e.get("away")   or {}).get("name", "")
     ss     = e.get("ss") or e.get("score", "")
     winner = None
-    if ss and "-" in str(ss):
-        parts = str(ss).split("-")
+    ss_str = str(ss).strip().lower() if ss else ""
+    if ss_str == "home":
+        winner = home
+    elif ss_str == "away":
+        winner = away
+    elif "-" in ss_str:
+        parts = ss_str.split("-")
         try:
             h, a = int(parts[0].strip()), int(parts[1].strip())
             winner = home if h > a else (away if a > h else "draw")
@@ -312,6 +317,73 @@ def now_iso() -> str:
 
 
 # ── Phase runners ─────────────────────────────────────────────────────────────
+
+def phase0_settle_pending(api: BetsAPI, conn: sqlite3.Connection) -> int:
+    """Settle 'upcoming' events that started >2h ago by re-fetching from ended endpoint."""
+    import time as _time
+    cutoff = int(_time.time()) - 7200  # 2 hours ago
+    pending = conn.execute(
+        """SELECT DISTINCT date(datetime(CAST(start_time AS INTEGER), 'unixepoch')) as day
+           FROM raw_events
+           WHERE status='upcoming' AND CAST(start_time AS INTEGER) < ?""",
+        (cutoff,)
+    ).fetchall()
+
+    if not pending:
+        print("\n[Phase 0] No pending events to settle.", flush=True)
+        return 0
+
+    days = [r[0].replace("-", "") for r in pending]
+    print(f"\n[Phase 0] Settling pending events for {len(days)} day(s): {days}", flush=True)
+
+    updated = 0
+    for day_str in days:
+        page = 1
+        while page <= 50:
+            try:
+                data  = api.ended(page=page, day=day_str)
+                items = data.get("results", [])
+                if not items:
+                    break
+                total = data.get("pager", {}).get("total", 0)
+
+                for e in items:
+                    rec = parse_event(e, "ended")
+                    if not rec["event_id"]:
+                        continue
+                    # Insert if new
+                    conn.execute(
+                        """INSERT OR IGNORE INTO raw_events
+                           (event_id,sport_tag,league,home_team,away_team,
+                            start_time,status,score,winner,raw_json)
+                           VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                        (rec["event_id"], rec["sport_tag"], rec["league"],
+                         rec["home_team"], rec["away_team"], rec["start_time"],
+                         rec["status"], rec["score"], rec["winner"], rec["raw_json"])
+                    )
+                    # Update existing upcoming → ended
+                    cur = conn.execute(
+                        """UPDATE raw_events SET status=?, score=?, winner=?, raw_json=?
+                           WHERE event_id=? AND status='upcoming'""",
+                        (rec["status"], rec["score"], rec["winner"], rec["raw_json"],
+                         rec["event_id"])
+                    )
+                    updated += cur.rowcount
+
+                conn.commit()
+                if page * PAGE_SIZE >= total:
+                    break
+                page += 1
+            except Exception as ex:
+                print(f"  [WARN] settle {day_str} page {page}: {ex}", flush=True)
+                break
+
+    settled = conn.execute(
+        "SELECT COUNT(*) FROM raw_events WHERE status='ended' AND score IS NOT NULL AND score!=''"
+    ).fetchone()[0]
+    print(f"  → {updated} rows settled | total ended w/ score: {settled}", flush=True)
+    return updated
+
 
 def phase1_upcoming(api: BetsAPI, conn: sqlite3.Connection) -> int:
     """Download all upcoming events."""
@@ -449,6 +521,13 @@ def phase3_ended_events(api: BetsAPI, conn: sqlite3.Connection) -> int:
                             (rec["event_id"], rec["sport_tag"], rec["league"],
                              rec["home_team"], rec["away_team"], rec["start_time"],
                              rec["status"], rec["score"], rec["winner"], rec["raw_json"])
+                        )
+                        # Also update existing "upcoming" rows that are now ended
+                        conn.execute(
+                            """UPDATE raw_events SET status=?, score=?, winner=?, raw_json=?
+                               WHERE event_id=? AND status='upcoming'""",
+                            (rec["status"], rec["score"], rec["winner"], rec["raw_json"],
+                             rec["event_id"])
                         )
                         day_inserted += 1
                         if rec["sport_tag"] == "dota2":
@@ -864,6 +943,10 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description="BetsAPI Harvest")
     parser.add_argument(
+        "--settle-only", action="store_true",
+        help="Только Phase 0: осадить pending upcoming события (быстро, мало API-запросов)."
+    )
+    parser.add_argument(
         "--phase5-only", action="store_true",
         help="Пропустить Phases 1-4, запустить только Phase 5 (odds_history)."
     )
@@ -931,13 +1014,18 @@ def main():
     conn.commit()
 
     try:
-        if args.phase5_only:
+        if args.settle_only:
+            phase0_settle_pending(api, conn)
+        elif args.phase5_only:
             # Jump straight to Phase 5 — Phases 1-4 already done
             phase5_dota2_odds_history(
                 api, conn, max_events=15000, daily_cap=args.cap,
                 limit=args.limit, dry_run=args.dry_run
             )
         else:
+            # Phase 0: Settle pending upcoming events that have now ended
+            phase0_settle_pending(api, conn)
+
             # Phase 1 + 2: Upcoming
             phase1_upcoming(api, conn)
             phase2_upcoming_odds(api, conn)

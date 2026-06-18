@@ -219,6 +219,95 @@ def analyze_line_movement(task: dict) -> dict:
     }
 
 
+def analyze_value_detection(task: dict) -> dict:
+    """Матчи где рынок (Pinnacle close) сильно расходился с implied prob от соотношения odds."""
+    conn = harvest_conn()
+    if not conn:
+        return {"error": "betsapi_harvest.db not found"}
+
+    # Для каждого матча берём Pinnacle close и считаем implied prob
+    # Затем смотрим на winner — совпало ли с тем, на кого была поставлена линия
+    rows = conn.execute("""
+        SELECT
+            os.event_id,
+            re.home_team,
+            re.away_team,
+            re.league,
+            re.winner,
+            re.score,
+            os.bookmaker,
+            os.open_home,
+            os.open_away,
+            os.close_home,
+            os.close_away,
+            -- Implied probability (no-vig)
+            ROUND(1.0/os.close_home / (1.0/os.close_home + 1.0/os.close_away), 4) AS implied_home_prob,
+            ROUND(1.0/os.close_away / (1.0/os.close_home + 1.0/os.close_away), 4) AS implied_away_prob,
+            -- Line movement direction
+            ROUND(os.open_home - os.close_home, 3) AS home_move,
+            ROUND(os.open_away - os.close_away, 3) AS away_move
+        FROM odds_summary os
+        JOIN raw_events re ON os.event_id = re.event_id
+        WHERE os.bookmaker IN ('Pinnacle', 'PinnacleSports')
+          AND os.close_home IS NOT NULL AND os.close_away IS NOT NULL
+          AND os.close_home > 1.0 AND os.close_away > 1.0
+          AND re.winner IS NOT NULL
+          AND re.sport_tag = 'dota2'
+        ORDER BY os.event_id
+    """).fetchall()
+
+    if not rows:
+        conn.close()
+        return {"error": "No Pinnacle rows with winner data found"}
+
+    total = len(rows)
+    # Фаворит по рынку выиграл
+    fav_wins = sum(1 for r in rows if (
+        (r["implied_home_prob"] > 0.5 and r["winner"] == "1") or
+        (r["implied_away_prob"] > 0.5 and r["winner"] == "2")
+    ))
+    # Underdog wins
+    dog_wins = total - fav_wins
+
+    # Большие аутсайдеры (implied < 25%) которые выиграли
+    big_upsets = [dict(r) for r in rows
+                  if r["winner"] == "1" and r["implied_home_prob"] < 0.25
+                  or r["winner"] == "2" and r["implied_away_prob"] < 0.25]
+
+    # Матчи где линия сильно двигалась (>0.3) и движение правильно предсказало победителя
+    sharp_correct = [dict(r) for r in rows
+                     if r["home_move"] > 0.3 and r["winner"] == "2"  # home shortened → away won
+                     or r["away_move"] > 0.3 and r["winner"] == "1"]  # away shortened → home won
+
+    # Overround Pinnacle
+    overrounds = [(1/r["close_home"] + 1/r["close_away"]) for r in rows
+                  if r["close_home"] and r["close_away"]]
+    avg_overround = round(sum(overrounds)/len(overrounds), 4) if overrounds else 0
+
+    conn.close()
+
+    fav_win_rate = round(fav_wins / total * 100, 1) if total else 0
+
+    return {
+        "total_pinnacle_matches": total,
+        "favorite_win_rate_pct":  fav_win_rate,
+        "underdog_wins":          dog_wins,
+        "big_upsets_count":       len(big_upsets),
+        "big_upsets_sample":      big_upsets[:5],
+        "sharp_money_correct":    len(sharp_correct),
+        "sharp_money_correct_pct": round(len(sharp_correct) / total * 100, 1) if total else 0,
+        "avg_pinnacle_overround": avg_overround,
+        "key_finding": (
+            f"Pinnacle: {total} матчей с winner. "
+            f"Фаворит выиграл в {fav_win_rate}% случаев. "
+            f"Больших сюрпризов (андердог <25%): {len(big_upsets)}. "
+            f"Sharp money (движение >0.3) угадало победителя: {len(sharp_correct)} раз "
+            f"({round(len(sharp_correct)/total*100,1) if total else 0}%). "
+            f"Avg overround Pinnacle: {avg_overround}."
+        ),
+    }
+
+
 def analyze_dataset_summary(task: dict) -> dict:
     """Общая сводка собранного датасета."""
     conn = harvest_conn()
@@ -287,6 +376,7 @@ ANALYZERS = {
     "bookmaker_coverage":  analyze_bookmaker_coverage,
     "line_movement":       analyze_line_movement,
     "dataset_summary":     analyze_dataset_summary,
+    "value_detection":     analyze_value_detection,
 }
 
 
@@ -373,6 +463,7 @@ def main():
         "dataset_summary":    "bookmaker_coverage: Какие букмекеры покрывают Dota2, overround, движение",
         "bookmaker_coverage": "line_movement: Анализ sharp money — open→close, Pinnacle vs soft books",
         "line_movement":      "value_detection: Матчи где Elo расходился с рынком и был прав",
+        "value_detection":    "calibration_check: Калибровка Elo — насколько predicted prob совпадает с реальной win rate",
     }
     next_task_text = next_map.get(task_type, "dataset_summary: Обновлённая сводка датасета")
     next_priority  = max(10, task.get("priority", 50) - 10)
