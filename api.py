@@ -278,3 +278,17 @@ def debug_data_links():
             ),
         },
     }
+
+@app.post("/sync/match-links")
+def sync_match_links():
+    matches = sb("GET", "matches?select=id,match_external_id,name&limit=10000")
+
+    rows = []
+    for m in matches:
+        rows.append({
+            "match_external_id": m.get("match_external_id"),
+            "match_id": str(m.get("id")),
+            "match_name": m.get("name"),
+        })
+
+    return sb("POST", "match_links", rows)
