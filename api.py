@@ -5,7 +5,16 @@ import urllib.request
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-app = FastAPI(title="Dota Trader Orchestrator API")
+app = FastAPI(
+    title="Dota Trader Orchestrator API",
+    version="0.1.0",
+    servers=[
+        {
+            "url": "https://dota-trader-cloud-production.up.railway.app",
+            "description": "Production",
+        }
+    ],
+)
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
