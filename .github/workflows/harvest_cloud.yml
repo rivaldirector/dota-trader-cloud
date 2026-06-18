@@ -39,8 +39,7 @@ jobs:
         env:
           BETSAPI_TOKEN:     ${{ secrets.BETSAPI_TOKEN }}
           SUPABASE_URL:      ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          # Phase from dispatch payload, or manual input, or default "all"
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
           HARVEST_PHASE: ${{ github.event.client_payload.phase || github.event.inputs.phase || 'all' }}
         run: |
           echo "BETSAPI_TOKEN=${BETSAPI_TOKEN}"          > .env
