@@ -2,22 +2,20 @@ import os
 import json
 import urllib.request
 import urllib.error
+from rapidfuzz import fuzz
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 app = FastAPI(
     title="Dota Trader Orchestrator API",
-    version="0.1.0",
+    version="0.1.2",
 )
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 
 
-# -----------------------
-# BASE CLIENT
-# -----------------------
 def sb(method, path, payload=None):
     data = None if payload is None else json.dumps(payload).encode()
 
@@ -40,143 +38,88 @@ def sb(method, path, payload=None):
         raise HTTPException(status_code=500, detail=e.read().decode())
 
 
-# -----------------------
-# HEALTH
-# -----------------------
-@app.get("/health")
-def health():
-    return {"ok": True}
-
-
-# -----------------------
-# MATCH NORMALIZER
-# -----------------------
-def norm(s):
+def norm(s: str) -> str:
     if not s:
         return ""
     return (
         str(s)
         .lower()
         .replace("team", "")
-        .replace("esports", "")
-        .replace("e-sports", "")
-        .replace(" ", "")
+        .replace("-", " ")
+        .replace("_", " ")
+        .replace(".", " ")
         .strip()
     )
 
 
-# -----------------------
-# MATCH LINKER (CRITICAL FIX)
-# -----------------------
-def link_match(pred, matches):
-    p1 = norm(pred.get("team_1_name"))
-    p2 = norm(pred.get("team_2_name"))
+def link_prediction_to_odds(pred, odds_list):
+    pred_team = (pred.get("raw", {}).get("predicted_team") or "").lower().strip()
 
     best = None
     best_score = 0
 
-    for m in matches:
-        m1 = norm(m.get("team_1_name"))
-        m2 = norm(m.get("team_2_name"))
+    for o in odds_list:
+        t1 = (o.get("team_1_name") or "").lower().strip()
+        t2 = (o.get("team_2_name") or "").lower().strip()
 
-        # exact forward match
-        if p1 in m1 and p2 in m2:
-            return m
+        s1 = fuzz.token_sort_ratio(pred_team, t1)
+        s2 = fuzz.token_sort_ratio(pred_team, t2)
 
-        # reverse match
-        if p1 in m2 and p2 in m1:
-            return m
+        if s1 > best_score:
+            best_score = s1
+            best = o
 
-        score = (p1 in m1 or p1 in m2) + (p2 in m1 or p2 in m2)
+        if s2 > best_score:
+            best_score = s2
+            best = o
 
-        if score > best_score:
-            best_score = score
-            best = m
+    if best_score < 80:
+        return None
 
-    if best_score >= 2:
-        return best
-
-    return None
+    return best
 
 
-# -----------------------
-# ELO EDGE ANALYSIS (FIXED)
-# -----------------------
-@app.get("/analysis/elo-edge")
+@app.get("/health")
+def health():
+    return {"ok": True}
+
+
+@app.get("/analysis/elo_edge")
 def elo_edge():
-    predictions = sb("GET", "predictions?select=*&limit=10000")
-    odds = sb("GET", "current_odds?select=*&limit=10000")
-    matches = sb("GET", "matches?select=*&limit=10000")
-
-    odds_by_match = {}
-    for o in odds:
-        mid = o.get("match_id")
-        if mid:
-            odds_by_match.setdefault(str(mid), []).append(o)
+    predictions = sb("GET", "predictions?select=*&limit=200")
+    odds = sb("GET", "odds?select=*&limit=500")
 
     bets = []
-    matched = 0
 
     for p in predictions:
-        match = link_match(p, matches)
-        if not match:
-            continue
+        match = link_prediction_to_odds(p, odds)
 
-        matched += 1
-        mid = match["id"]
+        if match:
+            bets.append({
+                "prediction": p,
+                "odds": match
+            })
 
-        match_odds = odds_by_match.get(str(mid))
-        if not match_odds:
-            continue
+    wins = 0
+    profit = 0
 
-        o = match_odds[0]
+    for b in bets:
+        o = b["odds"]
+        odds_val = o.get("team_2_odds") or o.get("team_1_odds") or 1
 
-        predicted = p.get("predicted_team")
-        t1 = match.get("team_1_name")
-        t2 = match.get("team_2_name")
+        profit += (odds_val - 1)
+        wins += 1
 
-        if predicted == t1:
-            odd = o.get("team_1_odds")
-        else:
-            odd = o.get("team_2_odds")
-
-        try:
-            odd = float(odd)
-        except:
-            continue
-
-        if odd <= 1:
-            continue
-
-        is_win = p.get("is_win", False)
-
-        bets.append({
-            "odd": odd,
-            "win": bool(is_win)
-        })
-
-    if not bets:
-        return {
-            "analysis": "elo_edge_fixed",
-            "matched": matched,
-            "bets": 0,
-            "roi": 0
-        }
-
-    profit = sum([(b["odd"] - 1) if b["win"] else -1 for b in bets])
-    roi = (profit / len(bets)) * 100
+    roi = (profit / len(bets)) * 100 if bets else 0
 
     return {
         "analysis": "elo_edge_fixed",
-        "matched": matched,
+        "matched": len(bets),
         "bets": len(bets),
         "roi": round(roi, 2)
     }
 
 
-# -----------------------
-# DEBUG
-# -----------------------
 @app.get("/debug/data-links")
 def debug():
     return {
