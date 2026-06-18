@@ -103,25 +103,36 @@ def db_summary():
             "research_queue?select=*&limit=3",
         ),
     }
+
+
 @app.get("/analysis/elo-edge")
 def elo_edge_analysis():
     predictions = sb(
         "GET",
-        "predictions?select=match_id,team_1_prob,team_2_prob&limit=10000"
+        "predictions?select=match_id,team_1_prob,team_2_prob&limit=10000",
     )
 
     odds = sb(
         "GET",
-        "current_odds?select=match_id,bookmaker,team_1_name,team_2_name,team_1_odds,team_2_odds&limit=10000"
+        "current_odds?select=match_id,bookmaker,team_1_name,team_2_name,team_1_odds,team_2_odds&limit=10000",
     )
 
     matches = sb(
         "GET",
-        "matches?select=id,winner,team_1_name,team_2_name,status&limit=10000"
+        "matches?select=id,winner_id,winner_type,opponents,status&limit=10000",
     )
 
-    pred_by_match = {p["match_id"]: p for p in predictions if p.get("match_id")}
-    match_by_id = {m["id"]: m for m in matches if m.get("id")}
+    pred_by_match = {
+        p["match_id"]: p
+        for p in predictions
+        if p.get("match_id")
+    }
+
+    match_by_id = {
+        m["id"]: m
+        for m in matches
+        if m.get("id")
+    }
 
     bins = {
         "0-2%": [],
@@ -134,6 +145,7 @@ def elo_edge_analysis():
 
     def edge_bin(edge):
         e = edge * 100
+
         if e < 0:
             return None
         if e < 2:
@@ -146,7 +158,25 @@ def elo_edge_analysis():
             return "6-8%"
         if e < 10:
             return "8-10%"
+
         return "10%+"
+
+    def get_winner_name(match):
+        winner_id = match.get("winner_id")
+        opponents = match.get("opponents") or []
+
+        for item in opponents:
+            opponent = item.get("opponent") or {}
+            if opponent.get("id") == winner_id:
+                return opponent.get("name")
+
+        return None
+
+    def same_team(a, b):
+        if not a or not b:
+            return False
+
+        return str(a).lower().strip() == str(b).lower().strip()
 
     for o in odds:
         match_id = o.get("match_id")
@@ -156,8 +186,9 @@ def elo_edge_analysis():
         if not pred or not match:
             continue
 
-        winner = match.get("winner")
-        if not winner:
+        winner_name = get_winner_name(match)
+
+        if not winner_name:
             continue
 
         for side in [1, 2]:
@@ -175,20 +206,23 @@ def elo_edge_analysis():
             if not b:
                 continue
 
-            won = str(winner).lower() in str(team_name).lower()
+            won = same_team(winner_name, team_name)
             profit = odd - 1 if won else -1
 
-            bins[b].append({
-                "match_id": match_id,
-                "bookmaker": o.get("bookmaker"),
-                "team": team_name,
-                "odd": odd,
-                "model_prob": model_prob,
-                "implied_prob": implied_prob,
-                "edge": edge,
-                "won": won,
-                "profit": profit,
-            })
+            bins[b].append(
+                {
+                    "match_id": match_id,
+                    "bookmaker": o.get("bookmaker"),
+                    "team": team_name,
+                    "winner": winner_name,
+                    "odd": odd,
+                    "model_prob": model_prob,
+                    "implied_prob": implied_prob,
+                    "edge": edge,
+                    "won": won,
+                    "profit": profit,
+                }
+            )
 
     result = {}
 
@@ -216,5 +250,6 @@ def elo_edge_analysis():
 
     return {
         "analysis": "elo_edge",
+        "source": "current_odds",
         "bins": result,
     }
