@@ -22,8 +22,22 @@ class TaskRequest(BaseModel):
     priority: int = 1000
     assigned_to: str = "GPT"
 
-def check_auth(x_api_key: str | None):
-    if not ORCHESTRATOR_API_KEY or x_api_key != ORCHESTRATOR_API_KEY:
+def check_auth(
+    authorization: str | None = None,
+    x_api_key: str | None = None,
+):
+    key = None
+
+    if x_api_key:
+        key = x_api_key
+
+    elif authorization:
+        if authorization.startswith("Bearer "):
+            key = authorization.replace("Bearer ", "").strip()
+        else:
+            key = authorization.strip()
+
+    if not ORCHESTRATOR_API_KEY or key != ORCHESTRATOR_API_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 def sb(method, path, payload=None):
@@ -46,24 +60,41 @@ def health():
     return {"ok": True}
 
 @app.post("/tasks")
-def create_task(body: TaskRequest, x_api_key: str | None = Header(default=None)):
-    check_auth(x_api_key)
+def create_task(
+    body: TaskRequest,
+    authorization: str | None = Header(default=None),
+    x_api_key: str | None = Header(default=None),
+):
+    check_auth(authorization=authorization, x_api_key=x_api_key)
+
     rows = sb("POST", "research_queue", [{
         "priority": body.priority,
         "status": "todo",
         "assigned_to": body.assigned_to,
         "task": body.task,
     }])
+
     return {"created": True, "task": rows[0] if rows else None}
 
 @app.get("/tasks/latest")
-def latest_tasks(x_api_key: str | None = Header(default=None)):
-    check_auth(x_api_key)
-    return sb("GET", "research_queue?select=id,created_at,priority,status,assigned_to,task,result&order=id.desc&limit=10")
+def latest_tasks(
+    authorization: str | None = Header(default=None),
+    x_api_key: str | None = Header(default=None),
+):
+    check_auth(authorization=authorization, x_api_key=x_api_key)
+
+    return sb(
+        "GET",
+        "research_queue?select=id,created_at,priority,status,assigned_to,task,result&order=id.desc&limit=10"
+    )
 
 @app.get("/db/summary")
-def db_summary(x_api_key: str | None = Header(default=None)):
-    check_auth(x_api_key)
+def db_summary(
+    authorization: str | None = Header(default=None),
+    x_api_key: str | None = Header(default=None),
+):
+    check_auth(authorization=authorization, x_api_key=x_api_key)
+
     return {
         "matches_sample": sb("GET", "matches?select=*&limit=3"),
         "current_odds_sample": sb("GET", "current_odds?select=*&limit=3"),
