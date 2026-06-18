@@ -1,0 +1,45 @@
+name: Dota Trader — Signal Engine
+
+on:
+  # Каждые 2 часа автоматически
+  schedule:
+    - cron: "0 */2 * * *"
+
+  # Ручной запуск из GitHub UI
+  workflow_dispatch:
+
+  # GPT или Claude может триггернуть через repository_dispatch
+  repository_dispatch:
+    types: [signals]
+
+jobs:
+  signals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Run Signal Engine
+        env:
+          BETSAPI_TOKEN:     ${{ secrets.BETSAPI_TOKEN }}
+          SUPABASE_URL:      ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          echo "BETSAPI_TOKEN=${BETSAPI_TOKEN}"          > .env
+          echo "SUPABASE_URL=${SUPABASE_URL}"           >> .env
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+          python3 scripts/signal_engine.py
+
+      - name: Summary
+        if: always()
+        run: echo "Signal scan finished at $(date -u)"
