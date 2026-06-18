@@ -103,3 +103,118 @@ def db_summary():
             "research_queue?select=*&limit=3",
         ),
     }
+@app.get("/analysis/elo-edge")
+def elo_edge_analysis():
+    predictions = sb(
+        "GET",
+        "predictions?select=match_id,team_1_prob,team_2_prob&limit=10000"
+    )
+
+    odds = sb(
+        "GET",
+        "current_odds?select=match_id,bookmaker,team_1_name,team_2_name,team_1_odds,team_2_odds&limit=10000"
+    )
+
+    matches = sb(
+        "GET",
+        "matches?select=id,winner,team_1_name,team_2_name,status&limit=10000"
+    )
+
+    pred_by_match = {p["match_id"]: p for p in predictions if p.get("match_id")}
+    match_by_id = {m["id"]: m for m in matches if m.get("id")}
+
+    bins = {
+        "0-2%": [],
+        "2-4%": [],
+        "4-6%": [],
+        "6-8%": [],
+        "8-10%": [],
+        "10%+": [],
+    }
+
+    def edge_bin(edge):
+        e = edge * 100
+        if e < 0:
+            return None
+        if e < 2:
+            return "0-2%"
+        if e < 4:
+            return "2-4%"
+        if e < 6:
+            return "4-6%"
+        if e < 8:
+            return "6-8%"
+        if e < 10:
+            return "8-10%"
+        return "10%+"
+
+    for o in odds:
+        match_id = o.get("match_id")
+        pred = pred_by_match.get(match_id)
+        match = match_by_id.get(match_id)
+
+        if not pred or not match:
+            continue
+
+        winner = match.get("winner")
+        if not winner:
+            continue
+
+        for side in [1, 2]:
+            model_prob = pred.get(f"team_{side}_prob")
+            odd = o.get(f"team_{side}_odds")
+            team_name = o.get(f"team_{side}_name")
+
+            if not model_prob or not odd or odd <= 1:
+                continue
+
+            implied_prob = 1 / odd
+            edge = model_prob - implied_prob
+            b = edge_bin(edge)
+
+            if not b:
+                continue
+
+            won = str(winner).lower() in str(team_name).lower()
+            profit = odd - 1 if won else -1
+
+            bins[b].append({
+                "match_id": match_id,
+                "bookmaker": o.get("bookmaker"),
+                "team": team_name,
+                "odd": odd,
+                "model_prob": model_prob,
+                "implied_prob": implied_prob,
+                "edge": edge,
+                "won": won,
+                "profit": profit,
+            })
+
+    result = {}
+
+    for b, bets in bins.items():
+        if not bets:
+            result[b] = {
+                "bets": 0,
+                "winrate": None,
+                "roi": None,
+                "avg_odds": None,
+            }
+            continue
+
+        wins = sum(1 for x in bets if x["won"])
+        profit = sum(x["profit"] for x in bets)
+        avg_odds = sum(x["odd"] for x in bets) / len(bets)
+
+        result[b] = {
+            "bets": len(bets),
+            "wins": wins,
+            "winrate": round(wins / len(bets) * 100, 2),
+            "roi": round(profit / len(bets) * 100, 2),
+            "avg_odds": round(avg_odds, 3),
+        }
+
+    return {
+        "analysis": "elo_edge",
+        "bins": result,
+    }
