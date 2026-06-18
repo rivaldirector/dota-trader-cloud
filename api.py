@@ -1,19 +1,15 @@
 import os
 import json
 import urllib.request
+import urllib.error
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 app = FastAPI(
     title="Dota Trader Orchestrator API",
     version="0.1.0",
-    servers=[
-        {
-            "url": "https://dota-trader-cloud-production.up.railway.app",
-            "description": "Production",
-        }
-    ],
+    servers=[{"url": "https://dota-trader-cloud-production.up.railway.app", "description": "Production"}],
 )
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -41,8 +37,12 @@ def sb(method, path, payload=None):
         },
     )
 
-    raw = urllib.request.urlopen(req).read().decode()
-    return json.loads(raw) if raw else []
+    try:
+        raw = urllib.request.urlopen(req).read().decode()
+        return json.loads(raw) if raw else []
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()
+        raise HTTPException(status_code=500, detail={"supabase_path": path, "error": body})
 
 
 @app.get("/health")
@@ -58,7 +58,6 @@ def create_task(body: TaskRequest):
         "assigned_to": body.assigned_to,
         "task": body.task,
     }])
-
     return {"created": True, "task": rows[0] if rows else None}
 
 
@@ -82,22 +81,14 @@ def db_summary():
 
 @app.get("/analysis/elo-edge")
 def elo_edge_analysis():
-    predictions = sb(
-        "GET",
-        "predictions?select=match_id,predicted_probability,is_win,fair_odds_1,fair_odds_2,confidence,predicted_team,winner_name&limit=10000",
-    )
-
-    odds = sb(
-        "GET",
-        "current_odds?select=match_id,bookmaker,team_1_name,team_2_name,team_1_odds,team_2_odds&limit=10000",
-    )
+    predictions = sb("GET", "predictions?select=*&limit=10000")
+    odds = sb("GET", "current_odds?select=*&limit=10000")
 
     odds_by_match = {}
     for o in odds:
         mid = o.get("match_id")
-        if not mid:
-            continue
-        odds_by_match.setdefault(mid, []).append(o)
+        if mid is not None:
+            odds_by_match.setdefault(str(mid), []).append(o)
 
     bins = {
         "0-2%": [],
@@ -107,6 +98,16 @@ def elo_edge_analysis():
         "8-10%": [],
         "10%+": [],
     }
+
+    def norm(x):
+        return str(x or "").lower().strip()
+
+    def to_bool(x):
+        if isinstance(x, bool):
+            return x
+        if isinstance(x, str):
+            return x.lower() in ["true", "1", "yes", "win", "won"]
+        return bool(x)
 
     def edge_bin(edge):
         e = edge * 100
@@ -124,27 +125,39 @@ def elo_edge_analysis():
             return "8-10%"
         return "10%+"
 
-    def norm(x):
-        return str(x or "").lower().strip()
-
     for p in predictions:
         mid = p.get("match_id")
+        if mid is None:
+            continue
+
         model_prob = p.get("predicted_probability")
         predicted_team = p.get("predicted_team")
         is_win = p.get("is_win")
 
-        if not mid or not model_prob or is_win is None:
+        if model_prob is None or not predicted_team or is_win is None:
             continue
 
-        for o in odds_by_match.get(mid, []):
+        try:
+            model_prob = float(model_prob)
+        except Exception:
+            continue
+
+        for o in odds_by_match.get(str(mid), []):
             odd = None
 
             if norm(predicted_team) == norm(o.get("team_1_name")):
                 odd = o.get("team_1_odds")
             elif norm(predicted_team) == norm(o.get("team_2_name")):
                 odd = o.get("team_2_odds")
+            else:
+                continue
 
-            if not odd or odd <= 1:
+            try:
+                odd = float(odd)
+            except Exception:
+                continue
+
+            if odd <= 1:
                 continue
 
             implied_prob = 1 / odd
@@ -154,7 +167,8 @@ def elo_edge_analysis():
             if not b:
                 continue
 
-            profit = odd - 1 if is_win else -1
+            won = to_bool(is_win)
+            profit = odd - 1 if won else -1
 
             bins[b].append({
                 "match_id": mid,
@@ -164,7 +178,7 @@ def elo_edge_analysis():
                 "model_prob": model_prob,
                 "implied_prob": implied_prob,
                 "edge": edge,
-                "won": bool(is_win),
+                "won": won,
                 "profit": profit,
             })
 
@@ -190,5 +204,7 @@ def elo_edge_analysis():
     return {
         "analysis": "elo_edge",
         "source": "predictions + current_odds",
+        "predictions_loaded": len(predictions),
+        "odds_loaded": len(odds),
         "bins": result,
     }
