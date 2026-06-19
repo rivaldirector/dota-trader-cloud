@@ -1,0 +1,49 @@
+name: Daily Pipeline — Forecast / Settle / Report
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"   # каждые 2 часа — держит odds-покрытие свежим,
+                              # закрывает ставки сразу после матчей,
+                              # ловит новые сигналы в течение дня
+
+  workflow_dispatch:         # ручной запуск из GitHub UI
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Write .env
+        env:
+          BETSAPI_TOKEN:      ${{ secrets.BETSAPI_TOKEN }}
+          SUPABASE_URL:       ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY:  ${{ secrets.SUPABASE_KEY }}
+        run: |
+          echo "BETSAPI_TOKEN=${BETSAPI_TOKEN}"          > .env
+          echo "SUPABASE_URL=${SUPABASE_URL}"           >> .env
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+
+      - name: Backfill last 7 days odds (keeps signal coverage honest)
+        run: python3 scripts/backfill_last_week_odds.py
+
+      - name: Settle yesterday's / just-finished bets + build report
+        run: python3 scripts/daily_settle.py
+
+      - name: Generate today's forecast
+        run: python3 scripts/daily_forecast.py
+
+      - name: Summary
+        if: always()
+        run: echo "Daily pipeline finished at $(date -u)"

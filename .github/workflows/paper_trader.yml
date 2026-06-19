@@ -1,0 +1,39 @@
+name: Paper Trader — Virtual Bets
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"   # каждые 2 часа
+
+  workflow_dispatch:         # ручной запуск
+
+jobs:
+  paper_trade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Run Paper Trader
+        env:
+          BETSAPI_TOKEN:      ${{ secrets.BETSAPI_TOKEN }}
+          SUPABASE_URL:       ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY:  ${{ secrets.SUPABASE_KEY }}
+        run: |
+          echo "BETSAPI_TOKEN=${BETSAPI_TOKEN}"          > .env
+          echo "SUPABASE_URL=${SUPABASE_URL}"           >> .env
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+          python3 scripts/paper_trader.py
+
+      - name: Summary
+        if: always()
+        run: echo "Paper trader finished at $(date -u)"

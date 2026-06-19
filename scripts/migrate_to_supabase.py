@@ -41,9 +41,18 @@ BATCH = 500   # rows per request
 DELAY = 0.3   # seconds between requests
 
 
+CONFLICT_COLS = {
+    "betsapi_events": "event_id",
+    "betsapi_odds":   "event_id,bookmaker,market",
+}
+
 def sb_upsert(table: str, rows: list[dict]) -> None:
+    conflict = CONFLICT_COLS.get(table, "")
+    url = f"{URL}/rest/v1/{table}"
+    if conflict:
+        url += f"?on_conflict={conflict}"
     r = requests.post(
-        f"{URL}/rest/v1/{table}",
+        url,
         headers=HEADERS,
         json=rows,
         timeout=60,

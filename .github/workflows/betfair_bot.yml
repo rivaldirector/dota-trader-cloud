@@ -1,0 +1,53 @@
+name: Betfair Bot — Auto Betting
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"   # каждые 2 часа
+
+  workflow_dispatch:         # ручной запуск из GitHub UI
+
+  repository_dispatch:
+    types: [betfair]         # триггер через API
+
+jobs:
+  bet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Run Betfair Bot
+        env:
+          BETSAPI_TOKEN:      ${{ secrets.BETSAPI_TOKEN }}
+          SUPABASE_URL:       ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY:  ${{ secrets.SUPABASE_KEY }}
+          BETFAIR_USERNAME:   ${{ secrets.BETFAIR_USERNAME }}
+          BETFAIR_PASSWORD:   ${{ secrets.BETFAIR_PASSWORD }}
+          BETFAIR_APP_KEY:    ${{ secrets.BETFAIR_APP_KEY }}
+          DRY_RUN:            ${{ vars.BETFAIR_DRY_RUN }}   # true/false в GitHub Variables
+          EDGE_THRESHOLD:     "0.05"
+          KELLY_FRACTION:     "0.25"
+          MAX_STAKE_GBP:      "50"
+          HOURS_AHEAD:        "12"
+        run: |
+          echo "BETSAPI_TOKEN=${BETSAPI_TOKEN}"          > .env
+          echo "SUPABASE_URL=${SUPABASE_URL}"           >> .env
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+          echo "BETFAIR_USERNAME=${BETFAIR_USERNAME}"   >> .env
+          echo "BETFAIR_PASSWORD=${BETFAIR_PASSWORD}"   >> .env
+          echo "BETFAIR_APP_KEY=${BETFAIR_APP_KEY}"     >> .env
+          python3 scripts/betfair_bot.py
+
+      - name: Summary
+        if: always()
+        run: echo "Betfair bot finished at $(date -u)"

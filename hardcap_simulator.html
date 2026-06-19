@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Симулятор роста банка — v2 стратегия (Kelly + риск-менеджмент)</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f7; color: #1d1d1f; padding: 20px; }
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #888; margin-bottom: 18px; line-height: 1.5; }
+
+  .mode-toggle { display: flex; gap: 8px; margin-bottom: 18px; }
+  .mode-btn { flex: 1; padding: 11px 14px; border-radius: 10px; border: 1.5px solid #e0e0e0; background: #fff; font-size: 12px; font-weight: 600; cursor: pointer; text-align: left; color: #555; }
+  .mode-btn .t { display: block; font-size: 13px; margin-bottom: 2px; }
+  .mode-btn .d { font-size: 10px; font-weight: 400; color: #999; }
+  .mode-btn.active { border-color: #007aff; background: #eef6ff; color: #007aff; }
+  .mode-btn.active .d { color: #4a90d9; }
+
+  .controls { background: #fff; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.07); margin-bottom: 18px; }
+  .ctrl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 28px; }
+  .ctrl { }
+  .ctrl label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: #333; margin-bottom: 6px; }
+  .ctrl label .val { color: #007aff; font-weight: 700; }
+  .ctrl input[type=range] { width: 100%; }
+  .ctrl .hint { font-size: 10px; color: #999; margin-top: 3px; }
+
+  .cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }
+  .card { background: #fff; border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .card.hl { border: 1.5px solid #007aff; background: #f6fbff; }
+  .card .label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+  .card .value { font-size: 21px; font-weight: 700; }
+  .card .sub { font-size: 11px; color: #888; margin-top: 4px; }
+  .green { color: #2e7d32; } .red { color: #c62828; } .orange { color: #e65100; } .blue { color: #1565c0; }
+
+  .panel { background: #fff; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,.07); margin-bottom: 18px; }
+  .panel h3 { font-size: 13px; font-weight: 600; margin-bottom: 14px; }
+  .chart-wrap { position: relative; height: 280px; }
+  .chart-err { color: #c62828; font-size: 12px; padding: 12px; }
+
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .compare-table th { text-align: left; font-weight: 600; color: #888; padding: 7px 8px; border-bottom: 1px solid #eee; font-size: 10px; text-transform: uppercase; }
+  .compare-table td { padding: 7px 8px; border-bottom: 1px solid #f5f5f5; }
+  .compare-table tr.current { background: #e8f5e9; }
+  .compare-table tr.current td { font-weight: 700; }
+
+  .warn { background: #fff3e0; border: 1px solid #ffcc80; border-radius: 10px; padding: 13px 15px; font-size: 12px; line-height: 1.65; color: #5d4037; margin-bottom: 12px; }
+  .warn strong { color: #e65100; }
+  .info { background: #eef6ff; border: 1px solid #b3d9ff; border-radius: 10px; padding: 13px 15px; font-size: 12px; line-height: 1.65; color: #1d3a5f; margin-bottom: 12px; }
+  .info strong { color: #0b5ed7; }
+  .ok { background: #eaf7ed; border: 1px solid #aedcb8; border-radius: 10px; padding: 13px 15px; font-size: 12px; line-height: 1.65; color: #1d4f2a; margin-bottom: 12px; }
+  .ok strong { color: #1b7a37; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<h1>🎛 Симулятор роста банка — v2 стратегия (Kelly + риск-менеджмент)</h1>
+<div class="subtitle">
+  <strong>Реальные сигналы из Supabase</strong> (Pinnacle vs Bet365/GGBet, edge ≥12%, фильтр движения Pin) — Май&nbsp;2025–Июн&nbsp;2026, Dota2+CS2: <strong>326 settled-ставок, win rate 53.1%, средний edge ~27%, средние котировки ~3.05</strong>. Симуляция идёт <strong>по каждой ставке отдельно</strong> (не помесячным усреднением), реальный 14-месячный блок повторяется на выбранный горизонт. Размер ставки — <strong>quarter-Kelly от edge/odds конкретной ставки</strong>, с риск-потолком и долларовым кэпом — как в проде (paper_trader.py, betfair_bot.py), а не свободный слайдер до $500-1000.
+</div>
+
+<div class="mode-toggle">
+  <button class="mode-btn active" id="modeSoft">
+    <span class="t">🏦 Soft-book (Bet365/GGBet)</span>
+    <span class="d">риск — лимит/бан аккаунта, кэп как в paper_trader.py ($30)</span>
+  </button>
+  <button class="mode-btn" id="modeBF">
+    <span class="t">📈 Betfair Exchange</span>
+    <span class="d">кэп = ликвидность рынка, минус комиссия 5%, кэп как в betfair_bot.py ($50)</span>
+  </button>
+</div>
+
+<div class="controls">
+  <div class="ctrl-grid">
+    <div class="ctrl">
+      <label>Стартовый депозит <span class="val" id="lblStart">$1,000</span></label>
+      <input type="range" id="start" min="200" max="5000" step="100" value="1000">
+      <div class="hint">$200 – $5,000</div>
+    </div>
+    <div class="ctrl">
+      <label>Довнесение / месяц <span class="val" id="lblDeposit">$300</span></label>
+      <input type="range" id="deposit" min="0" max="1000" step="25" value="300">
+      <div class="hint">$0 – $1,000</div>
+    </div>
+    <div class="ctrl">
+      <label><span id="capLabel">Кэп на ставку</span> <span class="val" id="lblCap">$30</span></label>
+      <input type="range" id="cap" min="10" max="150" step="5" value="30">
+      <div class="hint" id="capHint">$10 – $150 · реалистичный диапазон для одного soft-book аккаунта</div>
+    </div>
+    <div class="ctrl">
+      <label>Агрессивность Kelly <span class="val" id="lblKelly">¼ Kelly (0.25)</span></label>
+      <input type="range" id="kelly" min="0.05" max="1" step="0.05" value="0.25">
+      <div class="hint" id="kellyHint">0.05–1.0 · 0.25 = четверть Kelly, как в betfair_bot.py (KELLY_FRACTION)</div>
+    </div>
+    <div class="ctrl">
+      <label>Горизонт <span class="val" id="lblHorizon">5 лет</span></label>
+      <input type="range" id="horizon" min="1" max="10" step="1" value="5">
+      <div class="hint">1 – 10 лет (повтор 14-мес блока реальных ставок)</div>
+    </div>
+  </div>
+</div>
+
+<div class="cards">
+  <div class="card hl"><div class="label">Банк через 1 год</div><div class="value" id="c1y">—</div><div class="sub" id="c1ySub">фикс. горизонт, не зависит от слайдера</div></div>
+  <div class="card"><div class="label">Банк на конец горизонта</div><div class="value" id="cFinal">—</div><div class="sub" id="cFinalSub">—</div></div>
+  <div class="card"><div class="label">Вложено</div><div class="value blue" id="cInvested">—</div><div class="sub">старт + довнесения</div></div>
+  <div class="card"><div class="label">Прибыль</div><div class="value" id="cProfit">—</div><div class="sub" id="cProfitPct">—</div></div>
+  <div class="card"><div class="label">До $100,000</div><div class="value" id="c100k">—</div><div class="sub" id="c100kSub">—</div></div>
+</div>
+
+<div class="panel">
+  <h3>📈 Динамика банка <span id="chartModeLabel" style="color:#888;font-weight:400;"></span></h3>
+  <div class="chart-wrap"><canvas id="bankChart" width="800" height="280"></canvas></div>
+</div>
+
+<div class="panel">
+  <h3>📊 Банк через 5 / 10 лет при разных долларовых кэпах (текущий депозит/довнесение/Kelly)</h3>
+  <table class="compare-table">
+    <thead><tr><th id="capColHead">Кэп на ставку</th><th>Банк через 5 лет</th><th>Банк через 10 лет</th><th>Когда $100k</th></tr></thead>
+    <tbody id="capTable"></tbody>
+  </table>
+</div>
+
+<div class="ok">
+  <strong>✅ Что изменилось в риск-модели.</strong> Раньше слайдер кэпа разрешал ставить до $500-1000 "% от банка на ставку" без учёта реального edge — именно так за прошлые замеры банк разносило в ноль на серии лосей. Теперь стейк считается per-bet по формуле quarter-Kelly: <code>f* = edge / (odds-1)</code>, <code>stake = f* × Kelly-фракция × банк</code>, как в продовом betfair_bot.py. Сверху — два независимых ограничителя: (1) ни одна ставка не может быть больше <strong>8% банка</strong> (защита от разорения, даже если Kelly предложит больше), и (2) долларовый кэп слайдера, ограниченный реалистичным диапазоном для каждого режима ($10–150 soft-book, $10–300 Betfair), а не до $1000. Дефолт Kelly-слайдера — 0.25 (как в проде), дефолт кэпа — $30 (soft) / $50 (Betfair), тоже из реальных констант paper_trader.py и betfair_bot.py.
+</div>
+
+<div class="info">
+  <strong>ℹ️ Что в основе графика.</strong> Это не синтетика и не помесячное усреднение — 326 реальных settled-ставок (Dota2+CS2) пересчитаны построчно прямо из Supabase по той же формуле, что в продовом signal_engine.py (edge = bm_odds/pin_odds−1 ≥12%, только Bet365+GGBet, обязательное движение линии Pinnacle в ту же сторону), сгруппированы по 14 календарным месяцам (май 2025 – июнь 2026) и проигрываются ставка за ставкой внутри каждого месяца с per-bet Kelly-стейкингом. <strong>Живой paper-trading эксперимент</strong> (таблица paper_trades) запущен недавно — реального forward-винрейта из него пока недостаточно для выводов; бэктест выше — основная база для реалистичной оценки на сейчас.
+</div>
+
+<div class="warn" id="warnBox"></div>
+
+<script>
+// 326 реальных settled-ставок (Dota2+CS2, Pin vs Bet365/GGBet, edge>=12%, pin-move фильтр)
+// Пересчитано построчно из Supabase (betsapi_events + betsapi_odds), сгруппировано по 14 календарным месяцам, Май'25–Июн'26.
+// Формат месяца: [ [edge, odds, win(1/0)], ... ]
+const MONTHS = [[[0.3991,5.96,0],[0.2103,4.333,0],[0.3889,3.0,0],[0.4881,3.75,0],[0.1912,2.1,1],[0.1556,5.57,0]],[[0.1592,2.33,1],[0.2366,13.12,0],[0.1583,3.0,1],[0.1344,2.0,0],[0.4407,2.54,0],[0.1724,1.285,0],[0.3523,4.03,1],[0.3875,2.27,1],[0.2072,1.87,1],[0.2489,1.4,0]],[[0.2949,2.45,0],[0.3455,2.59,0],[0.1531,1.333,1],[0.1995,2.375,0],[0.2788,2.89,1],[0.2064,1.8,1],[0.1881,1.8,0],[0.1394,1.61,1],[0.4055,2.52,1]],[[0.2008,1.25,0],[0.4192,3.25,1],[0.3897,2.96,1],[0.2365,2.06,1],[0.278,1.37,1],[0.2727,1.909,0],[0.3505,2.25,0],[0.1324,2.19,1],[0.2785,2.8,0],[0.125,2.25,0],[0.1364,2.25,0],[0.2097,2.625,0],[0.3082,2.53,0],[0.3428,8.5,0],[0.1904,5.19,0],[0.1307,2.25,0],[0.1759,3.81,0],[0.416,5.14,1],[0.2195,4.0,0],[0.161,7.5,0],[0.361,2.1,1],[0.3858,1.85,0],[0.1327,10.5,0],[0.403,4.63,0]],[[0.2753,4.91,0],[0.1876,1.69,0],[0.4629,1.95,1],[0.4877,2.05,0],[0.1623,1.54,1],[0.4408,1.909,1],[0.4493,4.0,0],[0.3592,2.35,1],[0.3393,2.25,0],[0.4132,2.5,1],[0.4776,3.62,1],[0.3878,3.4,1],[0.316,1.52,1],[0.3732,2.87,0],[0.4332,3.11,1],[0.2795,3.25,0],[0.1937,4.333,1],[0.2119,1.47,0],[0.256,2.625,1],[0.4783,2.72,0],[0.3321,1.444,1],[0.1756,2.41,1],[0.3082,1.94,1],[0.1673,3.0,0],[0.3486,1.83,0]],[[0.4168,2.24,1],[0.1786,1.28,1],[0.1956,1.51,1],[0.372,4.5,0],[0.493,2.25,0],[0.1538,3.75,0],[0.3559,1.92,1],[0.415,1.94,1],[0.1258,3.4,1],[0.4566,2.67,1],[0.2426,1.47,1],[0.1364,3.75,0],[0.2478,1.833,0],[0.2857,2.7,1],[0.1364,2.5,1],[0.1252,1.87,0],[0.3237,2.2,0],[0.4198,3.01,0],[0.4043,8.51,0],[0.1853,1.26,1],[0.3237,2.2,0],[0.3889,3.5,0],[0.2485,1.909,1],[0.2132,1.4,1],[0.1343,1.444,0],[0.1364,2.625,1],[0.1348,1.33,0],[0.1402,2.09,1],[0.2348,1.909,0],[0.1552,1.444,1],[0.3058,1.61,0],[0.176,1.47,1],[0.1934,1.45,1],[0.2296,9.21,0],[0.1356,1.39,1],[0.2927,6.36,1],[0.2432,4.09,0],[0.4803,2.25,0],[0.4375,1.85,1],[0.1246,3.25,1],[0.3265,2.45,0],[0.2724,1.99,1]],[[0.1895,2.09,0],[0.4066,2.2,1],[0.2095,2.35,1],[0.2923,1.49,1],[0.3225,1.71,0],[0.2032,4.5,1],[0.2877,2.22,1],[0.4802,2.5,0],[0.2221,1.48,1],[0.2434,1.64,1],[0.3298,10.0,0],[0.1364,1.8,1],[0.25,1.98,1],[0.2275,2.25,0],[0.1831,6.72,1],[0.4667,11.0,0],[0.2,1.5,0],[0.1308,7.61,0],[0.3143,4.6,0],[0.3174,1.76,1],[0.3535,2.5,1],[0.2204,1.833,0],[0.2334,3.54,1],[0.1407,1.5,1],[0.1331,1.49,1],[0.3237,2.74,1],[0.1716,1.42,1],[0.3282,2.25,0],[0.477,2.57,1],[0.167,1.53,0],[0.3188,1.75,0],[0.4254,6.5,0],[0.4259,3.75,0],[0.281,1.86,1],[0.2867,2.5,0],[0.3511,1.72,1],[0.1667,2.31,1],[0.1304,2.02,1]],[[0.2616,2.44,0],[0.1236,1.4,1],[0.2227,1.51,1],[0.4449,7.21,0],[0.3053,8.38,0],[0.121,2.78,1],[0.4941,4.333,0],[0.1486,1.53,1],[0.1317,7.65,0],[0.4778,3.0,0],[0.4423,4.5,0],[0.3012,6.48,1],[0.1389,4.1,1],[0.21,3.4,1]],[[0.1622,1.87,1],[0.4184,1.8,0],[0.2057,1.53,0],[0.1264,1.31,1],[0.1734,1.34,1],[0.1876,2.0,1],[0.2427,2.13,1],[0.1208,1.8,1],[0.2719,1.333,1],[0.3333,10.4,0],[0.1588,6.64,0],[0.2047,3.06,1],[0.3889,1.8,0],[0.284,3.3,0],[0.1433,1.444,0],[0.4545,2.0,0],[0.1362,1.36,1],[0.1448,3.4,1],[0.351,7.39,0],[0.1263,2.23,1],[0.173,2.21,1],[0.4991,2.625,1],[0.457,2.2,0],[0.166,1.7,1],[0.287,1.52,1],[0.2714,2.53,1],[0.4122,2.09,1],[0.183,3.75,1],[0.2167,1.28,1],[0.3221,5.5,0],[0.2614,1.38,1],[0.2549,2.25,1]],[[0.1429,1.36,1],[0.1871,4.333,0],[0.1674,2.65,1],[0.156,1.86,1],[0.2167,2.375,1],[0.4057,6.86,0],[0.1333,3.4,1],[0.3538,2.2,0],[0.4715,2.5,1],[0.3863,3.84,0],[0.1372,2.18,1],[0.4615,7.22,0],[0.1562,1.31,1],[0.1525,3.25,0],[0.3155,7.38,0],[0.2082,3.25,0],[0.1573,2.09,1],[0.3756,4.333,1],[0.2278,2.21,1],[0.1936,4.5,0],[0.3724,2.13,1],[0.3889,5.5,0],[0.4977,3.25,1],[0.2171,4.333,0],[0.3634,2.21,1],[0.3538,2.2,1],[0.2311,2.36,1],[0.2898,1.66,1],[0.3959,1.89,1],[0.2304,5.5,0],[0.1663,1.62,1],[0.4531,3.72,0],[0.1494,3.0,0],[0.1946,2.64,1],[0.4652,2.86,0],[0.1527,4.0,0]],[[0.293,2.78,1],[0.1787,1.59,1],[0.126,8.31,0],[0.165,2.33,1],[0.247,2.1,0],[0.407,5.22,0],[0.1364,3.0,0],[0.4457,3.73,1],[0.4137,2.71,1],[0.1949,1.95,1],[0.131,2.375,1],[0.1848,1.25,1],[0.3263,2.02,1],[0.3495,1.78,0],[0.2094,1.9,1],[0.3934,2.66,0],[0.1758,1.98,1],[0.1685,1.81,0],[0.2275,2.25,0],[0.2708,1.53,0],[0.2382,1.71,1],[0.2254,1.43,1],[0.1574,3.75,1],[0.1469,1.85,1],[0.3793,2.8,0],[0.3395,2.88,1],[0.3298,3.75,0],[0.239,1.571,1],[0.4294,2.52,0]],[[0.3095,5.5,0],[0.4368,10.0,0],[0.131,1.9,1],[0.1936,1.35,1],[0.1268,4.0,0],[0.4822,2.88,0],[0.2359,1.86,1],[0.3711,2.25,0],[0.175,1.45,1],[0.2273,1.571,1],[0.4779,3.34,0],[0.4056,7.97,0],[0.2136,2.5,1],[0.353,11.0,0],[0.2695,6.5,0],[0.2154,3.16,0],[0.1652,1.333,1],[0.4853,4.04,0],[0.1338,5.0,0],[0.2346,2.41,0],[0.3889,2.5,1],[0.145,2.29,1],[0.3224,2.26,1],[0.1407,1.2,1],[0.3601,4.91,0]],[[0.2154,2.15,0],[0.3467,4.35,1],[0.4582,2.25,0],[0.3066,1.99,1],[0.3248,1.66,1],[0.486,2.33,1],[0.3046,8.18,0],[0.2655,1.84,1],[0.1429,1.76,1],[0.3314,4.5,0],[0.2895,2.94,1],[0.1472,2.05,1],[0.1484,3.25,0],[0.1328,1.45,1],[0.4849,7.87,1],[0.1419,4.99,0],[0.4861,8.53,0],[0.4301,2.73,1],[0.1603,1.52,1],[0.1943,1.42,1],[0.1342,1.58,1],[0.1765,3.4,0],[0.4846,7.72,0],[0.4175,2.01,1],[0.3568,3.27,0],[0.1765,1.46,1],[0.1568,1.35,0],[0.1752,2.1,0],[0.2516,2.0,1],[0.2259,1.91,1]],[[0.2919,2.7,0],[0.1549,1.909,0],[0.156,1.46,0],[0.171,1.5,1],[0.4651,2.75,1],[0.2463,2.53,0]]];
+
+// Реальные продовые риск-константы (paper_trader.py / betfair_bot.py)
+const MIN_STAKE     = 2.0;    // минимальный стейк (Betfair minimum)
+const SAFETY_PCT    = 0.08;   // защита от разорения: ни одна ставка не больше 8% банка, даже если Kelly предложит больше
+const BF_COMMISSION = 0.05;   // комиссия Betfair с чистого выигрыша
+
+const MODE_DEFAULTS = {
+  soft:    { capMin: 10, capMax: 150, capDefault: 30 },   // paper_trader.py: MAX_STAKE = $30
+  betfair: { capMin: 10, capMax: 300, capDefault: 50 },   // betfair_bot.py: MAX_STAKE_GBP = 50
+};
+
+let mode = 'soft'; // 'soft' | 'betfair'
+
+// Per-bet quarter-Kelly симуляция: f* = edge/(odds-1); stake = f* * kellyFrac * bank,
+// зажатый сверху SAFETY_PCT банка и долларовым кэпом, снизу MIN_STAKE (но не больше банка).
+function simulate(months, start, deposit, capDollar, kellyFrac, mode) {
+  let bank = start;
+  const history = [bank];
+  let hit100k = null;
+  let invested = start;
+  let ruined = false;
+  for (let m = 0; m < months; m++) {
+    bank += deposit;
+    invested += deposit;
+    if (!ruined) {
+      const bucket = MONTHS[m % MONTHS.length];
+      for (const [edge, odds, win] of bucket) {
+        const b = odds - 1;
+        if (b <= 0 || bank <= 0.01) continue;
+        const fstar = edge / b;
+        let stake = fstar * kellyFrac * bank;
+        stake = Math.max(stake, MIN_STAKE);
+        stake = Math.min(stake, bank * SAFETY_PCT);   // риск-потолок: max 8% банка
+        stake = Math.min(stake, capDollar);            // долларовый кэп режима
+        stake = Math.min(stake, bank);                 // не больше текущего банка
+        let delta = win ? stake * (odds - 1) : -stake;
+        if (mode === 'betfair' && delta > 0) delta *= (1 - BF_COMMISSION);
+        bank = Math.max(0, bank + delta);
+      }
+    }
+    if (bank <= 0.01) ruined = true;
+    history.push(bank);
+    if (hit100k === null && bank >= 100000) hit100k = m + 1;
+  }
+  return { bank, history, hit100k, invested };
+}
+
+let chart = null;
+
+function fmt(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
+
+function kellyLabel(k) {
+  if (Math.abs(k - 0.25) < 0.001) return '¼ Kelly (0.25)';
+  if (Math.abs(k - 0.5) < 0.001)  return '½ Kelly (0.50)';
+  if (Math.abs(k - 1) < 0.001)    return 'Full Kelly (1.0)';
+  return k.toFixed(2) + '× Kelly';
+}
+
+function applyModeUI() {
+  document.getElementById('modeSoft').classList.toggle('active', mode === 'soft');
+  document.getElementById('modeBF').classList.toggle('active', mode === 'betfair');
+  const capLabel = document.getElementById('capLabel');
+  const capHint  = document.getElementById('capHint');
+  const capColHead = document.getElementById('capColHead');
+  const chartModeLabel = document.getElementById('chartModeLabel');
+  const warnBox = document.getElementById('warnBox');
+  const capInput = document.getElementById('cap');
+  const def = MODE_DEFAULTS[mode];
+
+  // Перенастраиваем диапазон слайдера кэпа под режим и подставляем продовый дефолт
+  capInput.min = def.capMin;
+  capInput.max = def.capMax;
+  capInput.value = def.capDefault;
+
+  if (mode === 'soft') {
+    capLabel.textContent = 'Кэп на ставку';
+    capHint.textContent  = `$${def.capMin} – $${def.capMax} · реалистичный диапазон для одного soft-book аккаунта (прод: $30)`;
+    capColHead.textContent = 'Кэп на ставку';
+    chartModeLabel.textContent = '· режим: soft-book, Kelly + риск-потолок';
+    warnBox.innerHTML = '⚠️ <strong>Главное ограничение — в букмекерах, не в модели.</strong> Стейк теперь считается per-bet через quarter-Kelly с потолком в 8% банка и долларовым кэпом — это безопасно с точки зрения математики. Но в реальности soft-buki (Bet365, GGBet) лимитируют или банят аккаунты с выигрывающим профилем задолго до серьёзных сумм — на нишевых esports-рынках лимит часто наступает в районе $20–50 на ставку. Поэтому кэп здесь ограничен сверху $150, а не выставлен произвольно до $1000.';
+  } else {
+    capLabel.textContent = 'Лимит ликвидности рынка';
+    capHint.textContent  = `$${def.capMin} – $${def.capMax} · доступный объём в стакане Betfair на нишевых esports обычно $50–300 (прод: $50)`;
+    capColHead.textContent = 'Лимит ликвидности';
+    chartModeLabel.textContent = '· режим: Betfair Exchange, Kelly + риск-потолок, комиссия 5%';
+    warnBox.innerHTML = '⚠️ <strong>Это структурная проекция, а не бэктест Betfair.</strong> У нас нет исторических котировок Betfair в базе (BetsAPI их не отдаёт) — здесь та же реальная последовательность 326 побед/поражений, но переставленная под механику биржи: нет риска бана/лимита профиля, зато стейк бьётся доступной ликвидностью в стакане (часто $50–300 на нишевых esports-рынках) и зажат тем же 8%-потолком от разорения, а с чистого выигрыша по рынку биржа берёт ~5% комиссии.';
+  }
+}
+
+function render() {
+  const start    = +document.getElementById('start').value;
+  const deposit  = +document.getElementById('deposit').value;
+  const cap      = +document.getElementById('cap').value;
+  const kellyFrac= +document.getElementById('kelly').value;
+  const horizonY = +document.getElementById('horizon').value;
+  const months   = horizonY * 12;
+
+  document.getElementById('lblStart').textContent   = fmt(start);
+  document.getElementById('lblDeposit').textContent = fmt(deposit) + '/мес';
+  document.getElementById('lblCap').textContent     = fmt(cap);
+  document.getElementById('lblKelly').textContent   = kellyLabel(kellyFrac);
+  document.getElementById('lblHorizon').textContent = horizonY + (horizonY === 1 ? ' год' : horizonY < 5 ? ' года' : ' лет');
+
+  const res  = simulate(months, start, deposit, cap, kellyFrac, mode);
+  const res1y = simulate(12, start, deposit, cap, kellyFrac, mode);
+
+  // Банк через 1 год — отдельная фиксированная карточка, не зависит от слайдера горизонта
+  const c1y = document.getElementById('c1y');
+  const profit1y = res1y.bank - res1y.invested;
+  c1y.textContent = fmt(res1y.bank);
+  c1y.className = 'value ' + (profit1y >= 0 ? 'green' : 'red');
+  document.getElementById('c1ySub').textContent = (profit1y >= 0 ? '+' : '') + fmt(profit1y) + ' за 12 мес';
+
+  document.getElementById('cFinal').textContent = fmt(res.bank);
+  document.getElementById('cFinalSub').textContent = `через ${horizonY} ${horizonY===1?'год':'лет'}`;
+  document.getElementById('cInvested').textContent = fmt(res.invested);
+  const profit = res.bank - res.invested;
+  const profitPct = res.invested > 0 ? (profit / res.invested * 100) : 0;
+  const pEl = document.getElementById('cProfit');
+  pEl.textContent = (profit >= 0 ? '+' : '') + fmt(profit);
+  pEl.className = 'value ' + (profit >= 0 ? 'green' : 'red');
+  document.getElementById('cProfitPct').textContent = (profitPct >= 0 ? '+' : '') + profitPct.toFixed(0) + '%';
+
+  const c100k = document.getElementById('c100k');
+  const c100kSub = document.getElementById('c100kSub');
+  if (res.hit100k) {
+    c100k.textContent = (res.hit100k/12).toFixed(1) + ' лет';
+    c100k.className = 'value green';
+    c100kSub.textContent = `на месяце ${res.hit100k}`;
+  } else {
+    c100k.textContent = '—';
+    c100k.className = 'value orange';
+    c100kSub.textContent = `не достигнут за ${horizonY} лет`;
+  }
+
+  const labels = Array.from({length: months+1}, (_, i) => i === 0 ? 'Старт' : `М${i}`);
+
+  const chartWrap = document.querySelector('.chart-wrap');
+  try {
+    if (chart) { chart.destroy(); chart = null; }
+    if (typeof Chart === 'undefined') throw new Error('Chart.js не загрузился (нет window.Chart)');
+    if (!chartWrap.querySelector('canvas')) {
+      chartWrap.innerHTML = '<canvas id="bankChart" width="800" height="280"></canvas>';
+    }
+    chart = new Chart(document.getElementById('bankChart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Банк', data: res.history, borderColor: '#2e7d32', backgroundColor: 'rgba(46,125,50,.08)', fill: true, tension: 0.25, pointRadius: 0, borderWidth: 2.5 },
+          { label: '$100,000', data: labels.map(()=>100000), borderColor: '#e53935', borderDash: [6,4], pointRadius: 0, borderWidth: 1.3 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 14 } } },
+        scales: {
+          x: { ticks: { maxTicksLimit: 12, font: { size: 9 } }, grid: { display: false } },
+          y: { ticks: { font: { size: 10 }, callback: v => '$'+v.toLocaleString() }, grid: { color: '#f0f0f0' } }
+        }
+      }
+    });
+  } catch (e) {
+    chartWrap.innerHTML = '<div class="chart-err">⚠️ Не удалось отрисовать график: ' + (e && e.message ? e.message : e) + '</div>';
+  }
+
+  renderCapTable(start, deposit, kellyFrac);
+}
+
+function renderCapTable(start, deposit, kellyFrac) {
+  const def = MODE_DEFAULTS[mode];
+  const span = def.capMax - def.capMin;
+  const steps = [0, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1];
+  const caps = [...new Set(steps.map(f => Math.round((def.capMin + span * f) / 5) * 5))];
+  const currentCap = +document.getElementById('cap').value;
+  const tbody = document.getElementById('capTable');
+  tbody.innerHTML = '';
+  caps.forEach(cap => {
+    const r5  = simulate(60, start, deposit, cap, kellyFrac, mode);
+    const r10 = simulate(120, start, deposit, cap, kellyFrac, mode);
+    const when = r10.hit100k ? (r10.hit100k/12).toFixed(1) + ' лет' : '> 10 лет';
+    const isCurrent = Math.abs(cap - currentCap) < 3;
+    tbody.innerHTML += `<tr class="${isCurrent ? 'current' : ''}">
+      <td>$${cap}</td>
+      <td>${fmt(r5.bank)}</td>
+      <td>${fmt(r10.bank)}</td>
+      <td>${when}</td>
+    </tr>`;
+  });
+}
+
+document.getElementById('modeSoft').addEventListener('click', () => { mode = 'soft'; applyModeUI(); render(); });
+document.getElementById('modeBF').addEventListener('click', () => { mode = 'betfair'; applyModeUI(); render(); });
+
+['start','deposit','cap','kelly','horizon'].forEach(id => {
+  document.getElementById(id).addEventListener('input', render);
+});
+
+applyModeUI();
+render();
+</script>
+</body>
+</html>

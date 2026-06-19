@@ -94,16 +94,23 @@ class BetsAPI:
 
 # ── Supabase helpers ──────────────────────────────────────────────────────────
 
+CONFLICT_COLS = {
+    "betsapi_events":  "event_id",
+    "betsapi_odds":    "event_id,bookmaker,market",
+    "raw_events":      "event_id",
+    "upcoming_events": "event_id",
+    "odds_summary":    "event_id,bookmaker,market",
+}
+
 def sb_upsert(table: str, rows: list[dict], batch: int = 500) -> int:
     inserted = 0
+    conflict = CONFLICT_COLS.get(table, "")
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+    if conflict:
+        url += f"?on_conflict={conflict}"
     for i in range(0, len(rows), batch):
         chunk = rows[i:i+batch]
-        r = requests.post(
-            f"{SUPABASE_URL}/rest/v1/{table}",
-            headers=SB_HEADERS,
-            json=chunk,
-            timeout=30,
-        )
+        r = requests.post(url, headers=SB_HEADERS, json=chunk, timeout=30)
         if r.status_code not in (200, 201):
             print(f"  [SB ERROR] {table}: {r.status_code} {r.text[:200]}")
         else:
