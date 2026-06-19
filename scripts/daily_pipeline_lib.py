@@ -118,3 +118,32 @@ def kelly_stake(edge_pct: float, bm_odds: float, bank: float) -> float:
 def fmt_usd(x: float) -> str:
     sign = "+" if x > 0 else ("" if x == 0 else "-")
     return f"{sign}${abs(x):,.2f}"
+
+
+def check_betsapi_alive(token: str) -> tuple[bool, str]:
+    """Cheap canary call — confirms the BetsAPI token still works before a
+    script burns its whole run on a dead key (which otherwise looks like a
+    quiet 'no data found' instead of an actual outage)."""
+    try:
+        r = requests.get("https://api.b365api.com/v3/events/upcoming",
+                          params={"token": token, "sport_id": 151, "page": 1}, timeout=15)
+        if r.status_code in (401, 403):
+            return False, f"HTTP {r.status_code}"
+        data = r.json()
+        if not data.get("success"):
+            return False, str(data.get("error") or data)[:200]
+        return True, "ok"
+    except Exception as ex:
+        return False, str(ex)[:200]
+
+
+def sb_set_pipeline_status(script: str, ok: bool, message: str = "") -> None:
+    """Upsert a one-row-per-script health record so the read-only daily
+    summary task can tell the difference between 'ran fine, nothing to
+    report' and 'didn't actually run' (e.g. BetsAPI token expired)."""
+    sb_upsert("pipeline_status", [{
+        "script": script,
+        "status": "ok" if ok else "error",
+        "message": (message or "")[:500],
+        "checked_at": now_iso(),
+    }], on_conflict="script")

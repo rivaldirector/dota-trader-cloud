@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from daily_pipeline_lib import (
     SB_HEADERS, SUPABASE_URL, SUPABASE_KEY, EDGE_THRESHOLD, SOFT_BOOKS,
     now_iso, sb_insert, get_bank, kelly_stake, fmt_usd,
+    check_betsapi_alive, sb_set_pipeline_status,
 )
 
 BETSAPI_TOKEN = os.getenv("BETSAPI_TOKEN", "")
@@ -157,6 +158,12 @@ def main():
     if not all([BETSAPI_TOKEN, SUPABASE_URL, SUPABASE_KEY]):
         print("ERROR: missing env vars"); sys.exit(1)
 
+    alive, why = check_betsapi_alive(BETSAPI_TOKEN)
+    if not alive:
+        print(f"ERROR: BetsAPI недоступен ({why}) — форкаст на сегодня пропущен.")
+        sb_set_pipeline_status("daily_forecast", False, f"BetsAPI недоступен: {why}")
+        sys.exit(1)
+
     api = BetsAPI(BETSAPI_TOKEN)
     bank = get_bank()
     bank_usd = float(bank["current_bank_usd"])
@@ -167,19 +174,24 @@ def main():
 
     all_events = []
     page = 1
-    while True:
-        data = api.get("/v3/events/upcoming", {"sport_id": SPORT_ID, "page": page})
-        items = data.get("results", [])
-        if not items:
-            break
-        for e in items:
-            sport = detect_sport(e)
-            if sport:
-                all_events.append((e, sport))
-        total = data.get("pager", {}).get("total", 0)
-        if page * 50 >= total or page >= 200:
-            break
-        page += 1
+    try:
+        while True:
+            data = api.get("/v3/events/upcoming", {"sport_id": SPORT_ID, "page": page})
+            items = data.get("results", [])
+            if not items:
+                break
+            for e in items:
+                sport = detect_sport(e)
+                if sport:
+                    all_events.append((e, sport))
+            total = data.get("pager", {}).get("total", 0)
+            if page * 50 >= total or page >= 200:
+                break
+            page += 1
+    except Exception as ex:
+        print(f"ERROR: BetsAPI отвалился во время сканирования событий: {ex}")
+        sb_set_pipeline_status("daily_forecast", False, f"упал во время сканирования: {ex}")
+        sys.exit(1)
 
     print(f"Upcoming events scanned: {len(all_events)}")
 
@@ -196,6 +208,7 @@ def main():
     if not found:
         print("\nСигналов нет — рынок эффективен сегодня. Это нормально:")
         print("при этом фильтре (edge>=12%, pin-move confirm) исторически ~2-3 сигнала/неделю.")
+        sb_set_pipeline_status("daily_forecast", True, f"отработал, сигналов 0 (events: {len(all_events)})")
         return
 
     rows = []
@@ -214,6 +227,7 @@ def main():
               f"Pin {s['pin_odds']} | edge +{s['edge_pct']}% | старт {s['start_time']}")
 
     sb_insert("daily_signals", rows)
+    sb_set_pipeline_status("daily_forecast", True, f"записано {len(rows)} сигналов (events: {len(all_events)})")
     print(f"\nЗаписано {len(rows)} сигналов в daily_signals. Банк не меняется до расчёта (settle).")
 
 

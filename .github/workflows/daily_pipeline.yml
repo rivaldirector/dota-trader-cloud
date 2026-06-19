@@ -36,12 +36,14 @@ jobs:
           echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
 
       - name: Backfill last 7 days odds (keeps signal coverage honest)
+        continue-on-error: true   # BetsAPI outage shouldn't block settle/report below
         run: python3 scripts/backfill_last_week_odds.py
 
       - name: Settle yesterday's / just-finished bets + build report
         run: python3 scripts/daily_settle.py
 
       - name: Generate today's forecast
+        continue-on-error: true   # BetsAPI outage shouldn't fail the whole run
         run: python3 scripts/daily_forecast.py
 
       - name: Summary

@@ -17,7 +17,10 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(__file__))
-from daily_pipeline_lib import sb_get, sb_patch, sb_upsert, get_bank, set_bank, fmt_usd, now_iso
+from daily_pipeline_lib import (
+    sb_get, sb_patch, sb_upsert, get_bank, set_bank, fmt_usd, now_iso,
+    sb_set_pipeline_status,
+)
 
 
 def settle_pending():
@@ -117,6 +120,7 @@ def main():
     settled = settle_pending()
     if not settled:
         print("Нет новых рассчитанных ставок (матчи ещё не закончились или сигналов не было).")
+        sb_set_pipeline_status("daily_settle", True, "нет новых расчитанных ставок")
         return
 
     # Recompute the FULL day's report from all decided bets for that date (not just the
@@ -151,6 +155,8 @@ def main():
             print(f"Худшая ставка:  {report['worst_bet']}")
         print(f"По дисциплинам: {report['by_sport_json']}")
         print()
+
+    sb_set_pipeline_status("daily_settle", True, f"расчитано {len(settled)} ставок")
 
 
 if __name__ == "__main__":

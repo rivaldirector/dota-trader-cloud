@@ -24,6 +24,9 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 
+sys.path.insert(0, os.path.dirname(__file__))
+from daily_pipeline_lib import check_betsapi_alive, sb_set_pipeline_status
+
 BETSAPI_TOKEN = os.getenv("BETSAPI_TOKEN", "")
 SUPABASE_URL  = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY  = os.getenv("SUPABASE_ANON_KEY", "")
@@ -86,6 +89,12 @@ def main():
     if not all([BETSAPI_TOKEN, SUPABASE_URL, SUPABASE_KEY]):
         print("ERROR: missing env vars", flush=True); sys.exit(1)
 
+    alive, why = check_betsapi_alive(BETSAPI_TOKEN)
+    if not alive:
+        print(f"ERROR: BetsAPI недоступен ({why}) — backfill пропущен.", flush=True)
+        sb_set_pipeline_status("backfill_last_week_odds", False, f"BetsAPI недоступен: {why}")
+        sys.exit(1)
+
     print(f"[{datetime.now()}] Fetching last-7-days ended events...", flush=True)
     events = sb_get("betsapi_events",
                      "status=eq.ended&winner=neq.&"
@@ -120,6 +129,13 @@ def main():
             r = session.get("https://api.b365api.com/v2/event/odds/summary",
                              params={"token": BETSAPI_TOKEN, "event_id": eid}, timeout=20)
             last = time.time()
+            if r.status_code in (401, 403):
+                print(f"  [AUTH] HTTP {r.status_code} on {eid} — токен умер посередине прогона.", flush=True)
+                sb_set_pipeline_status("backfill_last_week_odds", False,
+                                        f"токен умер на {i+1}/{len(to_fetch)} (ok={ok} fail={fail})")
+                if buf:
+                    sb_upsert("betsapi_odds", buf)
+                sys.exit(1)
             if r.status_code == 429:
                 print("  [429] sleeping 60s", flush=True)
                 time.sleep(60)
@@ -138,6 +154,15 @@ def main():
             print(f"  [WARN] {eid}: {ex}", flush=True)
             fail += 1
 
+        # Defensive abort: if the canary passed but the token dies mid-run
+        # (e.g. expires while the job is running), don't silently burn the
+        # rest of the timeout failing on every single event.
+        if i + 1 == 10 and ok == 0 and fail >= 10:
+            print("  [ABORT] первые 10 запросов все провалились — похоже, API недоступен.", flush=True)
+            sb_set_pipeline_status("backfill_last_week_odds", False,
+                                    "первые 10 запросов провалились — вероятен сбой API")
+            sys.exit(1)
+
         if len(buf) >= 200:
             sb_upsert("betsapi_odds", buf)
             buf = []
@@ -149,6 +174,7 @@ def main():
         sb_upsert("betsapi_odds", buf)
 
     print(f"[{datetime.now()}] DONE. ok={ok} fail={fail}", flush=True)
+    sb_set_pipeline_status("backfill_last_week_odds", True, f"ok={ok} fail={fail} (всего к фетчу: {len(to_fetch)})")
 
 
 if __name__ == "__main__":
