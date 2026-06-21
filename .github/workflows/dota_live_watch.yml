@@ -1,0 +1,35 @@
+name: Dota Live Watch — OpenDota live pro matches snapshot
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # каждые 15 минут — live-матчи быстро меняются
+
+  workflow_dispatch:
+
+jobs:
+  live-watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Write .env
+        env:
+          SUPABASE_URL:      ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          echo "SUPABASE_URL=${SUPABASE_URL}"           > .env
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+
+      - name: Snapshot live Dota2 pro matches (OpenDota, no BetsAPI needed)
+        run: python3 scripts/dota_live_watch.py
