@@ -1,0 +1,35 @@
+name: Prematch Free Predict — Elo picks, no paid API
+
+on:
+  schedule:
+    - cron: "0 6,18 * * *"   # 2 раза в день — расписание Liquipedia меняется не часто
+
+  workflow_dispatch:
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Write .env
+        env:
+          SUPABASE_URL:      ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          echo "SUPABASE_URL=${SUPABASE_URL}"           > .env
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+
+      - name: Elo model picks from free sources (Liquipedia schedule + Supabase history)
+        run: python3 scripts/prematch_free_predict.py
