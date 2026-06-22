@@ -88,6 +88,39 @@ def normalize_team(name: str | None) -> str:
     return re.sub(r"[^a-z0-9]", "", (name or "").lower())
 
 
+def clean_team_name(name: str | None) -> str:
+    """Убирает суффикс ' (page does not exist)', который dota.haglund.dev
+    сам добавляет в name, если у команды нет статьи на Liquipedia."""
+    if not name:
+        return name or "?"
+    return name.split(" (page does not exist)")[0].strip()
+
+
+def fetch_team_aliases() -> dict[str, str]:
+    """alias_name (нормализованное) -> canonical_name. Команды иногда играют
+    под другим именем — например, PARIVISION выступает как TEAM VISION на
+    TI2026 квалах из-за правила Valve против спонсоров-букмекеров (тот же
+    состав/организация). Таблица team_aliases в Supabase — ручной список,
+    дополняемый по мере обнаружения новых случаев (полностью автоматическое
+    обнаружение ребрендов ненадёжно без платного API с историей ростеров)."""
+    try:
+        rows = sb_get("team_aliases", "select=alias_name,canonical_name")
+    except Exception as ex:
+        print(f"  [WARN] team_aliases недоступна: {ex}")
+        return {}
+    return {
+        normalize_team(r["alias_name"]): r["canonical_name"]
+        for r in rows if r.get("alias_name") and r.get("canonical_name")
+    }
+
+
+def resolve_alias(name: str | None, alias_map: dict[str, str]) -> str | None:
+    if not name:
+        return name
+    key = normalize_team(clean_team_name(name))
+    return alias_map.get(key, name)
+
+
 def build_elo_from_supabase() -> dict[str, float]:
     print("Тяну историю dota2 матчей из Supabase для Elo (BetsAPI + PandaScore)...")
     page = 1000
@@ -233,12 +266,21 @@ def main():
         return
 
     elo = build_elo_from_supabase()
+    alias_map = fetch_team_aliases()
+    if alias_map:
+        print(f"  алиасов команд загружено: {len(alias_map)}")
 
     rows = []
     for m in soon:
         t1, t2 = m["_t1"], m["_t2"]
-        m1, score1 = best_elo_match(t1, elo)
-        m2, score2 = best_elo_match(t2, elo)
+        t1_lookup = resolve_alias(t1, alias_map)
+        t2_lookup = resolve_alias(t2, alias_map)
+        if t1_lookup != t1:
+            print(f"  [алиас] {t1} -> {t1_lookup}")
+        if t2_lookup != t2:
+            print(f"  [алиас] {t2} -> {t2_lookup}")
+        m1, score1 = best_elo_match(t1_lookup, elo)
+        m2, score2 = best_elo_match(t2_lookup, elo)
 
         e1 = elo.get(m1, START_ELO) if m1 else START_ELO
         e2 = elo.get(m2, START_ELO) if m2 else START_ELO
