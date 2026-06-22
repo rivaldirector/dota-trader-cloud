@@ -255,6 +255,10 @@ def dashboard():
         gate_count = sb("GET", "elo_paper_bets?strategy_name=eq.M05&settled=eq.true&select=id")
     except Exception:
         gate_count = []
+    try:
+        auto_bets = sb("GET", "elo_paper_bets?strategy_name=eq.AUTO_ELO_FLAT&order=start_time.desc&limit=20&select=*")
+    except Exception:
+        auto_bets = []
 
     bankroll = bankroll_rows[0] if bankroll_rows else {}
 
@@ -298,6 +302,37 @@ def dashboard():
     bank_start = float(bankroll.get("start_bank_usd", 1000) or 1000)
     gate_settled = len(gate_count)
 
+    auto_settled = [b for b in auto_bets if b.get("settled")]
+    auto_pending = [b for b in auto_bets if not b.get("settled")]
+    auto_pnl = sum(float(b.get("pnl") or 0) for b in auto_settled)
+    auto_wins = sum(1 for b in auto_settled if b.get("outcome") == "win")
+    auto_wr = (auto_wins / len(auto_settled) * 100) if auto_settled else None
+    auto_bank = round(1000.0 + auto_pnl, 2)
+
+    auto_rows_html = ""
+    for b in auto_bets[:12]:
+        st = b.get("start_time")
+        try:
+            st_fmt = datetime.fromtimestamp(st, tz=timezone.utc).strftime("%d.%m %H:%M UTC")
+        except Exception:
+            st_fmt = str(st)
+        side = b.get("home_team") if b.get("bet_team") == "home" else b.get("away_team")
+        if b.get("settled"):
+            cls = "ok" if b.get("outcome") == "win" else "err"
+            status_s = f"<span class='{cls}'>{b.get('outcome')} ({float(b.get('pnl') or 0):+.2f}$)</span>"
+        else:
+            status_s = "<span style='color:#9aa0ad'>ожидаем результат</span>"
+        auto_rows_html += f"""
+        <tr>
+          <td>{st_fmt}</td>
+          <td>{b.get('home_team')} vs {b.get('away_team')}</td>
+          <td><b>{side}</b></td>
+          <td>{b.get('odds')}</td>
+          <td>{status_s}</td>
+        </tr>"""
+    if not auto_rows_html:
+        auto_rows_html = '<tr><td colspan="5" style="text-align:center;color:#888">Машина пока не приняла ни одного решения — следующий прогон по расписанию (каждые 2ч)</td></tr>'
+
     html = f"""<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -333,6 +368,42 @@ def dashboard():
       {rows_html}
     </table>
     <div class="note">Без рыночных коэффициентов (BetsAPI отключён) — чисто модельный Elo-прогноз, без edge/value, без ставок. Обновляется 2 раза/день через GitHub Actions (prematch_free_predict.yml).</div>
+  </div>
+
+  <div class="card">
+    <h2>Автономная Elo-машина (решает сама, без ревью)</h2>
+    <div class="stats">
+      <div class="stat"><div class="val">${auto_bank:,.2f}</div><div class="lbl">условный банк (старт $1000)</div></div>
+      <div class="stat"><div class="val">{len(auto_settled)}</div><div class="lbl">решений урегулировано</div></div>
+      <div class="stat"><div class="val">{f'{auto_wr:.1f}%' if auto_wr is not None else '—'}</div><div class="lbl">winrate Elo-фаворита</div></div>
+      <div class="stat"><div class="val">{len(auto_pending)}</div><div class="lbl">ожидают результата</div></div>
+    </div>
+    <table style="margin-top:14px">
+      <tr><th>Старт</th><th>Матч</th><th>Решение</th><th>Условные odds</th><th>Итог</th></tr>
+      {auto_rows_html}
+    </table>
+    <div class="note">
+      Машина сама выбирает фаворита по Elo и фиксирует флэт $20 на каждый матч в окне 72ч — каждые 2 часа, без участия человека.
+      "Условные odds" — НЕ рыночная цена (её сейчас просто нет, BetsAPI мёртв): это 1/(model_prob × 1.0585), где 1.0585 —
+      реальный средний оверраунд букмекеров, посчитанный по 68 733 историческим строкам в этой же базе. Главная метрика
+      здесь — <b>winrate</b> (угадывает ли Elo фаворита), а не $ — деньги тут иллюстративные, пока не вернутся живые одсы.
+      Сеттлинг — через бесплатный OpenDota (без BetsAPI/ключа).
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Историческая симуляция — чистый Elo на реальных одсах, 60 дней</h2>
+    <div class="stats">
+      <div class="stat"><div class="val">377</div><div class="lbl">ставок (flat $20)</div></div>
+      <div class="stat"><div class="val">68.44%</div><div class="lbl">winrate (258/377)</div></div>
+      <div class="stat"><div class="val pos" style="color:#22c55e">+$570.46</div><div class="lbl">P&amp;L (ROI +7.57%)</div></div>
+      <div class="stat"><div class="val">$1,000 → $1,570.46</div><div class="lbl">банк в этой симуляции</div></div>
+    </div>
+    <div class="note">
+      Бэктест на РЕАЛЬНЫХ исторических котировках (закэшированы до смерти BetsAPI 17 июня), посчитан 21.06.2026
+      на Mac-пайплайне (scripts/backtest_elo_pure_60d.py). Это задним числом, отдельно от живого банка выше —
+      не смешиваем, чтобы не подменять честный live-трек симуляцией.
+    </div>
   </div>
 
   <div class="card">
