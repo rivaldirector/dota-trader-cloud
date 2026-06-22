@@ -188,6 +188,43 @@ def build_elo_from_supabase() -> dict[str, float]:
         history.append((int(st), t1, t2, act_h))
         ps_added += 1
 
+    # 3) Своя накопленная история (elo_own_history) — результаты матчей, для
+    # которых не было ни BetsAPI, ни PandaScore (часто новые/малоизвестные
+    # команды), но мы сами досмотрели исход через OpenDota (см.
+    # prematch_settle_results_cloud.py). Растёт со временем без платных API.
+    own_rows, offset = [], 0
+    while True:
+        chunk = sb_get(
+            "elo_own_history",
+            f"winner=neq.&select=home_team,away_team,winner,start_time&"
+            f"order=start_time.asc&limit={page}&offset={offset}",
+        )
+        if not chunk:
+            break
+        own_rows.extend(chunk)
+        if len(chunk) < page:
+            break
+        offset += page
+
+    own_added = 0
+    for r in own_rows:
+        t1, t2, w, st = r.get("home_team"), r.get("away_team"), r.get("winner"), r.get("start_time")
+        if not t1 or not t2 or not w or st is None:
+            continue
+        key = (normalize_team(t1), normalize_team(t2), int(st) // 3600)
+        if key in seen_keys:
+            continue  # уже есть из BetsAPI/PandaScore — не дублируем
+        nw = normalize_team(w)
+        if nw == normalize_team(t1):
+            act_h = 1.0
+        elif nw == normalize_team(t2):
+            act_h = 0.0
+        else:
+            continue
+        seen_keys.add(key)
+        history.append((int(st), t1, t2, act_h))
+        own_added += 1
+
     history.sort(key=lambda r: r[0])  # хронологически — обязательно для Elo (no leakage)
 
     elo: dict[str, float] = {}
@@ -196,8 +233,8 @@ def build_elo_from_supabase() -> dict[str, float]:
         ea = elo_exp(e1, e2)
         elo[t1] = e1 + K_FACTOR * (act_h - ea)
         elo[t2] = e2 + K_FACTOR * ((1 - act_h) - (1 - ea))
-    print(f"  матчей в истории: {len(history)} (BetsAPI: {n_betsapi}, +PandaScore: {ps_added})  "
-          f"|  команд с Elo: {len(elo)}")
+    print(f"  матчей в истории: {len(history)} (BetsAPI: {n_betsapi}, +PandaScore: {ps_added}, "
+          f"+своя история: {own_added})  |  команд с Elo: {len(elo)}")
     return elo
 
 
