@@ -351,8 +351,22 @@ def dashboard():
             odds_cell = f"{odds}"
             result_cell = f"<span style='color:#6b7280'>потенциал +${profit:,.2f} (прогноз, бот ещё не ставил)</span>"
         else:
+            # Нет ни реальной ставки, ни Эло-прогноза — но всё равно копим
+            # свою статистику: после того, как матч закончится, отдельный
+            # скрипт (prematch_settle_results_cloud.py) досмотрит исход через
+            # OpenDota и запишет actual_winner — он используется ТРЕТЬИМ
+            # источником Эло-истории (elo_own_history), так что покрытие по
+            # новым командам растёт само со временем.
+            actual_winner = clean_team_name(p.get("actual_winner")) if p.get("actual_winner") else None
             bet_cell = "<span style='color:#6b7280'>нет данных по Elo/коэф</span>"
-            stake_cell = odds_cell = result_cell = "—"
+            stake_cell = odds_cell = "—"
+            if actual_winner:
+                result_cell = f"<span style='color:#9aa0ad'>матч завершён: победил {actual_winner} (без ставки — копим историю)</span>"
+            elif st_dt is not None and st_dt <= now:
+                elapsed_h = (now - st_dt).total_seconds() / 3600
+                result_cell = f"<span style='color:#6b7280'>ждём исход ({elapsed_h:.0f}ч с начала)</span>"
+            else:
+                result_cell = "—"
         return f"""
         <tr>
           <td>{time_cell}</td>
