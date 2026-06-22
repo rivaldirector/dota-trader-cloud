@@ -371,9 +371,12 @@ def dashboard():
         if b.get("settled"):
             cls = "ok" if b.get("outcome") == "win" else "err"
             status_s = f"<span class='{cls}'>{b.get('outcome')} ({float(b.get('pnl') or 0):+.2f}$)</span>"
-        elif st_dt is not None:
+        elif st_dt is not None and st_dt <= now:
             elapsed_h = (now - st_dt).total_seconds() / 3600
-            status_s = f"<span style='color:#9aa0ad'>ожидаем результат ({elapsed_h:.0f}ч)</span>"
+            status_s = f"<span style='color:#9aa0ad'>ожидаем результат ({elapsed_h:.0f}ч с начала)</span>"
+        elif st_dt is not None:
+            until_h = (st_dt - now).total_seconds() / 3600
+            status_s = f"<span style='color:#6b7280'>начнётся через {until_h:.0f}ч</span>"
         else:
             status_s = "<span style='color:#9aa0ad'>ожидаем результат</span>"
         auto_rows_html += f"""
