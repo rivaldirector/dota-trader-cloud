@@ -22,6 +22,21 @@ SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 if not SUPABASE_URL or not SUPABASE_KEY:
     print("WARNING: Missing Supabase env variables")
 
+# Те же константы, что в elo_auto_bet.py — приблизительный коэффициент для
+# карточки прогноза считается ТЕМ ЖЕ способом, что и в реальных ставках
+# машины: 1/(model_prob * AVG_OVERROUND_HIST), где AVG_OVERROUND_HIST —
+# реальный средний оверраунд букмекеров по 68 733 историческим строкам
+# odds_summary в этой же базе. Не рыночная цена, а историческая оценка.
+FORECAST_AVG_OVERROUND = 1.0585
+FORECAST_STAKE_USD = 20.0
+
+
+def clean_team_name(name):
+    """Убирает мусор парсинга Liquipedia вида ' (page does not exist)'."""
+    if not name:
+        return name or "?"
+    return name.split(" (page does not exist)")[0].strip()
+
 
 # -------------------
 # SUPABASE CLIENT
@@ -293,31 +308,59 @@ def dashboard():
     bank_cur = round(bank_start + rule_c_pnl, 2)
     gate_settled = len(rule_c_settled)
 
-    rows_html = ""
+    def pick_row(p, time_cell):
+        t1 = clean_team_name(p.get("team_1"))
+        t2 = clean_team_name(p.get("team_2"))
+        has_data = bool(p.get("has_elo_data"))
+        fav_prob = p.get("favorite_prob")
+        if has_data and fav_prob is not None:
+            fav = clean_team_name(p.get("favorite"))
+            fav_prob_f = float(fav_prob)
+            odds = round(1.0 / (fav_prob_f * FORECAST_AVG_OVERROUND), 3)
+            profit = round(FORECAST_STAKE_USD * (odds - 1), 2)
+            bet_cell = f"<b>{fav}</b>"
+            stake_cell = f"${FORECAST_STAKE_USD:.0f}"
+            odds_cell = f"{odds}"
+            profit_cell = f"<span class='ok'>+${profit:,.2f}</span>"
+        else:
+            bet_cell = "<span style='color:#6b7280'>нет данных</span>"
+            stake_cell = odds_cell = profit_cell = "—"
+        return f"""
+        <tr>
+          <td>{time_cell}</td>
+          <td>{t1} vs {t2}</td>
+          <td>{bet_cell}</td>
+          <td>{stake_cell}</td>
+          <td>{odds_cell}</td>
+          <td>{profit_cell}</td>
+        </tr>"""
+
+    today_date = now.date()
+    today_picks, later_picks = [], []
     for p in picks:
         st = p.get("starts_at", "")
         try:
             dt = datetime.fromisoformat(st.replace("Z", "+00:00"))
-            st_fmt = dt.strftime("%d.%m %H:%M UTC")
         except Exception:
-            st_fmt = st
-        has_data = p.get("has_elo_data")
-        fav = p.get("favorite") or "?"
-        fav_prob = p.get("favorite_prob")
-        fav_prob_s = f"{float(fav_prob) * 100:.1f}%" if fav_prob is not None else "—"
-        elo_diff = p.get("elo_diff")
-        elo_diff_s = f"{float(elo_diff):+.0f}" if elo_diff is not None else "—"
-        warn = "" if has_data else " <span style='color:#f59e0b'>(нет Elo-истории)</span>"
-        rows_html += f"""
-        <tr>
-          <td>{st_fmt}</td>
-          <td>{p.get('league_name') or ''}</td>
-          <td>{p.get('team_1')} vs {p.get('team_2')}</td>
-          <td>{elo_diff_s}</td>
-          <td><b>{fav}</b> ({fav_prob_s}){warn}</td>
-        </tr>"""
-    if not rows_html:
-        rows_html = '<tr><td colspan="5" style="text-align:center;color:#888">Нет матчей в ближайшие часы (или прогноз ещё не обновлялся — обновляется 2 раза/день)</td></tr>'
+            dt = None
+        (today_picks if (dt and dt.date() == today_date) else later_picks).append((p, dt))
+
+    today_rows_html = "".join(
+        pick_row(p, dt.strftime("%H:%M UTC") if dt else "—") for p, dt in today_picks
+    ) or '<tr><td colspan="6" style="text-align:center;color:#888">Сегодня матчей в прогнозе нет</td></tr>'
+
+    later_rows_html = ""
+    last_date = None
+    for p, dt in later_picks:
+        d = dt.date() if dt else None
+        if d != last_date:
+            _wd = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"]
+            d_label = f"{dt.strftime('%d.%m')} ({_wd[dt.weekday()]})" if dt else "?"
+            later_rows_html += f'<tr><td colspan="6" style="padding-top:14px;color:#9aa0ad;font-weight:600">{d_label}</td></tr>'
+            last_date = d
+        later_rows_html += pick_row(p, dt.strftime("%H:%M UTC") if dt else "—")
+    if not later_rows_html:
+        later_rows_html = '<tr><td colspan="6" style="text-align:center;color:#888">Дальше матчей в прогнозе нет</td></tr>'
 
     auto_settled = [b for b in auto_bets if b.get("settled")]
     auto_pending = [b for b in auto_bets if not b.get("settled")]
@@ -419,12 +462,25 @@ def dashboard():
   <div class="note">Обновлено: {now.strftime('%Y-%m-%d %H:%M:%S')} UTC · автообновление страницы каждые 5 мин</div>
 
   <div class="card">
-    <h2>Elo-прогноз — ближайшие матчи (бесплатные источники: Liquipedia + история в Supabase)</h2>
+    <h2>Прогноз — сегодня</h2>
     <table>
-      <tr><th>Время</th><th>Лига</th><th>Матч</th><th>Elo Δ</th><th>Фаворит по модели</th></tr>
-      {rows_html}
+      <tr><th>Время</th><th>Матч</th><th>Ставка</th><th>Размер</th><th>Коэф</th><th>Потенциальный выигрыш</th></tr>
+      {today_rows_html}
     </table>
-    <div class="note">Без рыночных коэффициентов (BetsAPI отключён) — чисто модельный Elo-прогноз, без edge/value, без ставок. Обновляется 2 раза/день через GitHub Actions (prematch_free_predict.yml).</div>
+  </div>
+
+  <div class="card">
+    <h2>Прогноз — далее</h2>
+    <table>
+      <tr><th>Время</th><th>Матч</th><th>Ставка</th><th>Размер</th><th>Коэф</th><th>Потенциальный выигрыш</th></tr>
+      {later_rows_html}
+    </table>
+    <div class="note">
+      Коэф — НЕ рыночная цена (BetsAPI мёртв, живых одсов нет): это приблизительная оценка 1/(model_prob × 1.0585)
+      по тому же среднему историческому оверраунду, что и у автономной машины ниже. "Нет данных" — для команд без
+      Elo-истории прогноз ненадёжен (коинфлип), ставку не показываем. Обновляется 2 раза/день через GitHub Actions
+      (prematch_free_predict.yml).
+    </div>
   </div>
 
   <div class="card">
