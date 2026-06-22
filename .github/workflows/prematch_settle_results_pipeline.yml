@@ -1,0 +1,39 @@
+name: Prematch Settle Results — своя статистика (без BetsAPI)
+
+on:
+  schedule:
+    - cron: "15 */3 * * *"   # раз в 3 часа — буфер сеттлинга и так 3ч
+
+  workflow_dispatch:
+
+jobs:
+  settle_results:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Write .env
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          echo "SUPABASE_URL=${SUPABASE_URL}" > .env
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+
+      - name: Settle prematch picks via OpenDota (no BetsAPI)
+        run: python3 scripts/prematch_settle_results_cloud.py
+
+      - name: Summary
+        if: always()
+        run: echo "Prematch settle results pipeline finished at $(date -u)"
