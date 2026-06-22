@@ -351,7 +351,7 @@ def dashboard():
             odds_cell = f"{odds}"
             result_cell = f"<span style='color:#6b7280'>потенциал +${profit:,.2f} (прогноз, бот ещё не ставил)</span>"
         else:
-            bet_cell = "<span style='color:#6b7280'>нет данных</span>"
+            bet_cell = "<span style='color:#6b7280'>нет данных по Elo/коэф</span>"
             stake_cell = odds_cell = result_cell = "—"
         return f"""
         <tr>
