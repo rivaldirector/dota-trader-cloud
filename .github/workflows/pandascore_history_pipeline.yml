@@ -1,0 +1,41 @@
+name: PandaScore History — доп. покрытие Elo-истории (без BetsAPI)
+
+on:
+  schedule:
+    - cron: "30 */6 * * *"   # раз в 6 часов — история обновляется медленно
+
+  workflow_dispatch:
+
+jobs:
+  fetch_history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Write .env
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+          PANDASCORE_TOKEN: ${{ secrets.PANDASCORE_TOKEN }}
+        run: |
+          echo "SUPABASE_URL=${SUPABASE_URL}" > .env
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+          echo "PANDASCORE_TOKEN=${PANDASCORE_TOKEN}" >> .env
+
+      - name: Fetch PandaScore finished matches (60 days) -> Supabase
+        run: python3 scripts/fetch_pandascore_history_cloud.py --days 60
+
+      - name: Summary
+        if: always()
+        run: echo "PandaScore history pipeline finished at $(date -u)"
