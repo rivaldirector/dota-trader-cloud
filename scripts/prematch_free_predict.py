@@ -19,6 +19,10 @@ Run:
     python3 scripts/prematch_free_predict.py
 
 GitHub Actions: пару раз в день (расписание Liquipedia меняется не часто).
+
+HOURS_AHEAD=72: зафиксировано как стандартный горизонт прогноза для всего
+проекта (см. Mac-пайплайн, dashboard.html) — было 36, расширено для
+консистентности между cloud- и local-дэшбордами.
 """
 from __future__ import annotations
 
@@ -46,7 +50,7 @@ SB_HEADERS = {
 }
 
 MATCHES_URL = "https://dota.haglund.dev/v1/matches"
-HOURS_AHEAD = 36          # окно "на сегодня" (с запасом на таймзоны)
+HOURS_AHEAD = 72          # горизонт прогноза — зафиксирован на 72ч (было 36)
 START_ELO = 1500.0
 K_FACTOR = 32
 FUZZY_MIN = 0.72           # порог нечёткого совпадения имён команд
