@@ -334,8 +334,11 @@ def dashboard():
             elif st_dt is not None and st_dt <= now:
                 elapsed_h = (now - st_dt).total_seconds() / 3600
                 result_cell = f"<span style='color:#9aa0ad'>ожидаем результат ({elapsed_h:.0f}ч с начала)</span>"
+            elif st_dt is not None:
+                until_h = (st_dt - now).total_seconds() / 3600
+                result_cell = f"<span style='color:#6b7280'>начнётся через {until_h:.0f}ч</span>"
             else:
-                result_cell = "<span style='color:#9aa0ad'>матч идёт/начался</span>"
+                result_cell = "<span style='color:#9aa0ad'>ставка принята</span>"
         elif has_data and fav_prob is not None:
             # Прогноз есть, но машина ЕЩЁ не ставила (свежий матч — следующий
             # прогон по расписанию подхватит) — гипотетическая оценка.
