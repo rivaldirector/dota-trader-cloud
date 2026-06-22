@@ -1,0 +1,43 @@
+name: Elo Auto Pipeline — autonomous flat-bet decide + settle (no BetsAPI)
+
+on:
+  schedule:
+    - cron: "15 */2 * * *"   # каждые 2 часа, сдвиг на 15 мин от daily_pipeline
+
+  workflow_dispatch:
+
+jobs:
+  auto_pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Write .env
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          echo "SUPABASE_URL=${SUPABASE_URL}" > .env
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+
+      - name: Settle matured AUTO_ELO_FLAT bets (OpenDota, free)
+        continue-on-error: true   # OpenDota недоступен — не блокируем bet-шаг ниже
+        run: python3 scripts/elo_auto_settle.py
+
+      - name: Place autonomous flat bets on Elo favorites (decide, no review)
+        run: python3 scripts/elo_auto_bet.py
+
+      - name: Summary
+        if: always()
+        run: echo "Elo auto pipeline finished at $(date -u)"
