@@ -2,7 +2,7 @@ import os
 import json
 import urllib.request
 import urllib.error
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
@@ -229,38 +229,69 @@ def debug_links():
 
 
 # -------------------
+# Маленький инлайн-SVG лайн-чарт — без внешних JS-библиотек, считается
+# на сервере из cumulative P&L по урегулированным ставкам автономной машины.
+# -------------------
+def render_bank_chart(values: list, start: float, width: int = 760, height: int = 150) -> str:
+    pts = [start] + list(values)
+    if len(pts) < 2:
+        return ('<div class="note" style="padding:24px 0;text-align:center">'
+                'Пока нет урегулированных ставок — график появится после первых результатов.</div>')
+    vmin, vmax = min(pts), max(pts)
+    pad = max(2.0, (vmax - vmin) * 0.12)
+    vmin -= pad
+    vmax += pad
+    n = len(pts)
+
+    def X(i):
+        return 8 + (width - 16) * i / (n - 1)
+
+    def Y(v):
+        return 8 + (height - 16) * (1 - (v - vmin) / (vmax - vmin or 1))
+
+    poly = " ".join(f"{X(i):.1f},{Y(v):.1f}" for i, v in enumerate(pts))
+    y0 = Y(start)
+    color = "#22c55e" if pts[-1] >= start else "#ef4444"
+    return f"""<svg viewBox="0 0 {width} {height}" width="100%" height="{height}" preserveAspectRatio="none">
+      <line x1="8" y1="{y0:.1f}" x2="{width - 8}" y2="{y0:.1f}" stroke="#2a2e38" stroke-width="1" stroke-dasharray="4,4"/>
+      <polyline points="{poly}" fill="none" stroke="{color}" stroke-width="2.5"/>
+    </svg>"""
+
+
+# -------------------
 # DASHBOARD (HTML) — живая страница, не зависит от Мака.
 # Источники: prematch_model_picks (бесплатный Elo-прогноз, см.
-# scripts/prematch_free_predict.py) + elo_bankroll (банк Rule C контура,
-# отдельного от других экспериментов в этой базе).
+# scripts/prematch_free_predict.py) + elo_paper_bets (и автономная
+# AUTO_ELO_FLAT машина, и frozen Rule C family M05/M06/M36 — СТРОГО
+# раздельный расчёт банка для каждой, без общих таблиц-банков).
 # -------------------
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard():
     now = datetime.now(timezone.utc)
     now_iso_str = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=7)
 
     try:
         picks = sb("GET", f"prematch_model_picks?starts_at=gte.{now_iso_str}&order=starts_at.asc&limit=100&select=*")
-    except Exception as e:
+    except Exception:
         picks = []
     try:
-        bankroll_rows = sb("GET", "elo_bankroll?select=*&limit=1")
-    except Exception:
-        bankroll_rows = []
-    try:
-        pipeline = sb("GET", "pipeline_status?select=*&order=checked_at.desc")
-    except Exception:
-        pipeline = []
-    try:
-        gate_count = sb("GET", "elo_paper_bets?strategy_name=eq.M05&settled=eq.true&select=id")
-    except Exception:
-        gate_count = []
-    try:
-        auto_bets = sb("GET", "elo_paper_bets?strategy_name=eq.AUTO_ELO_FLAT&order=start_time.desc&limit=20&select=*")
+        auto_bets = sb("GET", "elo_paper_bets?strategy_name=eq.AUTO_ELO_FLAT&order=start_time.desc&limit=300&select=*")
     except Exception:
         auto_bets = []
+    try:
+        rule_c_bets = sb("GET", "elo_paper_bets?strategy_name=in.(M05,M06,M36)&select=id,settled,pnl")
+    except Exception:
+        rule_c_bets = []
 
-    bankroll = bankroll_rows[0] if bankroll_rows else {}
+    # ---- Rule C — полностью отдельный расчёт банка, НЕ из elo_bankroll
+    # (та таблица принадлежит автономной машине, см. ниже) ----
+    rule_c_settled = [b for b in rule_c_bets if b.get("settled")]
+    rule_c_pnl = sum(float(b.get("pnl") or 0) for b in rule_c_settled)
+    bank_start = 1000.0
+    bank_cur = round(bank_start + rule_c_pnl, 2)
+    gate_settled = len(rule_c_settled)
 
     rows_html = ""
     for p in picks:
@@ -288,38 +319,61 @@ def dashboard():
     if not rows_html:
         rows_html = '<tr><td colspan="5" style="text-align:center;color:#888">Нет матчей в ближайшие часы (или прогноз ещё не обновлялся — обновляется 2 раза/день)</td></tr>'
 
-    pipeline_html = ""
-    for s in pipeline[:6]:
-        cls = "ok" if s.get("status") == "ok" else "err"
-        msg = (s.get("message") or "")[:90]
-        pipeline_html += (
-            f"<div class='stat'><div class='lbl'>{s.get('script')}</div>"
-            f"<div class='val {cls}' style='font-size:14px'>{s.get('status')}</div>"
-            f"<div class='note' style='margin-top:2px'>{msg}</div></div>"
-        )
-
-    bank_cur = float(bankroll.get("current_bank_usd", 1000) or 1000)
-    bank_start = float(bankroll.get("start_bank_usd", 1000) or 1000)
-    gate_settled = len(gate_count)
-
     auto_settled = [b for b in auto_bets if b.get("settled")]
     auto_pending = [b for b in auto_bets if not b.get("settled")]
     auto_pnl = sum(float(b.get("pnl") or 0) for b in auto_settled)
     auto_wins = sum(1 for b in auto_settled if b.get("outcome") == "win")
+    auto_losses = sum(1 for b in auto_settled if b.get("outcome") == "loss")
     auto_wr = (auto_wins / len(auto_settled) * 100) if auto_settled else None
     auto_bank = round(1000.0 + auto_pnl, 2)
 
+    gains_sum = sum(float(b.get("pnl") or 0) for b in auto_settled if float(b.get("pnl") or 0) > 0)
+    losses_sum = sum(float(b.get("pnl") or 0) for b in auto_settled if float(b.get("pnl") or 0) < 0)
+
+    def started_after(b, dt):
+        st = b.get("start_time")
+        if st is None:
+            return False
+        try:
+            return datetime.fromtimestamp(st, tz=timezone.utc) >= dt
+        except Exception:
+            return False
+
+    today_bets = [b for b in auto_bets if started_after(b, today_start)]
+    week_bets = [b for b in auto_bets if started_after(b, week_start)]
+    today_settled = [b for b in today_bets if b.get("settled")]
+    week_settled = [b for b in week_bets if b.get("settled")]
+    today_staked = sum(float(b.get("stake_usd") or 0) for b in today_bets)
+    week_staked = sum(float(b.get("stake_usd") or 0) for b in week_bets)
+    today_pnl = sum(float(b.get("pnl") or 0) for b in today_settled)
+    week_pnl = sum(float(b.get("pnl") or 0) for b in week_settled)
+
+    # ---- график банка: хронологически по settled_ts (fallback start_time) ----
+    chrono_settled = sorted(
+        auto_settled,
+        key=lambda b: b.get("settled_ts") or datetime.fromtimestamp(b.get("start_time", 0), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+    bank_curve, running = [], 1000.0
+    for b in chrono_settled:
+        running = round(running + float(b.get("pnl") or 0), 2)
+        bank_curve.append(running)
+    bank_chart_svg = render_bank_chart(bank_curve, start=1000.0)
+
     auto_rows_html = ""
-    for b in auto_bets[:12]:
+    for b in auto_bets[:20]:
         st = b.get("start_time")
         try:
-            st_fmt = datetime.fromtimestamp(st, tz=timezone.utc).strftime("%d.%m %H:%M UTC")
+            st_dt = datetime.fromtimestamp(st, tz=timezone.utc)
+            st_fmt = st_dt.strftime("%d.%m %H:%M UTC")
         except Exception:
-            st_fmt = str(st)
+            st_dt, st_fmt = None, str(st)
         side = b.get("home_team") if b.get("bet_team") == "home" else b.get("away_team")
         if b.get("settled"):
             cls = "ok" if b.get("outcome") == "win" else "err"
             status_s = f"<span class='{cls}'>{b.get('outcome')} ({float(b.get('pnl') or 0):+.2f}$)</span>"
+        elif st_dt is not None:
+            elapsed_h = (now - st_dt).total_seconds() / 3600
+            status_s = f"<span style='color:#9aa0ad'>ожидаем результат ({elapsed_h:.0f}ч)</span>"
         else:
             status_s = "<span style='color:#9aa0ad'>ожидаем результат</span>"
         auto_rows_html += f"""
@@ -378,6 +432,7 @@ def dashboard():
       <div class="stat"><div class="val">{f'{auto_wr:.1f}%' if auto_wr is not None else '—'}</div><div class="lbl">winrate Elo-фаворита</div></div>
       <div class="stat"><div class="val">{len(auto_pending)}</div><div class="lbl">ожидают результата</div></div>
     </div>
+    <div style="margin-top:16px">{bank_chart_svg}</div>
     <table style="margin-top:14px">
       <tr><th>Старт</th><th>Матч</th><th>Решение</th><th>Условные odds</th><th>Итог</th></tr>
       {auto_rows_html}
@@ -387,8 +442,26 @@ def dashboard():
       "Условные odds" — НЕ рыночная цена (её сейчас просто нет, BetsAPI мёртв): это 1/(model_prob × 1.0585), где 1.0585 —
       реальный средний оверраунд букмекеров, посчитанный по 68 733 историческим строкам в этой же базе. Главная метрика
       здесь — <b>winrate</b> (угадывает ли Elo фаворита), а не $ — деньги тут иллюстративные, пока не вернутся живые одсы.
-      Сеттлинг — через бесплатный OpenDota (без BetsAPI/ключа).
+      Сеттлинг — через бесплатный OpenDota (без BetsAPI/ключа): иногда матч (особенно квалы с неопределённым соперником,
+      типа "Inner Circle x Insanity") просто отсутствует в бесплатной выдаче OpenDota — тогда ставка честно висит
+      "ожидаем результата" дольше обычного, это не баг, а предел бесплатного источника.
     </div>
+  </div>
+
+  <div class="card">
+    <h2>Объём ставок и P&amp;L — сегодня / за 7 дней</h2>
+    <div class="stats">
+      <div class="stat"><div class="val">{len(today_bets)}</div><div class="lbl">ставок сегодня (${today_staked:,.0f} stake)</div></div>
+      <div class="stat"><div class="val">{len(week_bets)}</div><div class="lbl">ставок за 7 дней (${week_staked:,.0f} stake)</div></div>
+      <div class="stat"><div class="val {'ok' if today_pnl >= 0 else 'err'}">{today_pnl:+,.2f}$</div><div class="lbl">P&amp;L сегодня ({len(today_settled)} settled)</div></div>
+      <div class="stat"><div class="val {'ok' if week_pnl >= 0 else 'err'}">{week_pnl:+,.2f}$</div><div class="lbl">P&amp;L за 7 дней ({len(week_settled)} settled)</div></div>
+    </div>
+    <div class="stats" style="margin-top:18px">
+      <div class="stat"><div class="val ok">+{gains_sum:,.2f}$</div><div class="lbl">сумма приростов ({auto_wins} win)</div></div>
+      <div class="stat"><div class="val err">{losses_sum:,.2f}$</div><div class="lbl">сумма лузов ({auto_losses} loss)</div></div>
+      <div class="stat"><div class="val {'ok' if auto_pnl >= 0 else 'err'}">{auto_pnl:+,.2f}$</div><div class="lbl">чистый P&amp;L (всего settled)</div></div>
+    </div>
+    <div class="note">Считается по тем же settled-ставкам автономной Elo-машины (elo_paper_bets, strategy_name=AUTO_ELO_FLAT). "Сегодня"/"7 дней" — по времени старта матча (UTC), а не по времени сеттла.</div>
   </div>
 
   <div class="card">
@@ -407,19 +480,18 @@ def dashboard():
   </div>
 
   <div class="card">
-    <h2>Виртуальный банк (Elo + H2H + Rule C контур)</h2>
+    <h2>Виртуальный банк (Rule C контур — заморожен, нужны живые одсы)</h2>
     <div class="stats">
       <div class="stat"><div class="val">${bank_cur:,.2f}</div><div class="lbl">текущий банк</div></div>
       <div class="stat"><div class="val">${bank_start:,.2f}</div><div class="lbl">старт</div></div>
       <div class="stat"><div class="val">{gate_settled}/30</div><div class="lbl">гейт Rule C (settled signals)</div></div>
     </div>
-    <div class="note">Rule C требует рыночные коэффициенты для расчёта edge — сигналы не генерируются и банк не меняется, пока не подключён источник одсов. Это отдельный контур от других таблиц в этой базе (paper_trades/daily_bankroll и т.п. — другие эксперименты).</div>
-  </div>
-
-  <div class="card">
-    <h2>Статус пайплайна (последние прогоны)</h2>
-    <div class="stats">
-      {pipeline_html or "<div class='note'>Нет данных pipeline_status</div>"}
+    <div class="note">
+      Считается СТРОГО по своим ставкам (elo_paper_bets, strategy_name IN M05/M06/M36) — не путать с автономной
+      машиной выше, у них разные банки и разная логика. Rule C требует рыночные коэффициенты для расчёта edge —
+      сигналы не генерируются и банк honestly не двигается, пока не подключён источник одсов (сейчас 0/30 — это
+      ожидаемо, контур не сломан, просто пуст). Отдельно от других таблиц в этой базе (paper_trades/daily_bankroll
+      и т.п. — другие эксперименты, не трогаем).
     </div>
   </div>
 </body>
