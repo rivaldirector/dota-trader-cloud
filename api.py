@@ -287,14 +287,18 @@ def dashboard():
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     week_start = today_start - timedelta(days=7)
 
+    today_start_iso = today_start.strftime("%Y-%m-%dT%H:%M:%SZ")
     try:
-        picks = sb("GET", f"prematch_model_picks?starts_at=gte.{now_iso_str}&order=starts_at.asc&limit=100&select=*")
+        # от начала СЕГОДНЯ (не от now) — иначе уже начавшиеся сегодня матчи
+        # (на которые машина уже реально поставила) выпадают из карточки.
+        picks = sb("GET", f"prematch_model_picks?starts_at=gte.{today_start_iso}&order=starts_at.asc&limit=150&select=*")
     except Exception:
         picks = []
     try:
         auto_bets = sb("GET", "elo_paper_bets?strategy_name=eq.AUTO_ELO_FLAT&order=start_time.desc&limit=300&select=*")
     except Exception:
         auto_bets = []
+    auto_bets_by_event = {b.get("event_id"): b for b in auto_bets if b.get("event_id")}
     try:
         rule_c_bets = sb("GET", "elo_paper_bets?strategy_name=in.(M05,M06,M36)&select=id,settled,pnl")
     except Exception:
@@ -308,12 +312,33 @@ def dashboard():
     bank_cur = round(bank_start + rule_c_pnl, 2)
     gate_settled = len(rule_c_settled)
 
-    def pick_row(p, time_cell):
+    def pick_row(p, time_cell, st_dt):
         t1 = clean_team_name(p.get("team_1"))
         t2 = clean_team_name(p.get("team_2"))
         has_data = bool(p.get("has_elo_data"))
         fav_prob = p.get("favorite_prob")
-        if has_data and fav_prob is not None:
+        real = auto_bets_by_event.get(f"liq_{p.get('match_hash')}") if p.get("match_hash") else None
+
+        if real:
+            # Машина уже реально поставила на этот матч — показываем
+            # настоящие данные ставки, а не гипотетический прогноз.
+            bet_team_name = clean_team_name(real.get("home_team") if real.get("bet_team") == "home" else real.get("away_team"))
+            stake = float(real.get("stake_usd") or 0)
+            odds = real.get("odds")
+            bet_cell = f"<b>{bet_team_name}</b>"
+            stake_cell = f"${stake:.0f}"
+            odds_cell = f"{odds}"
+            if real.get("settled"):
+                cls = "ok" if real.get("outcome") == "win" else "err"
+                result_cell = f"<span class='{cls}'>{real.get('outcome')} ({float(real.get('pnl') or 0):+.2f}$)</span>"
+            elif st_dt is not None and st_dt <= now:
+                elapsed_h = (now - st_dt).total_seconds() / 3600
+                result_cell = f"<span style='color:#9aa0ad'>ожидаем результат ({elapsed_h:.0f}ч с начала)</span>"
+            else:
+                result_cell = "<span style='color:#9aa0ad'>матч идёт/начался</span>"
+        elif has_data and fav_prob is not None:
+            # Прогноз есть, но машина ЕЩЁ не ставила (свежий матч — следующий
+            # прогон по расписанию подхватит) — гипотетическая оценка.
             fav = clean_team_name(p.get("favorite"))
             fav_prob_f = float(fav_prob)
             odds = round(1.0 / (fav_prob_f * FORECAST_AVG_OVERROUND), 3)
@@ -321,10 +346,10 @@ def dashboard():
             bet_cell = f"<b>{fav}</b>"
             stake_cell = f"${FORECAST_STAKE_USD:.0f}"
             odds_cell = f"{odds}"
-            profit_cell = f"<span class='ok'>+${profit:,.2f}</span>"
+            result_cell = f"<span style='color:#6b7280'>потенциал +${profit:,.2f} (прогноз, бот ещё не ставил)</span>"
         else:
             bet_cell = "<span style='color:#6b7280'>нет данных</span>"
-            stake_cell = odds_cell = profit_cell = "—"
+            stake_cell = odds_cell = result_cell = "—"
         return f"""
         <tr>
           <td>{time_cell}</td>
@@ -332,7 +357,7 @@ def dashboard():
           <td>{bet_cell}</td>
           <td>{stake_cell}</td>
           <td>{odds_cell}</td>
-          <td>{profit_cell}</td>
+          <td>{result_cell}</td>
         </tr>"""
 
     today_date = now.date()
@@ -346,7 +371,7 @@ def dashboard():
         (today_picks if (dt and dt.date() == today_date) else later_picks).append((p, dt))
 
     today_rows_html = "".join(
-        pick_row(p, dt.strftime("%H:%M UTC") if dt else "—") for p, dt in today_picks
+        pick_row(p, dt.strftime("%H:%M UTC") if dt else "—", dt) for p, dt in today_picks
     ) or '<tr><td colspan="6" style="text-align:center;color:#888">Сегодня матчей в прогнозе нет</td></tr>'
 
     later_rows_html = ""
@@ -358,7 +383,7 @@ def dashboard():
             d_label = f"{dt.strftime('%d.%m')} ({_wd[dt.weekday()]})" if dt else "?"
             later_rows_html += f'<tr><td colspan="6" style="padding-top:14px;color:#9aa0ad;font-weight:600">{d_label}</td></tr>'
             last_date = d
-        later_rows_html += pick_row(p, dt.strftime("%H:%M UTC") if dt else "—")
+        later_rows_html += pick_row(p, dt.strftime("%H:%M UTC") if dt else "—", dt)
     if not later_rows_html:
         later_rows_html = '<tr><td colspan="6" style="text-align:center;color:#888">Дальше матчей в прогнозе нет</td></tr>'
 
@@ -464,7 +489,7 @@ def dashboard():
   <div class="card">
     <h2>Прогноз — сегодня</h2>
     <table>
-      <tr><th>Время</th><th>Матч</th><th>Ставка</th><th>Размер</th><th>Коэф</th><th>Потенциальный выигрыш</th></tr>
+      <tr><th>Время</th><th>Матч</th><th>Ставка</th><th>Размер</th><th>Коэф</th><th>Итог / потенциал</th></tr>
       {today_rows_html}
     </table>
   </div>
@@ -472,14 +497,16 @@ def dashboard():
   <div class="card">
     <h2>Прогноз — далее</h2>
     <table>
-      <tr><th>Время</th><th>Матч</th><th>Ставка</th><th>Размер</th><th>Коэф</th><th>Потенциальный выигрыш</th></tr>
+      <tr><th>Время</th><th>Матч</th><th>Ставка</th><th>Размер</th><th>Коэф</th><th>Итог / потенциал</th></tr>
       {later_rows_html}
     </table>
     <div class="note">
       Коэф — НЕ рыночная цена (BetsAPI мёртв, живых одсов нет): это приблизительная оценка 1/(model_prob × 1.0585)
       по тому же среднему историческому оверраунду, что и у автономной машины ниже. "Нет данных" — для команд без
-      Elo-истории прогноз ненадёжен (коинфлип), ставку не показываем. Обновляется 2 раза/день через GitHub Actions
-      (prematch_free_predict.yml).
+      Elo-истории прогноз ненадёжен (коинфлип), ставку не показываем. Если по матчу машина уже реально поставила
+      (видно по "Итог/потенциал": win/loss/ожидаем результата) — показаны настоящие данные ставки, а не прогноз.
+      "Потенциал (прогноз, бот ещё не ставил)" — гипотетическая оценка для матчей, до которых бот пока не добрался
+      (прогоняется раз в 2ч). Обновляется 2 раза/день через GitHub Actions (prematch_free_predict.yml).
     </div>
   </div>
 
