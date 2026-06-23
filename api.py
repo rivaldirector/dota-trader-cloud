@@ -377,9 +377,35 @@ def dashboard():
           <td>{result_cell}</td>
         </tr>"""
 
+    # Дедупликация: одна строка на матч. Несколько стратегий могут писать
+    # отдельные записи в prematch_model_picks — схлопываем по ключу
+    # (team_1, team_2, starts_at), оставляя наиболее информативную:
+    # 1) реальная ставка AUTO_ELO_FLAT — приоритет;
+    # 2) has_elo_data=True + максимальный favorite_prob;
+    # 3) любая (все "нет данных").
+    def _dedup_key(p):
+        return (
+            clean_team_name(p.get("team_1")),
+            clean_team_name(p.get("team_2")),
+            p.get("starts_at", ""),
+        )
+
+    def _pick_priority(p):
+        has_real = bool(auto_bets_by_event.get(f"liq_{p.get('match_hash')}") if p.get("match_hash") else None)
+        has_elo = bool(p.get("has_elo_data"))
+        prob = float(p.get("favorite_prob") or 0)
+        return (has_real, has_elo, prob)
+
+    seen_keys: dict = {}
+    for p in picks:
+        key = _dedup_key(p)
+        if key not in seen_keys or _pick_priority(p) > _pick_priority(seen_keys[key]):
+            seen_keys[key] = p
+    deduped_picks = sorted(seen_keys.values(), key=lambda p: p.get("starts_at", ""))
+
     today_date = now.date()
     today_picks, later_picks = [], []
-    for p in picks:
+    for p in deduped_picks:
         st = p.get("starts_at", "")
         try:
             dt = datetime.fromisoformat(st.replace("Z", "+00:00"))
