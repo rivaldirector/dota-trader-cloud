@@ -43,6 +43,11 @@ load_dotenv(ROOT / ".env")
 
 # Импортируем модуль сигналов
 sys.path.insert(0, str(ROOT / "scripts"))
+from totals_model import (
+    find_od_team, get_od_team_stats, combine_team_stats,
+    prob_over, prob_under, parse_totals_from_odds,
+    GLOBAL_AVG_KILLS, GLOBAL_AVG_DUR_MIN,
+)
 from signals import (
     compute_form,
     compute_h2h,
@@ -159,17 +164,21 @@ def _extract_real_odds(odds_data, bet_side):
     return round(best_odds, 4), best_bm
 
 
-def lookup_real_odds(home, away, start_ts, bet_side):
+def _find_betsapi_event(home: str, away: str, start_ts: int):
+    """Находит лучшее совпадение в BetsAPI upcoming событиях.
+    Возвращает (event_id, is_reversed) или (None, False)."""
     import time
     from difflib import SequenceMatcher
     events = _fetch_upcoming()
-    if not events: return None, None
+    if not events:
+        return None, False
     home_c = re.sub(r"\s+", " ", home.strip().lower())
     away_c = re.sub(r"\s+", " ", away.strip().lower())
     best_ev, best_score, best_rev = None, 0.0, False
     for ev in events:
         ev_ts = int(ev.get("time", 0))
-        if abs(ev_ts - start_ts) > 8 * 3600: continue
+        if abs(ev_ts - start_ts) > 8 * 3600:
+            continue
         h = re.sub(r"\s+", " ", (ev.get("home", {}).get("name", "")).strip().lower())
         a = re.sub(r"\s+", " ", (ev.get("away", {}).get("name", "")).strip().lower())
         s_norm = SequenceMatcher(None, home_c, h).ratio() + SequenceMatcher(None, away_c, a).ratio()
@@ -177,12 +186,179 @@ def lookup_real_odds(home, away, start_ts, bet_side):
         score, rev = (s_norm, False) if s_norm >= s_rev else (s_rev, True)
         if score > best_score and score >= ODDS_FUZZY_MIN * 2:
             best_score, best_ev, best_rev = score, ev, rev
-    if best_ev is None: return None, None
-    ev_id = best_ev.get("id")
+    if best_ev is None:
+        return None, False
+    return best_ev.get("id"), best_rev
+
+
+def _get_event_odds_data(event_id: str) -> dict:
+    import time
     time.sleep(1.2)
-    odds_data = _bapi("/v2/event/odds/summary", {"event_id": ev_id})
-    eff_side = ("away" if bet_side == "home" else "home") if best_rev else bet_side
+    return _bapi("/v2/event/odds/summary", {"event_id": event_id})
+
+
+def lookup_real_odds(home, away, start_ts, bet_side):
+    ev_id, is_rev = _find_betsapi_event(home, away, start_ts)
+    if ev_id is None:
+        return None, None
+    odds_data = _get_event_odds_data(ev_id)
+    eff_side = ("away" if bet_side == "home" else "home") if is_rev else bet_side
     return _extract_real_odds(odds_data, eff_side)
+
+
+# Минимальный edge для totals ставок (выше чем moneyline — модель слабее)
+TOTALS_EDGE_MIN_DATA   = 0.06   # есть статистика хотя бы одной команды
+TOTALS_EDGE_MIN_GLOBAL = 0.10   # только глобальные средние (слабый сигнал)
+KELLY_CAP_TOTALS       = 0.04   # max 4% банка на totals ставку
+
+
+def try_totals_bet(
+    home: str, away: str, start_ts: int, match_data: dict,
+    tiers: list, bankroll: float, a_mult: float,
+    daily_cap_usd: float, today_staked: float, eid: str,
+) -> dict | None:
+    """
+    Пробует найти выгодную totals ставку (убийства / длительность / карты)
+    для матча без Elo-данных.
+    Возвращает строку для elo_paper_bets или None.
+    """
+    # 1. Ищем событие в BetsAPI
+    ev_id, _rev = _find_betsapi_event(home, away, start_ts)
+    if ev_id is None:
+        print(f"    [тоталы] {home} vs {away} — не найдено в BetsAPI")
+        return None
+
+    odds_data = _get_event_odds_data(ev_id)
+    totals = parse_totals_from_odds(odds_data)
+    if not totals:
+        print(f"    [тоталы] {home} vs {away} — нет тотальных рынков в BetsAPI")
+        return None
+
+    print(f"    [тоталы] {home} vs {away} — найдено {len(totals)} тотальных рынков")
+
+    # 2. Получаем статистику команд из OpenDota
+    h_id, h_sc = find_od_team(home)
+    a_id, a_sc = find_od_team(away)
+    h_stats = get_od_team_stats(h_id) if h_id else None
+    a_stats = get_od_team_stats(a_id) if a_id else None
+
+    if h_stats:
+        print(f"    [тоталы] {home}: avg_kills={h_stats['avg_kills']} avg_dur={h_stats.get('avg_dur')} (n={h_stats['n']})")
+    if a_stats:
+        print(f"    [тоталы] {away}: avg_kills={a_stats['avg_kills']} avg_dur={a_stats.get('avg_dur')} (n={a_stats['n']})")
+
+    model = combine_team_stats(h_stats, a_stats)
+    using_global = model["using_global"]
+
+    edge_min = TOTALS_EDGE_MIN_GLOBAL if using_global else TOTALS_EDGE_MIN_DATA
+    tier = get_league_tier(match_data.get("leagueName"), tiers)
+
+    # 3. Ищем рынок с позитивным edge
+    best_row = None
+    best_edge = -999.0
+
+    for t in totals:
+        mtype = t["market_type"]
+        line  = t["line"]
+
+        if mtype == "kills":
+            mu, sigma = model["exp_kills"], model["std_kills"]
+        elif mtype == "duration":
+            mu, sigma = model["exp_dur"], model["std_dur"]
+        elif mtype == "maps":
+            # Для maps у нас нет модели без Elo — пропускаем
+            continue
+        else:
+            continue
+
+        p_ov = prob_over(line, mu, sigma)
+        p_un = prob_under(line, mu, sigma)
+
+        edge_over  = round(p_ov * t["over_odds"]  - 1, 4)
+        edge_under = round(p_un * t["under_odds"] - 1, 4)
+
+        print(
+            f"    [тоталы] {mtype} {line}: "
+            f"μ={mu:.1f} σ={sigma:.1f} | "
+            f"over={t['over_odds']} edge={edge_over:+.1%} | "
+            f"under={t['under_odds']} edge={edge_under:+.1%}"
+        )
+
+        for direction, edge, odds, p in [
+            ("over",  edge_over,  t["over_odds"],  p_ov),
+            ("under", edge_under, t["under_odds"], p_un),
+        ]:
+            if edge >= edge_min and edge > best_edge:
+                best_edge = edge
+                best_row = {
+                    "market_type": mtype,
+                    "line":        line,
+                    "direction":   direction,
+                    "edge":        edge,
+                    "real_odds":   odds,
+                    "bookmaker":   t["bookmaker"],
+                    "p":           p,
+                }
+
+    if best_row is None:
+        print(f"    [тоталы] нет рынка с edge ≥ {edge_min:.0%}")
+        return None
+
+    # 4. Kelly sizing (консервативный cap для totals)
+    p     = best_row["p"]
+    odds  = best_row["real_odds"]
+    b     = odds - 1.0
+    full_k = (b * p - (1 - p)) / b if b > 0 else 0
+    kf     = round(min(full_k * KELLY_FRACTION_DEFAULT * a_mult, KELLY_CAP_TOTALS), 5)
+    stake  = round(bankroll * kf, 1)
+
+    if stake < 1.0:
+        print(f"    [тоталы] Kelly stake слишком мал: ${stake:.1f}")
+        return None
+
+    if today_staked + stake > daily_cap_usd:
+        print(f"    [тоталы] дневной лимит исчерпан")
+        return None
+
+    mtype     = best_row["market_type"]
+    direction = best_row["direction"]
+    line      = best_row["line"]
+
+    print(
+        f"\n  ✓ [ТОТАЛ] {home} vs {away}  ({match_data.get('leagueName')})\n"
+        f"    {mtype} {direction.upper()} {line} | "
+        f"μ={model['exp_kills'] if mtype == 'kills' else model['exp_dur']:.1f} "
+        f"({'глобал' if using_global else 'стат'})\n"
+        f"    odds={odds} edge={best_row['edge']:+.1%} kelly={kf:.4f} stake=${stake:.0f}"
+    )
+
+    return {
+        "run_ts":         datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "strategy_name":  STRATEGY_NAME,
+        "event_id":       eid,
+        "division":       DIVISION,
+        "league":         match_data.get("leagueName"),
+        "home_team":      home,
+        "away_team":      away,
+        "start_time":     start_ts,
+        "bookmaker":      best_row["bookmaker"],
+        "bet_team":       direction,          # "over" / "under"
+        "bet_market":     mtype,              # "kills" / "duration"
+        "bet_line":       line,
+        "odds":           round(1.0 / (p * AVG_OVERROUND_HIST), 3),
+        "market_prob":    round(1.0 / odds, 4),
+        "model_prob":     round(p, 4),
+        "composite_prob": round(p, 4),
+        "edge":           best_row["edge"],
+        "stake_usd":      stake,
+        "settled":        False,
+        "real_odds":      odds,
+        "real_bookmaker": best_row["bookmaker"],
+        "form_score":     None,
+        "h2h_score":      None,
+        "kelly_f":        kf,
+        "league_tier":    tier,
+    }
 
 
 # ── Supabase ─────────────────────────────────────────────────────────────────
@@ -562,8 +738,19 @@ def main():
         m1, _ = best_elo_match(t1_lookup, elo)
         m2, _ = best_elo_match(t2_lookup, elo)
         if not (m1 and m2):
-            skipped_no_elo += 1
-            print(f"  ? {t1} vs {t2} — нет Elo, пропуск")
+            print(f"  ? {t1} vs {t2} — нет Elo, пробуем тоталы...")
+            totals_row = try_totals_bet(
+                t1, t2, int(m["_ts"].timestamp()), m,
+                tiers, bankroll, a_mult, daily_cap_usd, today_staked, eid,
+            )
+            if totals_row and totals_row["stake_usd"] > 0:
+                rows.append(totals_row)
+                today_staked += totals_row["stake_usd"]
+                done_matchups.add(matchup_key)
+            elif totals_row:
+                rows.append(totals_row)  # tracking без $
+            else:
+                skipped_no_elo += 1
             continue
 
         # ── Слой 1: Сигналы ─────────────────────────────────────────────────
@@ -727,13 +914,16 @@ def main():
 
     sb_upsert("elo_paper_bets", rows, on_conflict="strategy_name,event_id,division")
 
-    real_bets  = [r for r in rows if r["stake_usd"] > 0]
-    track_only = [r for r in rows if r["stake_usd"] == 0]
+    real_bets    = [r for r in rows if r["stake_usd"] > 0]
+    track_only   = [r for r in rows if r["stake_usd"] == 0]
+    elo_bets     = [r for r in real_bets if r.get("bet_market", "moneyline") == "moneyline"]
+    totals_bets  = [r for r in real_bets if r.get("bet_market", "moneyline") != "moneyline"]
     print(
         f"\n── Итог ──────────────────────────────────────────\n"
-        f"  Реальных ставок (с $): {len(real_bets)}\n"
-        f"  Трекинг без $ (нет BetsAPI odds): {len(track_only)}\n"
-        f"  Пропущено (нет Elo): {skipped_no_elo}\n"
+        f"  Реальных ставок: {len(real_bets)}"
+        f" (moneyline: {len(elo_bets)}, тоталы: {len(totals_bets)})\n"
+        f"  Трекинг без $: {len(track_only)}\n"
+        f"  Пропущено (нет Elo/тоталов): {skipped_no_elo}\n"
         f"  Пропущено (нет odds): {skipped_no_odds}\n"
         f"  Пропущено (мало edge): {skipped_no_edge}\n"
         f"  Пропущено (дневной лимит): {skipped_daily}\n"
