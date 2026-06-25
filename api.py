@@ -285,6 +285,7 @@ def dashboard():
         "?strategy_name=eq.AUTO_ELO_FLAT"
         "&settled=eq.false"
         "&stake_usd=gt.0"
+        "&real_odds=not.is.null"
         f"&run_ts=gte.{cutoff_72h}"
         "&select=run_ts,home_team,away_team,bet_team,stake_usd,real_odds,"
         "composite_prob,kelly_f,form_score,h2h_score,league_tier,edge,start_time,league"

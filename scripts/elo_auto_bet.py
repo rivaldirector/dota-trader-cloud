@@ -477,12 +477,25 @@ def main():
     if alias_map:
         print(f"  алиасов: {len(alias_map)}")
 
-    # Уже поставленные (идемпотентность)
+    # Уже поставленные (идемпотентность по event_id И по матчу)
     existing = sb_get(
         "elo_paper_bets",
-        f"strategy_name=eq.{STRATEGY_NAME}&division=eq.{DIVISION}&select=event_id",
+        f"strategy_name=eq.{STRATEGY_NAME}&division=eq.{DIVISION}"
+        "&select=event_id,home_team,away_team,start_time",
     )
     done_ids = {r["event_id"] for r in existing}
+    # Дедупликация по матчу: (norm_home, norm_away, start_hour)
+    # Это защищает от случая, когда dota.haglund.dev отдаёт разный hash
+    # для одного и того же матча при разных запросах
+    done_matchups: set[tuple[str, str, int]] = {
+        (
+            normalize_team(r["home_team"]),
+            normalize_team(r["away_team"]),
+            int(r["start_time"] or 0) // 3600,
+        )
+        for r in existing
+        if r.get("start_time")
+    }
 
     # Дневной лимит ставок
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -528,6 +541,13 @@ def main():
             continue
 
         t1, t2 = m["_t1"], m["_t2"]
+
+        # Дедупликация по матчу (защита от нестабильного hash Liquipedia)
+        _start_ts_pre = int(m["_ts"].timestamp())
+        matchup_key = (normalize_team(t1), normalize_team(t2), _start_ts_pre // 3600)
+        if matchup_key in done_matchups:
+            print(f"  [дубль матча] {t1} vs {t2} — уже поставлено ранее, пропуск")
+            continue
         t1_lookup = resolve_alias(t1, alias_map)
         t2_lookup = resolve_alias(t2, alias_map)
 
@@ -695,6 +715,7 @@ def main():
             "kelly_f":        kelly_f_applied,
             "league_tier":    tier,
         })
+        done_matchups.add(matchup_key)  # не ставим дважды в одном прогоне
 
     sb_upsert("elo_paper_bets", rows, on_conflict="strategy_name,event_id,division")
 
