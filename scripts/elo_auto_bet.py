@@ -1,36 +1,30 @@
 #!/usr/bin/env python3
 """
-elo_auto_bet.py — АВТОНОМНАЯ машина решений: сама выбирает фаворита по Elo
-на каждый предстоящий матч и сама фиксирует виртуальную ставку. Без участия
-человека и без сигналов на ревью — ты только смотришь /dashboard.
+elo_auto_bet.py — АВТОНОМНАЯ машина решений v2.
 
-ВАЖНО про деньги — честно, без иллюзий:
-  Рыночных коэффициентов на эти матчи НЕТ (BetsAPI мёртв с 17 июня, ни
-  локально, ни в облаке). Поэтому "odds" здесь — НЕ рыночная цена, а
-  условная оценка: notional_odds = 1 / (model_prob * AVG_OVERROUND_HIST),
-  где AVG_OVERROUND_HIST=1.0585 — это РЕАЛЬНЫЙ средний оверраунд (маржа
-  букмекера), посчитанный по 68 733 историческим строкам odds_summary в
-  этой же базе (см. SQL в чате, "avg_overround":1.0585). Это иллюстрация
-  правдоподобного исхода, НЕ настоящий edge — пока одсы не подключены,
-  главная метрика, на которую смотрим — это winrate Elo-фаворита, а не $.
+Архитектура принятия решений (5 слоёв):
+  1. СИГНАЛ       — Elo + форма (last 10) + H2H (last 8) → composite_prob
+  2. EDGE FILTER  — ставим ТОЛЬКО если real_edge >= edge_min для тира лиги
+                    (T1: 2%, T2: 3%, T3/qual: 5%)
+                    Без реальных odds от BetsAPI — пропускаем матч
+  3. KELLY        — stake = bankroll × fractional_kelly × adaptive_mult
+                    Fraction=0.25 (conservative), cap по тиру
+  4. ПОРТФЕЛЬ     — max 5% банка на матч, max 20% банка в сутки
+  5. ADAPTIVE     — rolling ROI за 20 бетов → множитель Kelly (0.15–1.0)
+                    ЗАМЕНА жёсткого стоп-лосса: никогда не останавливает
+                    полностью, только плавно снижает размер
 
-Источники (оба бесплатные, без ключа — те же, что в prematch_free_predict.py):
-  1. Расписание: https://dota.haglund.dev/v1/matches (Liquipedia)
-  2. Elo: walk-forward по betsapi_events (sport_tag=dota2, status=ended) +
-     elo_pandascore_history (доп. покрытие лиг, недообсчитанных BetsAPI —
-     TI Quals, EPL и т.п., см. fetch_pandascore_history_cloud.py), мёрдж
-     и дедуп как в локальном generate_dashboard.py.
-
-Стратегия: strategy_name='AUTO_ELO_FLAT', division='FREE' — ОТДЕЛЬНАЯ от
-Rule C (M05/M06/M36 family), которая остаётся frozen и нетронутой. Ставим
-ВСЕГДА на фаворита (не фильтруем по edge — edge тут не считается осмысленно
-без реальной цены), flat $20, идемпотентно (UNIQUE(strategy_name,event_id,
-division) в elo_paper_bets — повторный запуск не задвоит ставку).
+Источники данных:
+  Расписание: https://dota.haglund.dev/v1/matches  (Liquipedia, бесплатно)
+  История:    betsapi_events + elo_pandascore_history + elo_own_history
+  Odds:       BetsAPI /v3/events/upcoming + /v2/event/odds/summary
+  Тиры лиг:  Supabase league_tiers
+  Банк:       Supabase bankroll_state (обновляется после каждого settle)
 
 Run:
     python3 scripts/elo_auto_bet.py
 
-GitHub Actions: каждые 2 часа (см. elo_auto_pipeline.yml), вместе с settle.
+GitHub Actions: paper_trader.yml — каждые 10 минут.
 """
 from __future__ import annotations
 
@@ -38,7 +32,6 @@ import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
-from difflib import SequenceMatcher
 from math import pow
 from pathlib import Path
 
@@ -48,9 +41,22 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 
-SUPABASE_URL   = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY   = os.getenv("SUPABASE_ANON_KEY", "")
-BETSAPI_TOKEN  = os.getenv("BETSAPI_TOKEN", "")
+# Импортируем модуль сигналов
+sys.path.insert(0, str(ROOT / "scripts"))
+from signals import (
+    compute_form,
+    compute_h2h,
+    composite_prob,
+    kelly_stake,
+    adaptive_kelly_mult,
+    get_league_tier,
+    get_tier_params,
+    KELLY_FRACTION_DEFAULT,
+)
+
+SUPABASE_URL  = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY  = os.getenv("SUPABASE_ANON_KEY", "")
+BETSAPI_TOKEN = os.getenv("BETSAPI_TOKEN", "")
 
 SB_HEADERS = {
     "apikey": SUPABASE_KEY,
@@ -59,19 +65,24 @@ SB_HEADERS = {
     "Prefer": "resolution=merge-duplicates,return=minimal",
 }
 
-MATCHES_URL    = "https://dota.haglund.dev/v1/matches"
-HOURS_AHEAD    = 72
-START_ELO      = 1500.0
-K_FACTOR       = 32
-FUZZY_MIN      = 0.72
-ODDS_FUZZY_MIN = 0.60
-STAKE_USD      = 20.0
+MATCHES_URL        = "https://dota.haglund.dev/v1/matches"
+HOURS_AHEAD        = 72
+START_ELO          = 1500.0
+K_FACTOR           = 32
+FUZZY_MIN          = 0.72
+ODDS_FUZZY_MIN     = 0.60
 AVG_OVERROUND_HIST = 1.0585
-STRATEGY_NAME  = "AUTO_ELO_FLAT"
-DIVISION       = "FREE"
-PREFERRED_BM   = ["PinnacleSports", "Pinnacle", "Bet365", "GGBet", "MelBet", "1xBet"]
+STRATEGY_NAME      = "AUTO_ELO_FLAT"
+DIVISION           = "FREE"
+PREFERRED_BM       = ["PinnacleSports", "Pinnacle", "Bet365", "GGBet", "MelBet", "1xBet"]
 
-# ── BetsAPI real odds lookup ─────────────────────────────────────────────────
+# Минимальный банк для ставки (защита от случайного обнуления)
+MIN_BANKROLL       = 100.0
+# Дневной лимит — не более 20% банка за сутки
+DAILY_STAKE_CAP    = 0.20
+
+
+# ── BetsAPI ──────────────────────────────────────────────────────────────────
 
 def _bapi(path, params=None):
     if not BETSAPI_TOKEN:
@@ -92,7 +103,9 @@ def _bapi(path, params=None):
         time.sleep(1.2)
     return {}
 
+
 _cached_upcoming = None
+
 
 def _fetch_upcoming():
     global _cached_upcoming
@@ -111,6 +124,7 @@ def _fetch_upcoming():
     _cached_upcoming = events
     return events
 
+
 def _extract_real_odds(odds_data, bet_side):
     results = odds_data.get("results", {})
     if not isinstance(results, dict): return None, None
@@ -127,14 +141,17 @@ def _extract_real_odds(odds_data, bet_side):
             except Exception: continue
             if o_home <= 1.0 or o_away <= 1.0: continue
             our = o_home if bet_side == "home" else o_away
-            prio = next((i for i, p in enumerate(PREFERRED_BM) if p.lower() in bm_name.lower()), len(PREFERRED_BM))
+            prio = next((i for i, p in enumerate(PREFERRED_BM)
+                         if p.lower() in bm_name.lower()), len(PREFERRED_BM))
             candidates.append((prio, our, bm_name))
     if not candidates: return None, None
     _, best_odds, best_bm = sorted(candidates)[0]
     return round(best_odds, 4), best_bm
 
+
 def lookup_real_odds(home, away, start_ts, bet_side):
     import time
+    from difflib import SequenceMatcher
     events = _fetch_upcoming()
     if not events: return None, None
     home_c = re.sub(r"\s+", " ", home.strip().lower())
@@ -157,16 +174,15 @@ def lookup_real_odds(home, away, start_ts, bet_side):
     eff_side = ("away" if bet_side == "home" else "home") if best_rev else bet_side
     return _extract_real_odds(odds_data, eff_side)
 
-# ── end BetsAPI ──────────────────────────────────────────────────────────────
 
-
-def elo_exp(ra: float, rb: float) -> float:
-    return 1.0 / (1.0 + pow(10.0, (rb - ra) / 400.0))
-
+# ── Supabase ─────────────────────────────────────────────────────────────────
 
 def sb_get(table: str, qs: str) -> list:
-    r = requests.get(f"{SUPABASE_URL}/rest/v1/{table}?{qs}",
-                      headers={**SB_HEADERS, "Prefer": "return=representation"}, timeout=30)
+    r = requests.get(
+        f"{SUPABASE_URL}/rest/v1/{table}?{qs}",
+        headers={**SB_HEADERS, "Prefer": "return=representation"},
+        timeout=30,
+    )
     r.raise_for_status()
     return r.json()
 
@@ -174,35 +190,44 @@ def sb_get(table: str, qs: str) -> list:
 def sb_upsert(table: str, rows: list[dict], on_conflict: str) -> None:
     if not rows:
         return
-    r = requests.post(f"{SUPABASE_URL}/rest/v1/{table}?on_conflict={on_conflict}",
-                       headers=SB_HEADERS, json=rows, timeout=30)
+    r = requests.post(
+        f"{SUPABASE_URL}/rest/v1/{table}?on_conflict={on_conflict}",
+        headers=SB_HEADERS,
+        json=rows,
+        timeout=30,
+    )
     if r.status_code not in (200, 201, 204):
         print(f"  [SB ERROR] upsert {table}: {r.status_code} {r.text[:200]}")
 
+
+def sb_patch(table: str, qs: str, body: dict) -> None:
+    r = requests.patch(
+        f"{SUPABASE_URL}/rest/v1/{table}?{qs}",
+        headers=SB_HEADERS,
+        json=body,
+        timeout=30,
+    )
+    if r.status_code not in (200, 201, 204):
+        print(f"  [SB ERROR] patch {table}: {r.status_code} {r.text[:200]}")
+
+
+# ── Team helpers ──────────────────────────────────────────────────────────────
 
 def normalize_team(name: str | None) -> str:
     return re.sub(r"[^a-z0-9]", "", (name or "").lower())
 
 
 def clean_team_name(name: str | None) -> str:
-    """Убирает суффикс ' (page does not exist)', который dota.haglund.dev
-    сам добавляет в name, если у команды нет статьи на Liquipedia."""
     if not name:
-        return name or "?"
+        return "?"
     return name.split(" (page does not exist)")[0].strip()
 
 
 def fetch_team_aliases() -> dict[str, str]:
-    """alias_name (нормализованное) -> canonical_name. Команды иногда играют
-    под другим именем — например, PARIVISION выступает как TEAM VISION на
-    TI2026 квалах из-за правила Valve против спонсоров-букмекеров (тот же
-    состав/организация). Таблица team_aliases в Supabase — ручной список,
-    дополняемый по мере обнаружения новых случаев (полностью автоматическое
-    обнаружение ребрендов ненадёжно без платного API с историей ростеров)."""
     try:
         rows = sb_get("team_aliases", "select=alias_name,canonical_name")
     except Exception as ex:
-        print(f"  [WARN] team_aliases недоступна: {ex}")
+        print(f"  [WARN] team_aliases: {ex}")
         return {}
     return {
         normalize_team(r["alias_name"]): r["canonical_name"]
@@ -217,124 +242,8 @@ def resolve_alias(name: str | None, alias_map: dict[str, str]) -> str | None:
     return alias_map.get(key, name)
 
 
-def build_elo_from_supabase() -> dict[str, float]:
-    print("Тяну историю dota2 матчей из Supabase для Elo (BetsAPI + PandaScore)...")
-    page = 1000
-    history: list[tuple[int, str, str, float]] = []  # (start_time, home, away, act_h)
-    seen_keys: set[tuple[str, str, int]] = set()
-
-    # 1) BetsAPI — основной источник, winner уже бинарный (без "ничьих")
-    rows, offset = [], 0
-    while True:
-        chunk = sb_get(
-            "betsapi_events",
-            f"sport_tag=eq.dota2&status=eq.ended&winner=neq.&"
-            f"select=home_team,away_team,winner,start_time&"
-            f"order=start_time.asc&limit={page}&offset={offset}",
-        )
-        if not chunk:
-            break
-        rows.extend(chunk)
-        if len(chunk) < page:
-            break
-        offset += page
-
-    for r in rows:
-        t1, t2, w, st = r.get("home_team"), r.get("away_team"), r.get("winner"), r.get("start_time")
-        if not t1 or not t2 or not w or st is None:
-            continue
-        key = (normalize_team(t1), normalize_team(t2), int(st) // 3600)
-        if key in seen_keys:
-            continue
-        seen_keys.add(key)
-        history.append((int(st), t1, t2, 1.0 if w == t1 else 0.0))
-    n_betsapi = len(history)
-
-    # 2) PandaScore — добор лиг, недообсчитанных BetsAPI (см. docstring выше)
-    ps_rows, offset = [], 0
-    while True:
-        chunk = sb_get(
-            "elo_pandascore_history",
-            f"winner=neq.&select=home_team,away_team,winner,start_time&"
-            f"order=start_time.asc&limit={page}&offset={offset}",
-        )
-        if not chunk:
-            break
-        ps_rows.extend(chunk)
-        if len(chunk) < page:
-            break
-        offset += page
-
-    ps_added = 0
-    for r in ps_rows:
-        t1, t2, w, st = r.get("home_team"), r.get("away_team"), r.get("winner"), r.get("start_time")
-        if not t1 or not t2 or not w or st is None:
-            continue
-        key = (normalize_team(t1), normalize_team(t2), int(st) // 3600)
-        if key in seen_keys:
-            continue  # уже есть из BetsAPI — не дублируем
-        nw = normalize_team(w)
-        if nw == normalize_team(t1):
-            act_h = 1.0
-        elif nw == normalize_team(t2):
-            act_h = 0.0
-        else:
-            continue  # не смогли определить сторону — пропускаем
-        seen_keys.add(key)
-        history.append((int(st), t1, t2, act_h))
-        ps_added += 1
-
-    # 3) Своя накопленная история (elo_own_history) — результаты матчей, для
-    # которых не было ни BetsAPI, ни PandaScore (часто новые/малоизвестные
-    # команды), но мы сами досмотрели исход через OpenDota (см.
-    # prematch_settle_results_cloud.py). Растёт со временем без платных API.
-    own_rows, offset = [], 0
-    while True:
-        chunk = sb_get(
-            "elo_own_history",
-            f"winner=neq.&select=home_team,away_team,winner,start_time&"
-            f"order=start_time.asc&limit={page}&offset={offset}",
-        )
-        if not chunk:
-            break
-        own_rows.extend(chunk)
-        if len(chunk) < page:
-            break
-        offset += page
-
-    own_added = 0
-    for r in own_rows:
-        t1, t2, w, st = r.get("home_team"), r.get("away_team"), r.get("winner"), r.get("start_time")
-        if not t1 or not t2 or not w or st is None:
-            continue
-        key = (normalize_team(t1), normalize_team(t2), int(st) // 3600)
-        if key in seen_keys:
-            continue  # уже есть из BetsAPI/PandaScore — не дублируем
-        nw = normalize_team(w)
-        if nw == normalize_team(t1):
-            act_h = 1.0
-        elif nw == normalize_team(t2):
-            act_h = 0.0
-        else:
-            continue
-        seen_keys.add(key)
-        history.append((int(st), t1, t2, act_h))
-        own_added += 1
-
-    history.sort(key=lambda r: r[0])  # хронологически — обязательно для Elo (no leakage)
-
-    elo: dict[str, float] = {}
-    for st, t1, t2, act_h in history:
-        e1, e2 = elo.get(t1, START_ELO), elo.get(t2, START_ELO)
-        ea = elo_exp(e1, e2)
-        elo[t1] = e1 + K_FACTOR * (act_h - ea)
-        elo[t2] = e2 + K_FACTOR * ((1 - act_h) - (1 - ea))
-    print(f"  матчей в истории: {len(history)} (BetsAPI: {n_betsapi}, +PandaScore: {ps_added}, "
-          f"+своя история: {own_added})  |  команд с Elo: {len(elo)}")
-    return elo
-
-
 def fuzzy(a: str, b: str) -> float:
+    from difflib import SequenceMatcher
     return SequenceMatcher(None, a.lower().strip(), b.lower().strip()).ratio()
 
 
@@ -347,6 +256,112 @@ def best_elo_match(name: str, elo: dict[str, float]) -> tuple[str | None, float]
     return (best, score) if score >= FUZZY_MIN else (None, score)
 
 
+# ── Elo build ─────────────────────────────────────────────────────────────────
+
+def elo_exp(ra: float, rb: float) -> float:
+    return 1.0 / (1.0 + pow(10.0, (rb - ra) / 400.0))
+
+
+def build_elo_from_supabase() -> tuple[dict[str, float], list[tuple]]:
+    """
+    Строит Elo и возвращает (elo_dict, history).
+    history — список (start_time, home, away, act_h) для signals.py.
+    """
+    print("Тяну историю матчей для Elo + сигналов...")
+    page = 1000
+    history: list[tuple[int, str, str, float]] = []
+    seen_keys: set[tuple[str, str, int]] = set()
+
+    # 1) BetsAPI
+    rows, offset = [], 0
+    while True:
+        chunk = sb_get(
+            "betsapi_events",
+            f"sport_tag=eq.dota2&status=eq.ended&winner=neq.&"
+            f"select=home_team,away_team,winner,start_time&"
+            f"order=start_time.asc&limit={page}&offset={offset}",
+        )
+        if not chunk: break
+        rows.extend(chunk)
+        if len(chunk) < page: break
+        offset += page
+
+    for r in rows:
+        t1, t2, w, st = r.get("home_team"), r.get("away_team"), r.get("winner"), r.get("start_time")
+        if not t1 or not t2 or not w or st is None: continue
+        key = (normalize_team(t1), normalize_team(t2), int(st) // 3600)
+        if key in seen_keys: continue
+        seen_keys.add(key)
+        history.append((int(st), t1, t2, 1.0 if w == t1 else 0.0))
+    n_betsapi = len(history)
+
+    # 2) PandaScore
+    ps_rows, offset = [], 0
+    while True:
+        chunk = sb_get(
+            "elo_pandascore_history",
+            f"winner=neq.&select=home_team,away_team,winner,start_time&"
+            f"order=start_time.asc&limit={page}&offset={offset}",
+        )
+        if not chunk: break
+        ps_rows.extend(chunk)
+        if len(chunk) < page: break
+        offset += page
+
+    ps_added = 0
+    for r in ps_rows:
+        t1, t2, w, st = r.get("home_team"), r.get("away_team"), r.get("winner"), r.get("start_time")
+        if not t1 or not t2 or not w or st is None: continue
+        key = (normalize_team(t1), normalize_team(t2), int(st) // 3600)
+        if key in seen_keys: continue
+        nw = normalize_team(w)
+        if nw == normalize_team(t1): act_h = 1.0
+        elif nw == normalize_team(t2): act_h = 0.0
+        else: continue
+        seen_keys.add(key)
+        history.append((int(st), t1, t2, act_h))
+        ps_added += 1
+
+    # 3) Своя история
+    own_rows, offset = [], 0
+    while True:
+        chunk = sb_get(
+            "elo_own_history",
+            f"winner=neq.&select=home_team,away_team,winner,start_time&"
+            f"order=start_time.asc&limit={page}&offset={offset}",
+        )
+        if not chunk: break
+        own_rows.extend(chunk)
+        if len(chunk) < page: break
+        offset += page
+
+    own_added = 0
+    for r in own_rows:
+        t1, t2, w, st = r.get("home_team"), r.get("away_team"), r.get("winner"), r.get("start_time")
+        if not t1 or not t2 or not w or st is None: continue
+        key = (normalize_team(t1), normalize_team(t2), int(st) // 3600)
+        if key in seen_keys: continue
+        nw = normalize_team(w)
+        if nw == normalize_team(t1): act_h = 1.0
+        elif nw == normalize_team(t2): act_h = 0.0
+        else: continue
+        seen_keys.add(key)
+        history.append((int(st), t1, t2, act_h))
+        own_added += 1
+
+    history.sort(key=lambda r: r[0])
+
+    elo: dict[str, float] = {}
+    for st, t1, t2, act_h in history:
+        e1, e2 = elo.get(t1, START_ELO), elo.get(t2, START_ELO)
+        ea = elo_exp(e1, e2)
+        elo[t1] = e1 + K_FACTOR * (act_h - ea)
+        elo[t2] = e2 + K_FACTOR * ((1 - act_h) - (1 - ea))
+
+    print(f"  матчей: {len(history)} (BetsAPI:{n_betsapi} +PS:{ps_added} +own:{own_added}) | команд: {len(elo)}")
+    return elo, history
+
+
 def fetch_upcoming_matches() -> list[dict]:
     r = requests.get(MATCHES_URL, timeout=20)
     r.raise_for_status()
@@ -356,6 +371,30 @@ def fetch_upcoming_matches() -> list[dict]:
 def is_real_team(name: str | None) -> bool:
     return bool(name) and name != "TBD"
 
+
+# ── Bankroll ──────────────────────────────────────────────────────────────────
+
+def get_bankroll() -> float:
+    """Читает текущий банк из bankroll_state."""
+    try:
+        rows = sb_get("bankroll_state", f"strategy=eq.{STRATEGY_NAME}&select=balance")
+        if rows:
+            return max(float(rows[0]["balance"]), MIN_BANKROLL)
+    except Exception as e:
+        print(f"  [WARN] bankroll_state: {e}")
+    return 1000.0
+
+
+def update_bankroll(new_balance: float, total_bets: int) -> None:
+    sb_patch(
+        "bankroll_state",
+        f"strategy=eq.{STRATEGY_NAME}",
+        {"balance": round(new_balance, 2), "total_bets": total_bets,
+         "updated_at": datetime.now(timezone.utc).isoformat()},
+    )
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
     if not all([SUPABASE_URL, SUPABASE_KEY]):
@@ -368,6 +407,32 @@ def main():
         print(f"ERROR: dota.haglund.dev недоступен: {ex}")
         sys.exit(1)
 
+    # ── Загружаем вспомогательные данные ────────────────────────────────────
+    tiers = []
+    try:
+        tiers = sb_get("league_tiers", "select=pattern,tier,edge_min,kelly_cap&order=tier.asc")
+        print(f"Тиров лиг: {len(tiers)}")
+    except Exception as e:
+        print(f"  [WARN] league_tiers: {e}")
+
+    bankroll = get_bankroll()
+    print(f"Текущий банк: ${bankroll:,.2f}")
+
+    # Загружаем последние settled ставки для adaptive Kelly
+    recent_settled = []
+    try:
+        recent_settled = sb_get(
+            "elo_paper_bets",
+            f"strategy_name=eq.{STRATEGY_NAME}&settled=eq.true"
+            f"&select=stake_usd,pnl,outcome,real_odds&order=settled_ts.desc&limit=30",
+        )
+    except Exception as e:
+        print(f"  [WARN] recent_settled: {e}")
+
+    a_mult = adaptive_kelly_mult(recent_settled)
+    print(f"Adaptive Kelly множитель: {a_mult:.2f} (по {len(recent_settled)} settled бетам)")
+
+    # ── Окно матчей ──────────────────────────────────────────────────────────
     cutoff = datetime.now(timezone.utc) + timedelta(hours=HOURS_AHEAD)
     soon = []
     for m in matches:
@@ -387,61 +452,160 @@ def main():
 
     print(f"Матчей в окне {HOURS_AHEAD}ч: {len(soon)}")
     if not soon:
-        print("Нет матчей — выходим, ничего не ставим.")
+        print("Нет матчей — выходим.")
         return
 
-    elo = build_elo_from_supabase()
+    elo, history = build_elo_from_supabase()
     alias_map = fetch_team_aliases()
     if alias_map:
-        print(f"  алиасов команд загружено: {len(alias_map)}")
+        print(f"  алиасов: {len(alias_map)}")
 
-    # Уже поставленные (идемпотентность на стороне клиента — не обязательно,
-    # UNIQUE constraint в БД и так не даст задвоить, но так меньше шума в логах)
+    # Уже поставленные (идемпотентность)
     existing = sb_get(
         "elo_paper_bets",
         f"strategy_name=eq.{STRATEGY_NAME}&division=eq.{DIVISION}&select=event_id",
     )
     done_ids = {r["event_id"] for r in existing}
 
+    # Дневной лимит ставок
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_staked = 0.0
+    try:
+        today_bets = sb_get(
+            "elo_paper_bets",
+            f"strategy_name=eq.{STRATEGY_NAME}"
+            f"&run_ts=gte.{today_start.isoformat()}"
+            f"&select=stake_usd",
+        )
+        today_staked = sum(float(b.get("stake_usd") or 0) for b in today_bets)
+    except Exception:
+        pass
+    daily_cap_usd = bankroll * DAILY_STAKE_CAP
+    print(f"Дневной лимит: ${daily_cap_usd:.0f} | уже поставлено сегодня: ${today_staked:.0f}")
+
     rows = []
+    skipped_no_odds = 0
+    skipped_no_edge = 0
+    skipped_no_elo  = 0
+    skipped_daily   = 0
+
     for m in soon:
         eid = f"liq_{m.get('hash')}"
         if eid in done_ids:
             continue
+
         t1, t2 = m["_t1"], m["_t2"]
         t1_lookup = resolve_alias(t1, alias_map)
         t2_lookup = resolve_alias(t2, alias_map)
-        if t1_lookup != t1:
-            print(f"  [алиас] {t1} -> {t1_lookup}")
-        if t2_lookup != t2:
-            print(f"  [алиас] {t2} -> {t2_lookup}")
+
         m1, _ = best_elo_match(t1_lookup, elo)
         m2, _ = best_elo_match(t2_lookup, elo)
         if not (m1 and m2):
-            print(f"  ? {t1} vs {t2} — нет Elo-истории для обеих команд, пропуск (не ставим без данных)")
+            skipped_no_elo += 1
+            print(f"  ? {t1} vs {t2} — нет Elo, пропуск")
             continue
 
+        # ── Слой 1: Сигналы ─────────────────────────────────────────────────
         e1, e2 = elo[m1], elo[m2]
-        model_prob_1 = elo_exp(e1, e2)
-        fav_is_t1 = model_prob_1 >= 0.5
-        fav_team = t1 if fav_is_t1 else t2
-        fav_prob = model_prob_1 if fav_is_t1 else (1 - model_prob_1)
+        elo_prob_t1 = elo_exp(e1, e2)
 
-        notional_odds = round(1.0 / (fav_prob * AVG_OVERROUND_HIST), 3)
-        notional_market_prob = round(1.0 / notional_odds, 4)
-        edge = round(fav_prob - notional_market_prob, 4)
+        form_t1  = compute_form(t1_lookup, history, n=10)
+        form_t2  = compute_form(t2_lookup, history, n=10)
+        h2h_t1   = compute_h2h(t1_lookup, t2_lookup, history, n=8)
 
-        bet_side = "home" if fav_is_t1 else "away"
-        start_ts = int(m["_ts"].timestamp())
+        # Определяем на кого ставим (фаворит по elo_prob)
+        fav_is_t1  = elo_prob_t1 >= 0.5
+        fav_team   = t1 if fav_is_t1 else t2
+        fav_lookup = t1_lookup if fav_is_t1 else t2_lookup
+        opp_lookup = t2_lookup if fav_is_t1 else t1_lookup
+
+        elo_prob_fav = elo_prob_t1 if fav_is_t1 else (1 - elo_prob_t1)
+        form_fav     = (form_t1 if fav_is_t1 else form_t2)
+        h2h_fav      = h2h_t1 if fav_is_t1 else (1 - h2h_t1 if h2h_t1 is not None else None)
+
+        comp_prob = composite_prob(elo_prob_fav, form_fav, h2h_fav)
+
+        # ── Слой 2: BetsAPI + Edge filter ───────────────────────────────────
+        bet_side  = "home" if fav_is_t1 else "away"
+        start_ts  = int(m["_ts"].timestamp())
         real_odds, real_bm = lookup_real_odds(t1, t2, start_ts, bet_side)
 
-        print(f"\n  {t1} vs {t2}  ({m.get('leagueName')})  старт {m['_ts'].strftime('%Y-%m-%d %H:%M')}Z")
-        if real_odds:
-            real_edge = round(fav_prob * real_odds - 1, 4)
-            print(f"    РЕШЕНИЕ: ${STAKE_USD:.0f} на {fav_team} | notional={notional_odds} "
-                  f"real={real_odds} [{real_bm}] real_edge={real_edge:+.1%}")
-        else:
-            print(f"    РЕШЕНИЕ: ${STAKE_USD:.0f} на {fav_team} | notional={notional_odds} (нет реальных одсов)")
+        if not real_odds:
+            skipped_no_odds += 1
+            # Записываем информационную ставку без размера (для трекинга winrate)
+            notional_odds = round(1.0 / (comp_prob * AVG_OVERROUND_HIST), 3)
+            print(f"  [нет реальных одсов] {t1} vs {t2} — notional={notional_odds}, не ставим")
+            # Пишем с stake=0 чтобы иметь трек прогнозов без $ риска
+            rows.append({
+                "run_ts":        datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "strategy_name": STRATEGY_NAME,
+                "event_id":      eid,
+                "division":      DIVISION,
+                "league":        m.get("leagueName"),
+                "home_team": t1, "away_team": t2,
+                "start_time":    start_ts,
+                "bookmaker":     "NOTIONAL_HIST_AVG",
+                "bet_team":      bet_side,
+                "odds":          notional_odds,
+                "market_prob":   round(1.0 / notional_odds, 4),
+                "model_prob":    round(elo_prob_fav, 4),
+                "composite_prob": comp_prob,
+                "edge":          None,
+                "stake_usd":     0.0,   # не ставим без реальных одсов
+                "settled":       False,
+                "real_odds":     None,
+                "real_bookmaker": None,
+                "form_score":    round(form_fav, 4) if form_fav is not None else None,
+                "h2h_score":     round(h2h_fav, 4) if h2h_fav is not None else None,
+                "kelly_f":       None,
+                "league_tier":   get_league_tier(m.get("leagueName"), tiers),
+            })
+            continue
+
+        # Считаем реальный edge
+        real_edge = round(comp_prob * real_odds - 1, 4)
+        tier      = get_league_tier(m.get("leagueName"), tiers)
+        edge_min, kelly_cap = get_tier_params(tier, tiers)
+        notional_odds = round(1.0 / (comp_prob * AVG_OVERROUND_HIST), 3)
+
+        if real_edge < edge_min:
+            skipped_no_edge += 1
+            print(f"  [edge мал] {t1} vs {t2}  edge={real_edge:+.1%} < {edge_min:.0%} (T{tier}) — пропуск")
+            continue
+
+        # ── Слой 3: Kelly sizing ─────────────────────────────────────────────
+        stake = kelly_stake(
+            p=comp_prob,
+            odds=real_odds,
+            bankroll=bankroll,
+            fraction=KELLY_FRACTION_DEFAULT,
+            cap=kelly_cap,
+            adaptive_mult=a_mult,
+        )
+
+        if stake <= 0:
+            print(f"  [kelly=0] {t1} vs {t2} — Kelly отрицательный, пропуск")
+            continue
+
+        # ── Слой 4: Дневной лимит ────────────────────────────────────────────
+        if today_staked + stake > daily_cap_usd:
+            skipped_daily += 1
+            print(f"  [дневной лимит] {t1} vs {t2} — лимит ${daily_cap_usd:.0f} исчерпан")
+            continue
+        today_staked += stake
+
+        # ── Расчёт kelly_f для сохранения ────────────────────────────────────
+        b = real_odds - 1.0
+        full_k = (b * comp_prob - (1 - comp_prob)) / b if b > 0 else 0
+        kelly_f_applied = round(min(full_k * KELLY_FRACTION_DEFAULT * a_mult, kelly_cap), 5)
+
+        print(
+            f"\n  ✓ {t1} vs {t2}  ({m.get('leagueName')})  {m['_ts'].strftime('%d.%m %H:%M')}Z  T{tier}"
+            f"\n    elo_p={elo_prob_fav:.3f} form={form_fav:.3f if form_fav else '—'} "
+            f"h2h={h2h_fav:.3f if h2h_fav else '—'} → comp_p={comp_prob:.3f}"
+            f"\n    real={real_odds} [{real_bm}]  edge={real_edge:+.1%}  "
+            f"kelly_f={kelly_f_applied:.4f}  stake=${stake:.0f}  bank=${bankroll:.0f}"
+        )
 
         rows.append({
             "run_ts":         datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -451,20 +615,36 @@ def main():
             "league":         m.get("leagueName"),
             "home_team": t1,  "away_team": t2,
             "start_time":     start_ts,
-            "bookmaker":      real_bm if real_bm else "NOTIONAL_HIST_AVG",
+            "bookmaker":      real_bm,
             "bet_team":       bet_side,
             "odds":           notional_odds,
-            "market_prob":    notional_market_prob,
-            "model_prob":     round(fav_prob, 4),
-            "edge":           edge,
-            "stake_usd":      STAKE_USD,
+            "market_prob":    round(comp_prob / real_odds, 4),
+            "model_prob":     round(elo_prob_fav, 4),
+            "composite_prob": comp_prob,
+            "edge":           real_edge,
+            "stake_usd":      stake,
             "settled":        False,
             "real_odds":      real_odds,
             "real_bookmaker": real_bm,
+            "form_score":     round(form_fav, 4) if form_fav is not None else None,
+            "h2h_score":      round(h2h_fav, 4) if h2h_fav is not None else None,
+            "kelly_f":        kelly_f_applied,
+            "league_tier":    tier,
         })
 
     sb_upsert("elo_paper_bets", rows, on_conflict="strategy_name,event_id,division")
-    print(f"\nАвтономно поставлено новых ставок: {len(rows)}")
+
+    real_bets  = [r for r in rows if r["stake_usd"] > 0]
+    track_only = [r for r in rows if r["stake_usd"] == 0]
+    print(
+        f"\n── Итог ──────────────────────────────────────────\n"
+        f"  Реальных ставок (с $): {len(real_bets)}\n"
+        f"  Трекинг без $ (нет BetsAPI odds): {len(track_only)}\n"
+        f"  Пропущено (нет Elo): {skipped_no_elo}\n"
+        f"  Пропущено (нет odds): {skipped_no_odds}\n"
+        f"  Пропущено (мало edge): {skipped_no_edge}\n"
+        f"  Пропущено (дневной лимит): {skipped_daily}"
+    )
 
 
 if __name__ == "__main__":
