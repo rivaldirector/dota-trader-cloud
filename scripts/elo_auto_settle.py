@@ -126,21 +126,24 @@ def main():
         print(f"  ✓ {home} vs {away} -> winner={winner_side} ({outcome}, pnl=${pnl:+.2f})")
 
     if settled_n:
-        bankroll = sb_get("elo_bankroll", "select=*&limit=1")
-        if bankroll:
-            b = bankroll[0]
-            new_total_pnl = sum(
-                float(x["pnl"]) for x in sb_get(
-                    "elo_paper_bets",
-                    f"strategy_name=eq.{STRATEGY_NAME}&settled=eq.true&select=pnl",
-                )
+        new_total_pnl = sum(
+            float(x["pnl"]) for x in sb_get(
+                "elo_paper_bets",
+                f"strategy_name=eq.{STRATEGY_NAME}&settled=eq.true&stake_usd=gt.0&select=pnl",
             )
-            new_bank = round(float(b["start_bank_usd"]) + new_total_pnl, 2)
-            new_peak = max(new_bank, float(b["peak_bank_usd"]))
-            sb_patch("elo_bankroll", "id=eq.1", {
-                "current_bank_usd": new_bank, "peak_bank_usd": new_peak, "updated_at": now_iso(),
-            })
-            print(f"\nБанк обновлён: ${new_bank:,.2f} (peak ${new_peak:,.2f})")
+        )
+        n_settled = sum(
+            1 for _ in sb_get(
+                "elo_paper_bets",
+                f"strategy_name=eq.{STRATEGY_NAME}&settled=eq.true&stake_usd=gt.0&select=id",
+            )
+        )
+        new_bank = round(1000.0 + new_total_pnl, 2)
+        sb_patch("bankroll_state", f"strategy=eq.{STRATEGY_NAME}", {
+            "balance": new_bank, "total_bets": n_settled,
+            "updated_at": now_iso(),
+        })
+        print(f"\nБанк обновлён: ${new_bank:,.2f} (P&L ${new_total_pnl:+.2f})")
 
     print(f"\nУрегулировано: {settled_n}/{len(pending)}")
 

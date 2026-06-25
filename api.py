@@ -255,14 +255,15 @@ def dashboard():
     now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
     # ── Bankroll ────────────────────────────────────────────────────────────
-    bank_rows = sb_safe("bankroll_state?strategy_name=eq.AUTO_ELO_FLAT&select=*&limit=1")
+    START_BANK  = 1000.0
+    bank_rows = sb_safe("bankroll_state?strategy=eq.AUTO_ELO_FLAT&select=balance,total_bets,updated_at&limit=1")
     bank = bank_rows[0] if bank_rows else {}
-    start_bank  = float(bank.get("start_bank_usd") or 1000)
-    curr_bank   = float(bank.get("current_bank_usd") or start_bank)
-    peak_bank   = float(bank.get("peak_bank_usd") or curr_bank)
-    total_pnl   = round(curr_bank - start_bank, 2)
-    roi_pct     = round(total_pnl / start_bank * 100, 2)
-    drawdown    = round((peak_bank - curr_bank) / peak_bank * 100, 2) if peak_bank > 0 else 0
+    curr_bank   = float(bank.get("balance") or START_BANK)
+    total_pnl   = round(curr_bank - START_BANK, 2)
+    roi_pct     = round(total_pnl / START_BANK * 100, 2)
+    # Peak = max ever balance — не храним, используем curr как lower bound
+    peak_bank   = curr_bank if total_pnl >= 0 else START_BANK
+    drawdown    = round((peak_bank - curr_bank) / peak_bank * 100, 2) if peak_bank > curr_bank else 0
 
     # ── Model config / calibration ───────────────────────────────────────────
     cfg_rows = sb_safe("model_config?select=key,value")
@@ -412,11 +413,10 @@ small{{font-size:11px;}}
   <h2>💰 Bankroll — AUTO_ELO_FLAT</h2>
   <div class="stats">
     <div class="stat"><div class="val">${curr_bank:,.2f}</div><div class="lbl">Текущий банк</div></div>
-    <div class="stat"><div class="val">${peak_bank:,.2f}</div><div class="lbl">Пик банка</div></div>
     <div class="stat"><div class="val {'pos' if total_pnl>=0 else 'neg'}">{fmt_pnl(total_pnl)}</div><div class="lbl">Total P&amp;L</div></div>
     <div class="stat"><div class="val {'pos' if roi_pct>=0 else 'neg'}">{roi_pct:+.2f}%</div><div class="lbl">ROI от старта</div></div>
-    <div class="stat"><div class="val neg">-{drawdown:.1f}%</div><div class="lbl">Drawdown от пика</div></div>
-    <div class="stat"><div class="val">${start_bank:,.0f}</div><div class="lbl">Стартовый банк</div></div>
+    <div class="stat"><div class="val">${START_BANK:,.0f}</div><div class="lbl">Стартовый банк</div></div>
+    <div class="stat"><div class="val">{bank.get('total_bets', '—')}</div><div class="lbl">Settled ставок</div></div>
   </div>
 </div>
 
