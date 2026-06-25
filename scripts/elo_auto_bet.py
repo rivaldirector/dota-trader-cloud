@@ -434,6 +434,21 @@ def main():
     a_mult = adaptive_kelly_mult(recent_settled)
     print(f"Adaptive Kelly множитель: {a_mult:.2f} (по {len(recent_settled)} settled бетам)")
 
+    # Загружаем калиброванные веса ансамбля из model_config
+    ensemble_weights = {"elo": 0.60, "form": 0.25, "h2h": 0.15}
+    try:
+        cfg = sb_get("model_config", "key=in.(w_elo,w_form,w_h2h)&select=key,value")
+        if cfg:
+            cfg_map = {r["key"]: float(r["value"]) for r in cfg}
+            ensemble_weights = {
+                "elo":  cfg_map.get("w_elo",  0.60),
+                "form": cfg_map.get("w_form", 0.25),
+                "h2h":  cfg_map.get("w_h2h",  0.15),
+            }
+            print(f"Веса ансамбля: elo={ensemble_weights['elo']} form={ensemble_weights['form']} h2h={ensemble_weights['h2h']}")
+    except Exception as e:
+        print(f"  [WARN] model_config: {e}")
+
     # ── Окно матчей ──────────────────────────────────────────────────────────
     cutoff = datetime.now(timezone.utc) + timedelta(hours=HOURS_AHEAD)
     soon = []
