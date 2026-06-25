@@ -378,6 +378,24 @@ def dashboard():
         "&order=start_time.asc&limit=30"
     )
 
+    # ── Историческая симуляция SIM_3M ───────────────────────────────────────
+    sim_data = sb_safe(
+        "elo_paper_bets"
+        "?strategy_name=eq.SIM_3M"
+        "&settled=eq.true"
+        "&select=outcome,pnl,stake_usd,run_ts,odds,home_team,away_team,bet_team,edge"
+        "&order=run_ts.asc"
+    )
+    sim_wins   = sum(1 for b in sim_data if b.get("outcome") == "win")
+    sim_losses = sum(1 for b in sim_data if b.get("outcome") == "loss")
+    sim_staked = sum(float(b.get("stake_usd") or 0) for b in sim_data)
+    sim_pnl    = round(sum(float(b.get("pnl") or 0) for b in sim_data), 2)
+    sim_roi    = round(sim_pnl / sim_staked * 100, 1) if sim_staked > 0 else 0
+    sim_wr     = round(sim_wins / (sim_wins + sim_losses) * 100, 1) if (sim_wins + sim_losses) > 0 else 0
+    sim_from   = sim_data[0]["run_ts"][:10] if sim_data else "—"
+    sim_to     = sim_data[-1]["run_ts"][:10] if sim_data else "—"
+    sim_bank   = round(1000.0 + sim_pnl, 2)
+
     # ── Model config ─────────────────────────────────────────────────────────
     cfg_rows = sb_safe("model_config?select=key,value")
     cfg      = {r["key"]: r["value"] for r in cfg_rows} if cfg_rows else {}
@@ -679,6 +697,22 @@ small{{font-size:11px;}}
       <div class="stat"><div class="val pos">{fp(w_earned)}</div><div class="lbl">Заработано (выигрыши)</div></div>
       <div class="stat"><div class="val neg">{fp(w_lost)}</div><div class="lbl">Потеряно (проигрыши)</div></div>
     </div>
+  </div>
+</div>
+
+<!-- ══ SIM_3M: ИСТОРИЧЕСКАЯ СИМУЛЯЦИЯ Apr-Jun 2026 ═══════════════════════ -->
+<div class="card">
+  <h2>🔬 Историческая симуляция — {sim_from} → {sim_to} ({len(sim_data)} ставок)</h2>
+  <div class="stats">
+    <div class="stat"><div class="val {pc(sim_pnl)}">{fp(sim_pnl)}</div><div class="lbl">Итоговый P&amp;L</div></div>
+    <div class="stat"><div class="val {pc(sim_roi)}">{sim_roi:+.1f}%</div><div class="lbl">ROI</div></div>
+    <div class="stat"><div class="val">${sim_bank:,.0f}</div><div class="lbl">Виртуальный банк ($1 000 старт)</div></div>
+    <div class="stat"><div class="val">{sim_wr}%</div><div class="lbl">Win rate ({sim_wins}W/{sim_losses}L)</div></div>
+    <div class="stat"><div class="val">${sim_staked:,.0f}</div><div class="lbl">Поставлено (нотиональные)</div></div>
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-top:10px">
+    Симуляция запущена по матчам PandaScore. Коэффы нотиональные (1/p × overround), т.к. исторические рыночные коэффы недоступны.
+    Ставка фиксированная $20. Живая система ставит только при real_edge &gt; 2% от BetsAPI.
   </div>
 </div>
 
