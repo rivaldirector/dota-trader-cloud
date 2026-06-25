@@ -281,7 +281,6 @@ def dashboard():
         "elo_paper_bets"
         "?strategy_name=eq.AUTO_ELO_FLAT"
         "&stake_usd=gt.0"
-        "&real_odds=not.is.null"
         "&select=run_ts,home_team,away_team,bet_team,stake_usd,real_odds,"
         "outcome,pnl,settled,league"
         "&order=run_ts.desc&limit=50"
@@ -290,12 +289,15 @@ def dashboard():
     hist_settled = [b for b in hist_real if b.get("settled")]
 
     # ── Статистика (все settled) ─────────────────────────────────────────────
-    wins_all     = sum(1 for b in all_settled if b.get("outcome") == "win")
-    losses_all   = sum(1 for b in all_settled if b.get("outcome") == "loss")
-    staked_all   = sum(float(b.get("stake_usd") or 0) for b in all_settled)
-    pnl_all      = sum(float(b.get("pnl") or 0) for b in all_settled)
-    winrate_all  = round(wins_all / len(all_settled) * 100, 1) if all_settled else 0
-    roi_all      = round(pnl_all / staked_all * 100, 2) if staked_all > 0 else 0
+    wins_all    = sum(1 for b in all_settled if b.get("outcome") == "win")
+    losses_all  = sum(1 for b in all_settled if b.get("outcome") == "loss")
+    staked_all  = sum(float(b.get("stake_usd") or 0) for b in all_settled)
+    pnl_all     = sum(float(b.get("pnl") or 0) for b in all_settled)
+    winrate_all = round(wins_all / len(all_settled) * 100, 1) if all_settled else 0
+    roi_all     = round(pnl_all / staked_all * 100, 2) if staked_all > 0 else 0
+    # Реальная прибыль/убыток (из поля pnl)
+    earned_all  = sum(float(b.get("pnl") or 0) for b in all_settled if float(b.get("pnl") or 0) > 0)
+    lost_all    = sum(float(b.get("pnl") or 0) for b in all_settled if float(b.get("pnl") or 0) < 0)
 
     # ── Недельная статистика ─────────────────────────────────────────────────
     week_ago = (now_utc - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -307,11 +309,12 @@ def dashboard():
         f"&settled_ts=gte.{week_ago}"
         "&select=pnl,outcome,stake_usd"
     )
-    w_staked = sum(float(b.get("stake_usd") or 0) for b in week_bets)
-    w_pnl    = sum(float(b.get("pnl") or 0) for b in week_bets)
-    w_wins   = sum(float(b.get("stake_usd") or 0) for b in week_bets if b.get("outcome") == "win")
-    w_losses = sum(float(b.get("stake_usd") or 0) for b in week_bets if b.get("outcome") == "loss")
-    w_count  = len(week_bets)
+    w_staked  = sum(float(b.get("stake_usd") or 0) for b in week_bets)
+    w_pnl     = sum(float(b.get("pnl") or 0) for b in week_bets)
+    # Заработано (положительный pnl) и потеряно (отрицательный pnl)
+    w_earned  = sum(float(b.get("pnl") or 0) for b in week_bets if float(b.get("pnl") or 0) > 0)
+    w_lost    = sum(float(b.get("pnl") or 0) for b in week_bets if float(b.get("pnl") or 0) < 0)
+    w_count   = len(week_bets)
 
     # ── Активные ставки (72ч) ───────────────────────────────────────────────
     cutoff_72h = (now_utc - timedelta(hours=72)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -559,11 +562,11 @@ small{{font-size:11px;}}
     <div class="stats">
       <div class="stat"><div class="val">{w_count}</div><div class="lbl">Ставок</div></div>
       <div class="stat"><div class="val {pc(w_pnl)}">{fp(w_pnl)}</div><div class="lbl">P&amp;L за неделю</div></div>
-      <div class="stat"><div class="val">${w_staked:,.0f}</div><div class="lbl">Объём</div></div>
+      <div class="stat"><div class="val">${w_staked:,.0f}</div><div class="lbl">Поставлено</div></div>
     </div>
     <div class="stats" style="margin-top:16px">
-      <div class="stat"><div class="val pos">${w_wins:,.0f}</div><div class="lbl">Объём выигравших</div></div>
-      <div class="stat"><div class="val neg">-${w_losses:,.0f}</div><div class="lbl">Объём проигравших</div></div>
+      <div class="stat"><div class="val pos">{fp(w_earned)}</div><div class="lbl">Заработано (выигрыши)</div></div>
+      <div class="stat"><div class="val neg">{fp(w_lost)}</div><div class="lbl">Потеряно (проигрыши)</div></div>
     </div>
   </div>
 </div>
