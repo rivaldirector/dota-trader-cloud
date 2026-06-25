@@ -1,15 +1,15 @@
-name: Prematch Free Predict — Elo picks, no paid API
+name: Prematch Predict — Elo picks + BetsAPI real odds + edge
 
 on:
   schedule:
-    - cron: "0 6,18 * * *"   # 2 раза в день — расписание Liquipedia меняется не часто
+    - cron: "0 */3 * * *"   # каждые 3 часа — нужно успевать до старта матча
 
   workflow_dispatch:
 
 jobs:
   predict:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -27,9 +27,15 @@ jobs:
         env:
           SUPABASE_URL:      ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+          BETSAPI_TOKEN:     ${{ secrets.BETSAPI_TOKEN }}
         run: |
           echo "SUPABASE_URL=${SUPABASE_URL}"           > .env
           echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+          echo "BETSAPI_TOKEN=${BETSAPI_TOKEN}"          >> .env
 
-      - name: Elo model picks from free sources (Liquipedia schedule + Supabase history)
+      - name: Elo picks + real odds + edge (BetsAPI если токен задан)
         run: python3 scripts/prematch_free_predict.py
+
+      - name: Summary
+        if: always()
+        run: echo "Predict pipeline finished at $(date -u)"
