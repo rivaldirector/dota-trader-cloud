@@ -2,7 +2,7 @@ name: Paper Trader — Virtual Bets
 
 on:
   schedule:
-    - cron: "0 */2 * * *"   # каждые 2 часа
+    - cron: "*/10 * * * *"  # каждые 10 минут
 
   workflow_dispatch:         # ручной запуск
 

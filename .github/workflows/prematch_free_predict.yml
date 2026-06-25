@@ -2,7 +2,7 @@ name: Prematch Predict — Elo picks + BetsAPI real odds + edge
 
 on:
   schedule:
-    - cron: "0 */3 * * *"   # каждые 3 часа — нужно успевать до старта матча
+    - cron: "*/10 * * * *"  # каждые 10 минут — свежие коэфы BetsAPI + новые пики
 
   workflow_dispatch:
 

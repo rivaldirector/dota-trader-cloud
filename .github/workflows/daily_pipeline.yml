@@ -2,7 +2,7 @@ name: Daily Pipeline — Forecast / Settle / Report
 
 on:
   schedule:
-    - cron: "0 */2 * * *"   # каждые 2 часа — держит odds-покрытие свежим,
+    - cron: "*/30 * * * *"  # каждые 30 минут — settle + backfill
                               # закрывает ставки сразу после матчей,
                               # ловит новые сигналы в течение дня
 
