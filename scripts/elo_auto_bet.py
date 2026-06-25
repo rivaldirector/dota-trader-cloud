@@ -480,6 +480,13 @@ def main():
         print("Нет матчей — выходим.")
         return
 
+    # Предзагружаем BetsAPI события (всегда, для диагностики)
+    if BETSAPI_TOKEN:
+        bapi_events = _fetch_upcoming()
+        print(f"  [BetsAPI] загружено событий: {len(bapi_events)}")
+    else:
+        print("  [BetsAPI] токен не задан — режим без коэффов")
+
     elo, history = build_elo_from_supabase()
     alias_map = fetch_team_aliases()
     if alias_map:
