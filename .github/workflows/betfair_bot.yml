@@ -1,13 +1,7 @@
 name: Betfair Bot — Auto Betting
 
 on:
-  schedule:
-    - cron: "0 */2 * * *"   # каждые 2 часа
-
-  workflow_dispatch:         # ручной запуск из GitHub UI
-
-  repository_dispatch:
-    types: [betfair]         # триггер через API
+  workflow_dispatch:         # только ручной запуск (schedule отключён — нет Betfair-аккаунта)
 
 jobs:
   bet:
