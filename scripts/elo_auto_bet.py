@@ -46,6 +46,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from signals import (
     compute_form,
     compute_h2h,
+    compute_fatigue,
+    fatigue_adjustment,
     composite_prob,
     kelly_stake,
     adaptive_kelly_mult,
@@ -475,19 +477,35 @@ def main():
             "elo_paper_bets",
             f"strategy_name=eq.{STRATEGY_NAME}"
             f"&run_ts=gte.{today_start.isoformat()}"
-            f"&select=stake_usd",
+            f"&select=stake_usd,bet_team,home_team,away_team,league",
         )
         today_staked = sum(float(b.get("stake_usd") or 0) for b in today_bets)
     except Exception:
-        pass
+        today_bets = []
     daily_cap_usd = bankroll * DAILY_STAKE_CAP
     print(f"Дневной лимит: ${daily_cap_usd:.0f} | уже поставлено сегодня: ${today_staked:.0f}")
+
+    # Корреляционный трекинг
+    from collections import defaultdict
+    team_bets_today: dict[str, int]     = defaultdict(int)
+    league_staked_today: dict[str, float] = defaultdict(float)
+    try:
+        for b in today_bets:
+            bt  = b.get("bet_team", "home")
+            key = b.get("home_team") if bt == "home" else b.get("away_team")
+            if key:
+                team_bets_today[key] += 1
+            lg = b.get("league") or ""
+            league_staked_today[lg] += float(b.get("stake_usd") or 0)
+    except Exception:
+        pass
 
     rows = []
     skipped_no_odds = 0
     skipped_no_edge = 0
     skipped_no_elo  = 0
     skipped_daily   = 0
+    skipped_corr    = 0
 
     for m in soon:
         eid = f"liq_{m.get('hash')}"
@@ -512,6 +530,11 @@ def main():
         form_t1  = compute_form(t1_lookup, history, n=10)
         form_t2  = compute_form(t2_lookup, history, n=10)
         h2h_t1   = compute_h2h(t1_lookup, t2_lookup, history, n=8)
+        start_ts = int(m["_ts"].timestamp())
+
+        # Fatigue
+        fat_t1   = compute_fatigue(t1_lookup, history, start_ts)
+        fat_t2   = compute_fatigue(t2_lookup, history, start_ts)
 
         # Определяем на кого ставим (фаворит по elo_prob)
         fav_is_t1  = elo_prob_t1 >= 0.5
@@ -522,12 +545,18 @@ def main():
         elo_prob_fav = elo_prob_t1 if fav_is_t1 else (1 - elo_prob_t1)
         form_fav     = (form_t1 if fav_is_t1 else form_t2)
         h2h_fav      = h2h_t1 if fav_is_t1 else (1 - h2h_t1 if h2h_t1 is not None else None)
+        fat_fav      = fat_t1 if fav_is_t1 else fat_t2
+        fat_opp      = fat_t2 if fav_is_t1 else fat_t1
+        fat_adj      = fatigue_adjustment(fat_fav, fat_opp)
 
-        comp_prob = composite_prob(elo_prob_fav, form_fav, h2h_fav)
+        comp_prob = composite_prob(
+            elo_prob_fav, form_fav, h2h_fav,
+            weights=ensemble_weights,
+            fatigue_adj=fat_adj,
+        )
 
         # ── Слой 2: BetsAPI + Edge filter ───────────────────────────────────
         bet_side  = "home" if fav_is_t1 else "away"
-        start_ts  = int(m["_ts"].timestamp())
         real_odds, real_bm = lookup_real_odds(t1, t2, start_ts, bet_side)
 
         if not real_odds:
@@ -587,12 +616,32 @@ def main():
             print(f"  [kelly=0] {t1} vs {t2} — Kelly отрицательный, пропуск")
             continue
 
-        # ── Слой 4: Дневной лимит ────────────────────────────────────────────
+        # ── Слой 4a: Корреляционный лимит ───────────────────────────────────
+        if team_bets_today[fav_team] >= 2:
+            skipped_corr += 1
+            print(f"  [корреляция] {fav_team} уже {team_bets_today[fav_team]}× сегодня — пропуск")
+            continue
+
+        league_name_key    = m.get("leagueName") or ""
+        league_budget_used = league_staked_today[league_name_key]
+        league_budget_max  = daily_cap_usd * 0.30
+        if league_budget_used + stake > league_budget_max:
+            remaining = max(0.0, league_budget_max - league_budget_used)
+            if remaining < 1.0:
+                skipped_corr += 1
+                print(f"  [турнир лимит] {league_name_key[:30]} — лимит 30% исчерпан")
+                continue
+            stake = round(remaining, 1)
+            print(f"  [турнир лимит] {league_name_key[:30]} — ставка срезана до ${stake}")
+
+        # ── Слой 4b: Дневной лимит ───────────────────────────────────────────
         if today_staked + stake > daily_cap_usd:
             skipped_daily += 1
             print(f"  [дневной лимит] {t1} vs {t2} — лимит ${daily_cap_usd:.0f} исчерпан")
             continue
         today_staked += stake
+        team_bets_today[fav_team] += 1
+        league_staked_today[league_name_key] += stake
 
         # ── Расчёт kelly_f для сохранения ────────────────────────────────────
         b = real_odds - 1.0
@@ -643,7 +692,8 @@ def main():
         f"  Пропущено (нет Elo): {skipped_no_elo}\n"
         f"  Пропущено (нет odds): {skipped_no_odds}\n"
         f"  Пропущено (мало edge): {skipped_no_edge}\n"
-        f"  Пропущено (дневной лимит): {skipped_daily}"
+        f"  Пропущено (дневной лимит): {skipped_daily}\n"
+        f"  Пропущено (корреляция/турнир): {skipped_corr}"
     )
 
 

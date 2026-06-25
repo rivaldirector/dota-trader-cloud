@@ -146,16 +146,18 @@ def composite_prob(
     form_score: Optional[float],
     h2h_score: Optional[float],
     weights: dict[str, float] = ENSEMBLE_WEIGHTS,
+    fatigue_adj: float = 0.0,
 ) -> float:
     """
-    Взвешенный ансамбль вероятностей.
-    Если form или h2h недоступны — их вес перераспределяется на elo.
+    Взвешенный ансамбль вероятностей + поправка на усталость.
 
-    elo_prob   — вероятность победы по Elo (0.0–1.0)
-    form_score — win rate за последние N матчей (или None)
-    h2h_score  — H2H win rate (или None)
+    elo_prob    — вероятность победы по Elo (0.0–1.0)
+    form_score  — win rate за последние N матчей (или None)
+    h2h_score   — H2H win rate (или None)
+    weights     — веса из model_config или ENSEMBLE_WEIGHTS
+    fatigue_adj — корректировка из fatigue_adjustment() (±0.05 max)
 
-    Возвращает итоговую вероятность (0.0–1.0), rounded 4.
+    Возвращает вероятность (0.01–0.99), rounded 4.
     """
     w_elo  = weights.get("elo",  0.60)
     w_form = weights.get("form", 0.25)
@@ -171,7 +173,9 @@ def composite_prob(
         total_w  += w_h2h
         weighted += w_h2h * h2h_score
 
-    return round(weighted / total_w, 4)
+    base = weighted / total_w
+    adjusted = base + fatigue_adj
+    return round(min(0.99, max(0.01, adjusted)), 4)
 
 
 # ─── Kelly sizing ────────────────────────────────────────────────────────────
@@ -305,3 +309,49 @@ def get_tier_params(tier: int, tiers: list[dict]) -> tuple[float, float]:
                 float(row.get("kelly_cap", KELLY_CAP_DEFAULT)),
             )
     return (EDGE_MIN_DEFAULT, KELLY_CAP_DEFAULT)
+
+
+# ─── Fatigue signal ──────────────────────────────────────────────────────────
+
+def compute_fatigue(
+    team: str,
+    history: list[tuple[int, str, str, float]],
+    match_start_ts: int,
+    fuzzy_min: float = 0.72,
+) -> float:
+    """
+    Усталость команды перед матчем: насколько недавно они играли.
+
+    Возвращает float [0.0–1.0]:
+      0.0 = отдохнувшие (7+ дней без матча или нет истории)
+      1.0 = играли вчера / в тот же день
+
+    Формула: fatigue = max(0, 1 - days_since / 7)
+    """
+    team_n = normalize_team(team)
+    last_ts = None
+
+    for ts, home, away, _ in reversed(history):
+        if ts >= match_start_ts:
+            continue  # только матчи ДО текущего
+        hn = normalize_team(home)
+        an = normalize_team(away)
+        if fuzzy_match(team_n, hn) >= fuzzy_min or fuzzy_match(team_n, an) >= fuzzy_min:
+            last_ts = ts
+            break
+
+    if last_ts is None:
+        return 0.0  # нет истории → не штрафуем
+
+    days_since = (match_start_ts - last_ts) / 86400.0
+    return round(max(0.0, 1.0 - days_since / 7.0), 4)
+
+
+def fatigue_adjustment(our_fatigue: float, opp_fatigue: float) -> float:
+    """
+    Корректировка вероятности на основе разницы усталости.
+    Positive = наша команда свежее (это хорошо для нас).
+    Вес: max ±5%.
+    """
+    diff = opp_fatigue - our_fatigue   # +1 = мы свежее на 7 дней
+    return round(diff * 0.05, 4)       # каждый день разницы ≈ 0.71% к вероятности

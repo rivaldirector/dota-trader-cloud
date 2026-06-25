@@ -1,0 +1,63 @@
+name: Recalibrate Signal Weights
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: "pip" }
+      - run: pip install requests python-dotenv
+
+      - name: Write .env
+        env:
+          SUPABASE_URL:      ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          echo "SUPABASE_URL=${SUPABASE_URL}"           > .env
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+
+      - name: Check if recalibration needed (30+ new settled bets)
+        id: check
+        env:
+          SUPABASE_URL:      ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          python3 - <<'EOF'
+          import os, requests, sys
+          url = os.environ["SUPABASE_URL"]
+          key = os.environ["SUPABASE_ANON_KEY"]
+          h   = {"apikey": key, "Authorization": f"Bearer {key}"}
+
+          r = requests.get(f"{url}/rest/v1/model_config?key=eq.calibrated_at&select=value", headers=h, timeout=15)
+          calibrated_at = (r.json() or [{}])[0].get("value", "never")
+          print(f"Last calibrated: {calibrated_at}")
+
+          if calibrated_at == "never":
+              with open(os.environ["GITHUB_OUTPUT"], "a") as f: f.write("run=true\n")
+              sys.exit(0)
+
+          r2 = requests.get(
+              f"{url}/rest/v1/elo_paper_bets"
+              f"?strategy_name=eq.AUTO_ELO_FLAT&settled=eq.true"
+              f"&stake_usd=gt.0&settled_ts=gte.{calibrated_at}&select=id",
+              headers={**h, "Prefer": "count=exact"}, timeout=15)
+          count_raw = r2.headers.get("Content-Range","0/0").split("/")[-1]
+          count = int(count_raw) if count_raw.isdigit() else len(r2.json())
+          print(f"New settled bets since calibration: {count}")
+          run = "true" if count >= 30 else "false"
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f: f.write(f"run={run}\n")
+          EOF
+
+      - name: Calibrate (6 months walk-forward)
+        if: steps.check.outputs.run == 'true' || github.event_name == 'workflow_dispatch'
+        run: python3 scripts/calibrate_signals.py --months 6
+
+      - if: always()
+        run: echo "Done at $(date -u)"
