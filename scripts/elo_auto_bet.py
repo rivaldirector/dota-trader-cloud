@@ -114,6 +114,10 @@ def _fetch_upcoming():
     if _cached_upcoming is not None:
         return _cached_upcoming
     import time
+    if not BETSAPI_TOKEN:
+        print("  [BetsAPI] токен не задан — пропускаем поиск коэффов")
+        _cached_upcoming = []
+        return []
     events, page = [], 1
     while page <= 3:
         data = _bapi("/v3/events/upcoming", {"sport_id": 151, "page": page})
@@ -123,6 +127,10 @@ def _fetch_upcoming():
         time.sleep(1.2)
         if len(res) < 50: break
         page += 1
+    print(f"  [BetsAPI] sport_id=151 → {len(events)} событий")
+    if events:
+        sample = [(e.get("home",{}).get("name"), e.get("away",{}).get("name")) for e in events[:3]]
+        print(f"  [BetsAPI] первые 3: {sample}")
     _cached_upcoming = events
     return events
 
