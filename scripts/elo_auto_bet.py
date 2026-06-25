@@ -48,8 +48,9 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_URL   = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY   = os.getenv("SUPABASE_ANON_KEY", "")
+BETSAPI_TOKEN  = os.getenv("BETSAPI_TOKEN", "")
 
 SB_HEADERS = {
     "apikey": SUPABASE_KEY,
@@ -58,15 +59,105 @@ SB_HEADERS = {
     "Prefer": "resolution=merge-duplicates,return=minimal",
 }
 
-MATCHES_URL = "https://dota.haglund.dev/v1/matches"
-HOURS_AHEAD = 72            # горизонт прогноза — зафиксирован 72ч (как в local dashboard)
-START_ELO = 1500.0
-K_FACTOR = 32
-FUZZY_MIN = 0.72
-STAKE_USD = 20.0
-AVG_OVERROUND_HIST = 1.0585  # реальный средний оверраунд по 68733 историческим строкам odds_summary
-STRATEGY_NAME = "AUTO_ELO_FLAT"
-DIVISION = "FREE"
+MATCHES_URL    = "https://dota.haglund.dev/v1/matches"
+HOURS_AHEAD    = 72
+START_ELO      = 1500.0
+K_FACTOR       = 32
+FUZZY_MIN      = 0.72
+ODDS_FUZZY_MIN = 0.60
+STAKE_USD      = 20.0
+AVG_OVERROUND_HIST = 1.0585
+STRATEGY_NAME  = "AUTO_ELO_FLAT"
+DIVISION       = "FREE"
+PREFERRED_BM   = ["PinnacleSports", "Pinnacle", "Bet365", "GGBet", "MelBet", "1xBet"]
+
+# ── BetsAPI real odds lookup ─────────────────────────────────────────────────
+
+def _bapi(path, params=None):
+    if not BETSAPI_TOKEN:
+        return {}
+    import time
+    url = f"https://api.betsapi.com{path}"
+    p = {"token": BETSAPI_TOKEN, **(params or {})}
+    for attempt in range(3):
+        try:
+            r = requests.get(url, params=p, timeout=12)
+            if r.status_code == 429:
+                time.sleep(6); continue
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:
+            if attempt == 2:
+                print(f"    [BetsAPI err] {path}: {e}"); return {}
+        time.sleep(1.2)
+    return {}
+
+_cached_upcoming = None
+
+def _fetch_upcoming():
+    global _cached_upcoming
+    if _cached_upcoming is not None:
+        return _cached_upcoming
+    import time
+    events, page = [], 1
+    while page <= 3:
+        data = _bapi("/v3/events/upcoming", {"sport_id": 151, "page": page})
+        res  = data.get("results", [])
+        if not res: break
+        events.extend(res)
+        time.sleep(1.2)
+        if len(res) < 50: break
+        page += 1
+    _cached_upcoming = events
+    return events
+
+def _extract_real_odds(odds_data, bet_side):
+    results = odds_data.get("results", {})
+    if not isinstance(results, dict): return None, None
+    candidates = []
+    for bm_name, bm_data in results.items():
+        if not isinstance(bm_data, dict): continue
+        for _m, mdata in bm_data.items():
+            if not isinstance(mdata, dict): continue
+            olist = mdata.get("odds", [])
+            if not isinstance(olist, list) or len(olist) < 2: continue
+            try:
+                def _f(x): return float(x["odds"] if isinstance(x, dict) else x)
+                o_home, o_away = _f(olist[0]), _f(olist[1])
+            except Exception: continue
+            if o_home <= 1.0 or o_away <= 1.0: continue
+            our = o_home if bet_side == "home" else o_away
+            prio = next((i for i, p in enumerate(PREFERRED_BM) if p.lower() in bm_name.lower()), len(PREFERRED_BM))
+            candidates.append((prio, our, bm_name))
+    if not candidates: return None, None
+    _, best_odds, best_bm = sorted(candidates)[0]
+    return round(best_odds, 4), best_bm
+
+def lookup_real_odds(home, away, start_ts, bet_side):
+    import time
+    events = _fetch_upcoming()
+    if not events: return None, None
+    home_c = re.sub(r"\s+", " ", home.strip().lower())
+    away_c = re.sub(r"\s+", " ", away.strip().lower())
+    best_ev, best_score, best_rev = None, 0.0, False
+    for ev in events:
+        ev_ts = int(ev.get("time", 0))
+        if abs(ev_ts - start_ts) > 8 * 3600: continue
+        h = re.sub(r"\s+", " ", (ev.get("home", {}).get("name", "")).strip().lower())
+        a = re.sub(r"\s+", " ", (ev.get("away", {}).get("name", "")).strip().lower())
+        s_norm = SequenceMatcher(None, home_c, h).ratio() + SequenceMatcher(None, away_c, a).ratio()
+        s_rev  = SequenceMatcher(None, home_c, a).ratio() + SequenceMatcher(None, away_c, h).ratio()
+        score, rev = (s_norm, False) if s_norm >= s_rev else (s_rev, True)
+        if score > best_score and score >= ODDS_FUZZY_MIN * 2:
+            best_score, best_ev, best_rev = score, ev, rev
+    if best_ev is None: return None, None
+    ev_id = best_ev.get("id")
+    time.sleep(1.2)
+    odds_data = _bapi("/v2/event/odds/summary", {"event_id": ev_id})
+    eff_side = ("away" if bet_side == "home" else "home") if best_rev else bet_side
+    return _extract_real_odds(odds_data, eff_side)
+
+# ── end BetsAPI ──────────────────────────────────────────────────────────────
 
 
 def elo_exp(ra: float, rb: float) -> float:
@@ -340,26 +431,36 @@ def main():
         notional_market_prob = round(1.0 / notional_odds, 4)
         edge = round(fav_prob - notional_market_prob, 4)
 
+        bet_side = "home" if fav_is_t1 else "away"
+        start_ts = int(m["_ts"].timestamp())
+        real_odds, real_bm = lookup_real_odds(t1, t2, start_ts, bet_side)
+
         print(f"\n  {t1} vs {t2}  ({m.get('leagueName')})  старт {m['_ts'].strftime('%Y-%m-%d %H:%M')}Z")
-        print(f"    АВТОНОМНОЕ РЕШЕНИЕ: ставим ${STAKE_USD:.0f} на {fav_team} "
-              f"(model_prob={fav_prob:.1%}, notional_odds={notional_odds})")
+        if real_odds:
+            real_edge = round(fav_prob * real_odds - 1, 4)
+            print(f"    РЕШЕНИЕ: ${STAKE_USD:.0f} на {fav_team} | notional={notional_odds} "
+                  f"real={real_odds} [{real_bm}] real_edge={real_edge:+.1%}")
+        else:
+            print(f"    РЕШЕНИЕ: ${STAKE_USD:.0f} на {fav_team} | notional={notional_odds} (нет реальных одсов)")
 
         rows.append({
-            "run_ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "strategy_name": STRATEGY_NAME,
-            "event_id": eid,
-            "division": DIVISION,
-            "league": m.get("leagueName"),
-            "home_team": t1, "away_team": t2,
-            "start_time": int(m["_ts"].timestamp()),
-            "bookmaker": "NOTIONAL_HIST_AVG",
-            "bet_team": "home" if fav_is_t1 else "away",
-            "odds": notional_odds,
-            "market_prob": notional_market_prob,
-            "model_prob": round(fav_prob, 4),
-            "edge": edge,
-            "stake_usd": STAKE_USD,
-            "settled": False,
+            "run_ts":         datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "strategy_name":  STRATEGY_NAME,
+            "event_id":       eid,
+            "division":       DIVISION,
+            "league":         m.get("leagueName"),
+            "home_team": t1,  "away_team": t2,
+            "start_time":     start_ts,
+            "bookmaker":      real_bm if real_bm else "NOTIONAL_HIST_AVG",
+            "bet_team":       bet_side,
+            "odds":           notional_odds,
+            "market_prob":    notional_market_prob,
+            "model_prob":     round(fav_prob, 4),
+            "edge":           edge,
+            "stake_usd":      STAKE_USD,
+            "settled":        False,
+            "real_odds":      real_odds,
+            "real_bookmaker": real_bm,
         })
 
     sb_upsert("elo_paper_bets", rows, on_conflict="strategy_name,event_id,division")
