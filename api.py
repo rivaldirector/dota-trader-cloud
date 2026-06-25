@@ -402,8 +402,8 @@ def dashboard():
   <polyline points="{pts}" fill="none" stroke="{col}" stroke-width="2" stroke-linejoin="round"/>
   {"".join(f'<circle cx="{xi(i):.1f}" cy="{px(v):.1f}" r="3" fill="{col}"/>' for i,(l,v) in enumerate(points))}
   {labels_html}
-  <text x="{PAD}" y="14" fill="#8a8f98" font-size="9">${mn+20:.0f}</text>
-  <text x="{PAD}" y="{H-PAD:.0f}" fill="#8a8f98" font-size="9">${mx-20:.0f}</text>
+  <text x="{PAD}" y="14" fill="#8a8f98" font-size="9">${mx-20:.0f}</text>
+  <text x="{PAD}" y="{H-PAD:.0f}" fill="#8a8f98" font-size="9">${mn+20:.0f}</text>
 </svg>'''
 
     chart_svg = build_chart(chart_points)

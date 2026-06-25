@@ -485,8 +485,8 @@ def main():
     )
     done_ids = {r["event_id"] for r in existing}
     # Дедупликация по матчу: (norm_home, norm_away, start_hour)
-    # Это защищает от случая, когда dota.haglund.dev отдаёт разный hash
-    # для одного и того же матча при разных запросах
+    # Только для РЕАЛЬНЫХ ставок (stake_usd > 0) — tracking-записи без одсов
+    # не блокируют будущие прогоны, если BetsAPI вдруг вернёт коэффы
     done_matchups: set[tuple[str, str, int]] = {
         (
             normalize_team(r["home_team"]),
@@ -494,7 +494,7 @@ def main():
             int(r["start_time"] or 0) // 3600,
         )
         for r in existing
-        if r.get("start_time")
+        if r.get("start_time") and float(r.get("stake_usd") or 0) > 0
     }
 
     # Дневной лимит ставок
