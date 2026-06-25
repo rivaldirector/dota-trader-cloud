@@ -1,4 +1,4 @@
-name: Elo Auto Pipeline — autonomous flat-bet decide + settle (no BetsAPI)
+name: Elo Auto Pipeline — autonomous flat-bet decide + settle
 
 on:
   schedule:
@@ -27,9 +27,11 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+          BETSAPI_TOKEN: ${{ secrets.BETSAPI_TOKEN }}
         run: |
           echo "SUPABASE_URL=${SUPABASE_URL}" > .env
           echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+          echo "BETSAPI_TOKEN=${BETSAPI_TOKEN}" >> .env
 
       - name: Settle matured AUTO_ELO_FLAT bets (OpenDota, free)
         continue-on-error: true   # OpenDota недоступен — не блокируем bet-шаг ниже
