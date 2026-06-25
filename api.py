@@ -278,18 +278,17 @@ def dashboard():
     cal_acc      = cfg.get("calibration_acc", "—")
 
     # ── Активные ставки (72ч окно) ──────────────────────────────────────────
-    import time as _time
-    now_ts = int(_time.time())
-    cutoff_ts = now_ts - 3600  # включаем начавшиеся <1ч назад
+    from datetime import timedelta
+    cutoff_72h = (datetime.now(timezone.utc) - timedelta(hours=72)).strftime("%Y-%m-%dT%H:%M:%SZ")
     active_bets = sb_safe(
         "elo_paper_bets"
         "?strategy_name=eq.AUTO_ELO_FLAT"
         "&settled=eq.false"
         "&stake_usd=gt.0"
-        f"&start_time=gt.{cutoff_ts}"
+        f"&run_ts=gte.{cutoff_72h}"
         "&select=run_ts,home_team,away_team,bet_team,stake_usd,real_odds,"
         "composite_prob,kelly_f,form_score,h2h_score,league_tier,edge,start_time,league"
-        "&order=start_time.asc&limit=30"
+        "&order=run_ts.desc&limit=30"
     )
 
     # ── Auto bets (last 50) ──────────────────────────────────────────────────
@@ -364,9 +363,10 @@ def dashboard():
         active_rows_html += '<table><thead><tr><th>Старт</th><th>Матч / Лига</th><th>Ставка</th><th>Prob / K</th><th>Edge / Тир</th></tr></thead><tbody>'
         for b in active_bets:
             edge_str = f"{float(b['edge'])*100:.1f}%" if b.get('edge') else "—"
+            ts_display = fmt_ts(b.get("start_time")) if b.get("start_time") else (b.get("run_ts") or "")[:16].replace("T", " ")
             active_rows_html += (
                 f'<tr>'
-                f'<td class="muted">{fmt_ts(b.get("start_time",""))}</td>'
+                f'<td class="muted">{ts_display}</td>'
                 f'<td><b>{b.get("home_team","?")} vs {b.get("away_team","?")}</b>'
                 f'<br><small class="muted">{b.get("league") or ""} · {b.get("bet_team","")}</small></td>'
                 f'<td>${fmt_f(b.get("stake_usd"),1)} @ {fmt_f(b.get("real_odds"),2)}</td>'
