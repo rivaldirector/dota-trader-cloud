@@ -252,34 +252,69 @@ def debug_links():
 # -------------------
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard():
-    now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    from datetime import timedelta
+    from collections import defaultdict
+
+    now_utc = datetime.now(timezone.utc)
+    now_str = now_utc.strftime("%Y-%m-%d %H:%M UTC")
+    START_BANK = 1000.0
 
     # ── Bankroll ────────────────────────────────────────────────────────────
-    START_BANK  = 1000.0
     bank_rows = sb_safe("bankroll_state?strategy=eq.AUTO_ELO_FLAT&select=balance,total_bets,updated_at&limit=1")
-    bank = bank_rows[0] if bank_rows else {}
-    curr_bank   = float(bank.get("balance") or START_BANK)
-    total_pnl   = round(curr_bank - START_BANK, 2)
-    roi_pct     = round(total_pnl / START_BANK * 100, 2)
-    # Peak = max ever balance — не храним, используем curr как lower bound
-    peak_bank   = curr_bank if total_pnl >= 0 else START_BANK
-    drawdown    = round((peak_bank - curr_bank) / peak_bank * 100, 2) if peak_bank > curr_bank else 0
+    bank      = bank_rows[0] if bank_rows else {}
+    curr_bank = float(bank.get("balance") or START_BANK)
+    total_pnl = round(curr_bank - START_BANK, 2)
+    roi_pct   = round(total_pnl / START_BANK * 100, 2)
 
-    # ── Model config / calibration ───────────────────────────────────────────
-    cfg_rows = sb_safe("model_config?select=key,value")
-    cfg = {r["key"]: r["value"] for r in cfg_rows} if cfg_rows else {}
-    w_elo        = cfg.get("w_elo", "0.60")
-    w_form       = cfg.get("w_form", "0.25")
-    w_h2h        = cfg.get("w_h2h", "0.15")
-    cal_at       = cfg.get("calibrated_at", "—")
-    cal_n        = cfg.get("calibration_n", "—")
-    cal_loss     = cfg.get("calibration_logloss", "—")
-    cal_brier    = cfg.get("calibration_brier", "—")
-    cal_acc      = cfg.get("calibration_acc", "—")
+    # ── All settled bets (для графика и истории) ─────────────────────────────
+    all_settled = sb_safe(
+        "elo_paper_bets"
+        "?strategy_name=eq.AUTO_ELO_FLAT"
+        "&settled=eq.true"
+        "&stake_usd=gt.0"
+        "&select=pnl,outcome,stake_usd,settled_ts,home_team,away_team,bet_team,real_odds,run_ts,composite_prob,clv"
+        "&order=settled_ts.asc"
+    )
 
-    # ── Активные ставки (72ч окно) ──────────────────────────────────────────
-    from datetime import timedelta
-    cutoff_72h = (datetime.now(timezone.utc) - timedelta(hours=72)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # ── Последние 50 (история) ───────────────────────────────────────────────
+    last50 = sb_safe(
+        "elo_paper_bets"
+        "?strategy_name=eq.AUTO_ELO_FLAT"
+        "&stake_usd=gt.0"
+        "&real_odds=not.is.null"
+        "&select=run_ts,home_team,away_team,bet_team,stake_usd,real_odds,"
+        "outcome,pnl,settled,league"
+        "&order=run_ts.desc&limit=50"
+    )
+    hist_real    = last50
+    hist_settled = [b for b in hist_real if b.get("settled")]
+
+    # ── Статистика (все settled) ─────────────────────────────────────────────
+    wins_all     = sum(1 for b in all_settled if b.get("outcome") == "win")
+    losses_all   = sum(1 for b in all_settled if b.get("outcome") == "loss")
+    staked_all   = sum(float(b.get("stake_usd") or 0) for b in all_settled)
+    pnl_all      = sum(float(b.get("pnl") or 0) for b in all_settled)
+    winrate_all  = round(wins_all / len(all_settled) * 100, 1) if all_settled else 0
+    roi_all      = round(pnl_all / staked_all * 100, 2) if staked_all > 0 else 0
+
+    # ── Недельная статистика ─────────────────────────────────────────────────
+    week_ago = (now_utc - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    week_bets = sb_safe(
+        "elo_paper_bets"
+        "?strategy_name=eq.AUTO_ELO_FLAT"
+        "&settled=eq.true"
+        "&stake_usd=gt.0"
+        f"&settled_ts=gte.{week_ago}"
+        "&select=pnl,outcome,stake_usd"
+    )
+    w_staked = sum(float(b.get("stake_usd") or 0) for b in week_bets)
+    w_pnl    = sum(float(b.get("pnl") or 0) for b in week_bets)
+    w_wins   = sum(float(b.get("stake_usd") or 0) for b in week_bets if b.get("outcome") == "win")
+    w_losses = sum(float(b.get("stake_usd") or 0) for b in week_bets if b.get("outcome") == "loss")
+    w_count  = len(week_bets)
+
+    # ── Активные ставки (72ч) ───────────────────────────────────────────────
+    cutoff_72h = (now_utc - timedelta(hours=72)).strftime("%Y-%m-%dT%H:%M:%SZ")
     active_bets = sb_safe(
         "elo_paper_bets"
         "?strategy_name=eq.AUTO_ELO_FLAT"
@@ -287,137 +322,185 @@ def dashboard():
         "&stake_usd=gt.0"
         "&real_odds=not.is.null"
         f"&run_ts=gte.{cutoff_72h}"
-        "&select=run_ts,home_team,away_team,bet_team,stake_usd,real_odds,"
-        "composite_prob,kelly_f,form_score,h2h_score,league_tier,edge,start_time,league"
-        "&order=run_ts.desc&limit=30"
+        "&select=start_time,home_team,away_team,bet_team,stake_usd,real_odds,league"
+        "&order=start_time.asc&limit=30"
     )
 
-    # ── Auto bets (last 50) ──────────────────────────────────────────────────
-    bets = sb_safe(
-        "elo_paper_bets"
-        "?strategy_name=eq.AUTO_ELO_FLAT"
-        "&select=run_ts,home_team,away_team,bet_team,stake_usd,real_odds,"
-        "composite_prob,kelly_f,form_score,h2h_score,closing_odds,clv,"
-        "league_tier,edge,outcome,pnl,settled"
-        "&order=run_ts.desc&limit=50"
-    )
-    real_bets = [b for b in bets if float(b.get("stake_usd") or 0) > 0]
-    settled   = [b for b in real_bets if b.get("settled")]
+    # ── Model config ─────────────────────────────────────────────────────────
+    cfg_rows = sb_safe("model_config?select=key,value")
+    cfg      = {r["key"]: r["value"] for r in cfg_rows} if cfg_rows else {}
+    w_elo    = cfg.get("w_elo", "0.60")
+    w_form   = cfg.get("w_form", "0.25")
+    w_h2h    = cfg.get("w_h2h", "0.15")
+    cal_at   = cfg.get("calibrated_at", "—")
+    cal_n    = cfg.get("calibration_n", "—")
+    cal_loss = cfg.get("calibration_logloss", "—")
+    cal_brier= cfg.get("calibration_brier", "—")
+    cal_acc  = cfg.get("calibration_acc", "—")
 
-    total_bets  = len(real_bets)
-    wins        = sum(1 for b in settled if b.get("outcome") == "win")
-    winrate     = round(wins / len(settled) * 100, 1) if settled else 0
-    total_staked = sum(float(b.get("stake_usd") or 0) for b in settled)
-    total_pnl_bets = sum(float(b.get("pnl") or 0) for b in settled)
-    roi_bets    = round(total_pnl_bets / total_staked * 100, 2) if total_staked > 0 else 0
-
-    # Brier score over settled bets with composite_prob
     brier_val = "—"
     clv_avg   = "—"
     try:
-        brier_data = [(float(b["composite_prob"]), 1 if b["outcome"] == "win" else 0)
-                      for b in settled if b.get("composite_prob") and b.get("outcome")]
-        if brier_data:
-            brier_val = round(sum((p-y)**2 for p,y in brier_data) / len(brier_data), 4)
-        clv_data = [float(b["clv"]) for b in settled if b.get("clv")]
-        if clv_data:
-            clv_avg = round(sum(clv_data) / len(clv_data) * 100, 2)
+        bd = [(float(b["composite_prob"]), 1 if b["outcome"]=="win" else 0)
+              for b in all_settled if b.get("composite_prob") and b.get("outcome")]
+        if bd:
+            brier_val = round(sum((p-y)**2 for p,y in bd)/len(bd), 4)
+        cd = [float(b["clv"]) for b in all_settled if b.get("clv")]
+        if cd:
+            clv_avg = round(sum(cd)/len(cd)*100, 2)
     except Exception:
         pass
 
+    # ── Еженедельный график банка ─────────────────────────────────────────────
+    # Группируем settled по ISO-неделе, считаем кумулятивный банк
+    weekly_pnl: dict = defaultdict(float)
+    for b in all_settled:
+        try:
+            dt = datetime.fromisoformat((b["settled_ts"] or "").replace("Z", "+00:00"))
+            wk = dt.strftime("%Y-W%V")
+            weekly_pnl[wk] += float(b.get("pnl") or 0)
+        except Exception:
+            pass
+    sorted_weeks = sorted(weekly_pnl.keys())
+    chart_points = []
+    running = START_BANK
+    for wk in sorted_weeks:
+        running += weekly_pnl[wk]
+        label = wk.split("-W")[1] + "нед"
+        chart_points.append((label, round(running, 2)))
+
+    # SVG chart (700×160)
+    def build_chart(points):
+        if not points:
+            return '<div style="text-align:center;color:var(--muted);padding:40px 0;font-size:13px">Недостаточно данных для графика (нужны settled ставки)</div>'
+        W, H, PAD = 680, 140, 10
+        vals = [p[1] for p in points]
+        mn, mx = min(min(vals), START_BANK) - 20, max(max(vals), START_BANK) + 20
+        rng = mx - mn or 1
+        def px(v): return H - PAD - (v - mn) / rng * (H - 2*PAD)
+        def xi(i): return PAD + i * (W - 2*PAD) / max(len(points)-1, 1)
+        baseline = px(START_BANK)
+        pts = " ".join(f"{xi(i):.1f},{px(v):.1f}" for i,(l,v) in enumerate(points))
+        path = "M " + " L ".join(f"{xi(i):.1f},{px(v):.1f}" for i,(l,v) in enumerate(points))
+        fill_path = f"{path} L {xi(len(points)-1):.1f},{H-PAD} L {PAD},{H-PAD} Z"
+        col = "#3ddc84" if vals[-1] >= START_BANK else "#ff5c5c"
+        labels_html = ""
+        step = max(1, len(points)//8)
+        for i,(l,v) in enumerate(points):
+            if i % step == 0 or i == len(points)-1:
+                labels_html += f'<text x="{xi(i):.1f}" y="{H+4}" fill="#8a8f98" font-size="9" text-anchor="middle">{l}</text>'
+        return f'''<svg viewBox="0 0 {W} {H+16}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:160px">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="{col}" stop-opacity="0.3"/>
+    <stop offset="100%" stop-color="{col}" stop-opacity="0"/>
+  </linearGradient></defs>
+  <line x1="{PAD}" y1="{baseline:.1f}" x2="{W-PAD}" y2="{baseline:.1f}" stroke="#2a2e38" stroke-width="1" stroke-dasharray="4,3"/>
+  <path d="{fill_path}" fill="url(#g)"/>
+  <polyline points="{pts}" fill="none" stroke="{col}" stroke-width="2" stroke-linejoin="round"/>
+  {"".join(f'<circle cx="{xi(i):.1f}" cy="{px(v):.1f}" r="3" fill="{col}"/>' for i,(l,v) in enumerate(points))}
+  {labels_html}
+  <text x="{PAD}" y="14" fill="#8a8f98" font-size="9">${mn+20:.0f}</text>
+  <text x="{PAD}" y="{H-PAD:.0f}" fill="#8a8f98" font-size="9">${mx-20:.0f}</text>
+</svg>'''
+
+    chart_svg = build_chart(chart_points)
+
     # ── HTML helpers ─────────────────────────────────────────────────────────
-    def pnl_cls(v):
+    def pc(v):
         try: return "pos" if float(v) >= 0 else "neg"
         except: return ""
 
-    def fmt_pnl(v):
+    def fp(v):
         try: return f"${float(v):+.2f}"
         except: return "—"
 
-    def fmt_pct(v):
-        try: return f"{float(v)*100:.1f}%"
-        except: return "—"
-
-    def fmt_f(v, d=3):
+    def ff(v, d=1):
         try: return f"{float(v):.{d}f}"
         except: return "—"
 
-    def tier_badge(t):
-        colors = {"1": "#ffd700", "2": "#5b8cff", "3": "#8a8f98"}
-        c = colors.get(str(t), "#8a8f98")
-        return f'<span style="color:{c};font-weight:700">T{t}</span>' if t else "—"
-
-    def outcome_badge(o):
-        if o == "win":  return '<span class="pos">✓ WIN</span>'
-        if o == "loss": return '<span class="neg">✗ LOSS</span>'
-        return '<span class="muted">⏳ pending</span>'
-
-    # ── Build active bet rows (72h window) ───────────────────────────────────
     def fmt_ts(ts):
         try:
             return datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime("%d.%m %H:%M")
         except Exception:
             return "—"
 
-    active_rows_html = '<div class="card"><h2>⏳ Активные ставки — сегодня и ближайшие 72ч</h2>'
-    if active_bets:
-        active_rows_html += '<table><thead><tr><th>Старт</th><th>Матч / Лига</th><th>Ставка</th><th>Prob / K</th><th>Edge / Тир</th></tr></thead><tbody>'
-        for b in active_bets:
-            edge_str = f"{float(b['edge'])*100:.1f}%" if b.get('edge') else "—"
-            ts_display = fmt_ts(b.get("start_time")) if b.get("start_time") else (b.get("run_ts") or "")[:16].replace("T", " ")
-            active_rows_html += (
-                f'<tr>'
-                f'<td class="muted">{ts_display}</td>'
-                f'<td><b>{b.get("home_team","?")} vs {b.get("away_team","?")}</b>'
-                f'<br><small class="muted">{b.get("league") or ""} · {b.get("bet_team","")}</small></td>'
-                f'<td>${fmt_f(b.get("stake_usd"),1)} @ {fmt_f(b.get("real_odds"),2)}</td>'
-                f'<td>{fmt_pct(b.get("composite_prob"))} / K:{fmt_f(b.get("kelly_f"),4)}</td>'
-                f'<td>{edge_str} &nbsp; {tier_badge(b.get("league_tier"))}</td>'
-                f'</tr>'
-            )
-        active_rows_html += '</tbody></table>'
-    else:
-        active_rows_html += '<p class="empty">Нет активных ставок в ближайшие 72ч</p>'
+    def oc_badge(o, settled):
+        if not settled: return '<span class="muted">⏳</span>'
+        if o == "win":  return '<span class="pos">✓ WIN</span>'
+        if o == "loss": return '<span class="neg">✗ LOSS</span>'
+        return "—"
 
-    # ── Build bet rows ───────────────────────────────────────────────────────
-    rows_html = ""
-    for b in real_bets:
-        ts = (b.get("run_ts") or "")[:16].replace("T", " ")
-        match = f"{b.get('home_team','?')} vs {b.get('away_team','?')}"
-        team  = b.get("bet_team", "")
-        stake = fmt_f(b.get("stake_usd"), 1)
-        odds  = fmt_f(b.get("real_odds"), 2)
-        prob  = fmt_pct(b.get("composite_prob"))
-        kf    = fmt_f(b.get("kelly_f"), 4)
-        edge  = f"{float(b['edge'])*100:.1f}%" if b.get("edge") else "—"
-        form  = fmt_pct(b.get("form_score"))
-        h2h   = fmt_pct(b.get("h2h_score"))
-        clv   = f"{float(b['clv'])*100:+.1f}%" if b.get("clv") else "—"
-        tier  = tier_badge(b.get("league_tier"))
-        oc    = outcome_badge(b.get("outcome") if b.get("settled") else None)
-        pnl   = fmt_pnl(b.get("pnl")) if b.get("settled") else "—"
-        pc    = pnl_cls(b.get("pnl") or 0)
-        rows_html += f"""
-        <tr>
+    # ── Active bets HTML (упрощённый вид) ────────────────────────────────────
+    if active_bets:
+        ab_rows = ""
+        for b in active_bets:
+            ts   = fmt_ts(b.get("start_time")) if b.get("start_time") else "—"
+            home = b.get("home_team","?")
+            away = b.get("away_team","?")
+            side = b.get("bet_team","home")
+            fav  = home if side == "home" else away
+            stake= ff(b.get("stake_usd"))
+            odds = ff(b.get("real_odds"), 2)
+            ab_rows += f"""<tr>
+              <td class="muted">{ts} UTC</td>
+              <td><b>{home} vs {away}</b><br><small class="muted">{b.get("league","")}</small></td>
+              <td><span style="color:var(--accent);font-weight:600">→ {fav}</span></td>
+              <td><b>${stake}</b> <span class="muted">@ {odds}</span></td>
+            </tr>"""
+        active_html = f"""<div class="card">
+  <h2>⏳ Активные ставки — ближайшие 72ч</h2>
+  <table><thead><tr>
+    <th>Матч начало</th><th>Матч</th><th>Наша ставка</th><th>Сумма</th>
+  </tr></thead><tbody>{ab_rows}</tbody></table>
+</div>"""
+    else:
+        active_html = """<div class="card">
+  <h2>⏳ Активные ставки — ближайшие 72ч</h2>
+  <p class="empty">Нет активных ставок — пайплайн поставит при появлении матчей с edge</p>
+</div>"""
+
+    # ── History rows HTML (последние 50, первые 10 видны) ────────────────────
+    hist_rows = ""
+    for i, b in enumerate(hist_real):
+        ts    = (b.get("run_ts") or "")[:16].replace("T", " ")
+        home  = b.get("home_team","?")
+        away  = b.get("away_team","?")
+        side  = b.get("bet_team","home")
+        fav   = home if side == "home" else away
+        stake = ff(b.get("stake_usd"))
+        odds  = ff(b.get("real_odds"), 2)
+        oc    = oc_badge(b.get("outcome"), b.get("settled"))
+        pnl_v = fp(b.get("pnl")) if b.get("settled") else "—"
+        pcls  = pc(b.get("pnl") or 0) if b.get("settled") else ""
+        extra = ' class="hist-extra" style="display:none"' if i >= 10 else ''
+        hist_rows += f"""<tr{extra}>
           <td class="muted">{ts}</td>
-          <td>{match}<br><small class="muted">{team}</small></td>
-          <td>${stake} @ {odds}</td>
-          <td>{prob} / K:{kf}<br><small>Edge:{edge} {tier}</small></td>
-          <td><small>Form:{form} H2H:{h2h}<br>CLV:{clv}</small></td>
+          <td><b>{home} vs {away}</b></td>
+          <td><span style="color:var(--accent)">→ {fav}</span></td>
+          <td>${stake} <span class="muted">@ {odds}</span></td>
           <td>{oc}</td>
-          <td class="{pc}">{pnl}</td>
+          <td class="{pcls}">{pnl_v}</td>
         </tr>"""
 
-    if not rows_html:
-        rows_html = '<tr><td colspan="7" class="empty">Нет ставок — пайплайн ещё не поставил</td></tr>'
+    if not hist_rows:
+        hist_rows = '<tr><td colspan="6" class="empty">Нет ставок — пайплайн ещё не поставил</td></tr>'
 
-    cal_at_short = cal_at[:16].replace("T", " ") if cal_at and cal_at != "—" else cal_at
+    show_more = ""
+    if len(hist_real) > 10:
+        show_more = f"""<div style="text-align:center;margin-top:12px">
+  <button onclick="toggleHist(this)" style="background:var(--card);border:1px solid var(--border);
+    color:var(--muted);padding:8px 20px;border-radius:8px;cursor:pointer;font-size:13px">
+    Показать все {len(hist_real)} ставок ▼
+  </button>
+</div>"""
+
+    cal_at_short = cal_at[:16].replace("T"," ") if cal_at and cal_at != "—" else cal_at
 
     html = f"""<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="1800">
+<meta http-equiv="refresh" content="600">
 <title>Dota Trader — Live Dashboard</title>
 <style>
 :root{{--bg:#0f1115;--card:#171a21;--border:#2a2e38;--text:#e6e8eb;
@@ -425,85 +508,130 @@ def dashboard():
 *{{box-sizing:border-box;}}
 body{{background:var(--bg);color:var(--text);
       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      margin:0;padding:32px;}}
+      margin:0;padding:24px 32px;max-width:1100px;}}
 h1{{font-size:22px;margin:0 0 4px;}}
-.upd{{color:var(--muted);font-size:13px;margin-bottom:28px;}}
+.upd{{color:var(--muted);font-size:13px;margin-bottom:24px;}}
 .card{{background:var(--card);border:1px solid var(--border);
-       border-radius:12px;padding:20px 24px;margin-bottom:24px;}}
-.card h2{{font-size:14px;margin:0 0 16px;color:var(--muted);
-          text-transform:uppercase;letter-spacing:.04em;}}
-.stats{{display:flex;gap:28px;flex-wrap:wrap;}}
-.stat .val{{font-size:24px;font-weight:700;}}
-.stat .lbl{{font-size:12px;color:var(--muted);margin-top:2px;}}
+       border-radius:12px;padding:20px 24px;margin-bottom:20px;}}
+.card h2{{font-size:13px;margin:0 0 14px;color:var(--muted);
+          text-transform:uppercase;letter-spacing:.05em;}}
+.stats{{display:flex;gap:24px;flex-wrap:wrap;}}
+.stat .val{{font-size:22px;font-weight:700;}}
+.stat .lbl{{font-size:11px;color:var(--muted);margin-top:2px;}}
+.grid2{{display:grid;grid-template-columns:1fr 1fr;gap:20px;}}
 table{{width:100%;border-collapse:collapse;font-size:12.5px;}}
 th{{text-align:left;color:var(--muted);font-weight:500;
-     padding:8px 10px;border-bottom:1px solid var(--border);}}
-td{{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;}}
+     padding:7px 10px;border-bottom:1px solid var(--border);font-size:11px;}}
+td{{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}}
 tr:last-child td{{border-bottom:none;}}
 .pos{{color:var(--pos);font-weight:600;}}
 .neg{{color:var(--neg);font-weight:600;}}
 .muted{{color:var(--muted);}}
-.empty{{text-align:center;color:var(--muted);padding:24px;}}
+.empty{{text-align:center;color:var(--muted);padding:24px;font-size:13px;}}
 small{{font-size:11px;}}
+.explain{{margin-top:14px;border-top:1px solid var(--border);padding-top:14px;}}
+.explain dl{{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px;margin:0;}}
+.explain dt{{color:var(--accent);font-weight:600;white-space:nowrap;}}
+.explain dd{{color:var(--muted);margin:0;}}
 </style>
 </head>
 <body>
 <h1>🎮 Dota Trader — Live Dashboard</h1>
-<div class="upd">Обновлено: {now_utc} &nbsp;·&nbsp; авто-обновление каждые 30 мин</div>
+<div class="upd">Обновлено: {now_str} &nbsp;·&nbsp; авто-обновление каждые 10 мин</div>
 
-<div class="card">
-  <h2>💰 Bankroll — AUTO_ELO_FLAT</h2>
-  <div class="stats">
-    <div class="stat"><div class="val">${curr_bank:,.2f}</div><div class="lbl">Текущий банк</div></div>
-    <div class="stat"><div class="val {'pos' if total_pnl>=0 else 'neg'}">{fmt_pnl(total_pnl)}</div><div class="lbl">Total P&amp;L</div></div>
-    <div class="stat"><div class="val {'pos' if roi_pct>=0 else 'neg'}">{roi_pct:+.2f}%</div><div class="lbl">ROI от старта</div></div>
-    <div class="stat"><div class="val">${START_BANK:,.0f}</div><div class="lbl">Стартовый банк</div></div>
-    <div class="stat"><div class="val">{bank.get('total_bets', '—')}</div><div class="lbl">Settled ставок</div></div>
+<!-- ══ БЛОК 1: БАНК + НЕДЕЛЬНАЯ СТАТИСТИКА ═══════════════════════════════ -->
+<div class="grid2">
+  <div class="card">
+    <h2>💰 Банк — AUTO_ELO_FLAT</h2>
+    <div class="stats">
+      <div class="stat"><div class="val">${curr_bank:,.2f}</div><div class="lbl">Текущий банк</div></div>
+      <div class="stat"><div class="val {pc(total_pnl)}">{fp(total_pnl)}</div><div class="lbl">Total P&amp;L</div></div>
+      <div class="stat"><div class="val {pc(roi_pct)}">{roi_pct:+.1f}%</div><div class="lbl">ROI всего</div></div>
+    </div>
+    <div class="stats" style="margin-top:16px">
+      <div class="stat"><div class="val">{len(all_settled)}</div><div class="lbl">Settled ставок</div></div>
+      <div class="stat"><div class="val">{winrate_all}%</div><div class="lbl">Win rate</div></div>
+      <div class="stat"><div class="val {pc(roi_all)}">{roi_all:+.1f}%</div><div class="lbl">ROI на объём</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>📅 За последние 7 дней</h2>
+    <div class="stats">
+      <div class="stat"><div class="val">{w_count}</div><div class="lbl">Ставок</div></div>
+      <div class="stat"><div class="val {pc(w_pnl)}">{fp(w_pnl)}</div><div class="lbl">P&amp;L за неделю</div></div>
+      <div class="stat"><div class="val">${w_staked:,.0f}</div><div class="lbl">Объём</div></div>
+    </div>
+    <div class="stats" style="margin-top:16px">
+      <div class="stat"><div class="val pos">${w_wins:,.0f}</div><div class="lbl">Объём выигравших</div></div>
+      <div class="stat"><div class="val neg">-${w_losses:,.0f}</div><div class="lbl">Объём проигравших</div></div>
+    </div>
   </div>
 </div>
 
+<!-- ══ БЛОК 2: ГРАФИК РОСТА БАНКА ════════════════════════════════════════ -->
 <div class="card">
-  <h2>📊 Статистика ставок (settled)</h2>
-  <div class="stats">
-    <div class="stat"><div class="val">{total_bets}</div><div class="lbl">Всего ставок</div></div>
-    <div class="stat"><div class="val">{len(settled)}</div><div class="lbl">Урегулировано</div></div>
-    <div class="stat"><div class="val">{winrate}%</div><div class="lbl">Win rate</div></div>
-    <div class="stat"><div class="val {'pos' if roi_bets>=0 else 'neg'}">{roi_bets:+.2f}%</div><div class="lbl">ROI (ставки)</div></div>
-    <div class="stat"><div class="val">{brier_val}</div><div class="lbl">Brier score</div></div>
-    <div class="stat"><div class="val">{'—' if clv_avg == '—' else f'{clv_avg:+.2f}%'}</div><div class="lbl">Avg CLV</div></div>
-  </div>
+  <h2>📈 Рост банка — еженедельно</h2>
+  {chart_svg}
+  <div style="font-size:11px;color:var(--muted);margin-top:8px">Пунктир — стартовый банк $1 000. Каждая точка — конец недели после settle всех ставок.</div>
 </div>
 
+<!-- ══ БЛОК 3: АКТИВНЫЕ СТАВКИ ═══════════════════════════════════════════ -->
+{active_html}
+
+<!-- ══ БЛОК 4: ИСТОРИЯ СТАВОК ════════════════════════════════════════════ -->
 <div class="card">
-  <h2>🧠 Качество модели — калибровка</h2>
+  <h2>🎯 История ставок</h2>
+  <table>
+    <thead><tr>
+      <th>Время</th><th>Матч</th><th>Ставка на</th><th>Сумма @ Коэф</th><th>Итог</th><th>P&amp;L</th>
+    </tr></thead>
+    <tbody>{hist_rows}</tbody>
+  </table>
+  {show_more}
+</div>
+
+<!-- ══ БЛОК 5: КАЧЕСТВО МОДЕЛИ (внизу) ═══════════════════════════════════ -->
+<div class="card">
+  <h2>🧠 Качество модели</h2>
   <div class="stats">
     <div class="stat"><div class="val">{w_elo}</div><div class="lbl">Вес Elo</div></div>
     <div class="stat"><div class="val">{w_form}</div><div class="lbl">Вес формы</div></div>
     <div class="stat"><div class="val">{w_h2h}</div><div class="lbl">Вес H2H</div></div>
     <div class="stat"><div class="val">{cal_loss}</div><div class="lbl">Log-loss</div></div>
-    <div class="stat"><div class="val">{cal_brier}</div><div class="lbl">Brier (cal)</div></div>
+    <div class="stat"><div class="val">{cal_brier}</div><div class="lbl">Brier score</div></div>
     <div class="stat"><div class="val">{cal_acc}</div><div class="lbl">Accuracy</div></div>
+    <div class="stat"><div class="val">{brier_val}</div><div class="lbl">Brier (live)</div></div>
+    <div class="stat"><div class="val">{'—' if clv_avg=='—' else f'{clv_avg:+.2f}%'}</div><div class="lbl">Avg CLV</div></div>
   </div>
-  <div style="margin-top:12px;font-size:12px;color:var(--muted)">
+  <div style="font-size:11px;color:var(--muted);margin-top:10px">
     Откалибровано: {cal_at_short} &nbsp;·&nbsp; Выборка: {cal_n} матчей
   </div>
+  <div class="explain">
+    <dl>
+      <dt>Вес Elo / формы / H2H</dt>
+      <dd>Доля каждого сигнала в итоговой вероятности победы. В сумме = 1.</dd>
+      <dt>Log-loss</dt>
+      <dd>Чем ниже — тем точнее вероятности. Хорошая модель: &lt; 0.65. Случайная: 0.693.</dd>
+      <dt>Brier score</dt>
+      <dd>Среднеквадратичная ошибка вероятностей. Чем ниже — тем лучше. Отлично: &lt; 0.22.</dd>
+      <dt>Accuracy</dt>
+      <dd>Доля правильно угаданных победителей. Ориентир для Dota: &gt; 55% уже хорошо.</dd>
+      <dt>Brier (live)</dt>
+      <dd>Brier по реальным ставкам (не по калибровочной выборке). Отражает live-качество.</dd>
+      <dt>Avg CLV</dt>
+      <dd>Closing Line Value — насколько наши коэффы лучше закрывающей линии. Положительный CLV = долгосрочное преимущество.</dd>
+    </dl>
+  </div>
 </div>
 
-{active_rows_html}</div>
-
-<div class="card">
-  <h2>🎯 Последние ставки AUTO_ELO_FLAT</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Время</th><th>Матч / Команда</th><th>Ставка</th>
-        <th>Prob / Kelly</th><th>Сигналы</th><th>Итог</th><th>P&amp;L</th>
-      </tr>
-    </thead>
-    <tbody>{rows_html}</tbody>
-  </table>
-</div>
-
+<script>
+function toggleHist(btn) {{
+  var rows = document.querySelectorAll('.hist-extra');
+  var hidden = rows[0] && rows[0].style.display === 'none';
+  rows.forEach(function(r){{ r.style.display = hidden ? '' : 'none'; }});
+  btn.textContent = hidden ? 'Скрыть ▲' : 'Показать все {len(hist_real)} ставок ▼';
+}}
+</script>
 </body>
 </html>"""
     return HTMLResponse(content=html)
