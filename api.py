@@ -316,6 +316,21 @@ def dashboard():
     w_lost    = sum(float(b.get("pnl") or 0) for b in week_bets if float(b.get("pnl") or 0) < 0)
     w_count   = len(week_bets)
 
+    # ── Ставки за сегодня ───────────────────────────────────────────────────
+    today_start = now_utc.replace(hour=0, minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+    today_bets = sb_safe(
+        "elo_paper_bets"
+        "?strategy_name=eq.AUTO_ELO_FLAT"
+        "&stake_usd=gt.0"
+        f"&run_ts=gte.{today_start}"
+        "&select=run_ts,home_team,away_team,bet_team,stake_usd,real_odds,"
+        "outcome,pnl,settled,start_time,league"
+        "&order=run_ts.desc&limit=50"
+    )
+    today_staked = sum(float(b.get("stake_usd") or 0) for b in today_bets)
+    today_pnl    = sum(float(b.get("pnl") or 0) for b in today_bets if b.get("settled"))
+    today_settled_n = sum(1 for b in today_bets if b.get("settled"))
+
     # ── Активные ставки (72ч) ───────────────────────────────────────────────
     cutoff_72h = (now_utc - timedelta(hours=72)).strftime("%Y-%m-%dT%H:%M:%SZ")
     active_bets = sb_safe(
@@ -432,6 +447,47 @@ def dashboard():
         if o == "win":  return '<span class="pos">✓ WIN</span>'
         if o == "loss": return '<span class="neg">✗ LOSS</span>'
         return "—"
+
+    # ── Today bets HTML ──────────────────────────────────────────────────────
+    if today_bets:
+        td_rows = ""
+        for b in today_bets:
+            home  = b.get("home_team", "?")
+            away  = b.get("away_team", "?")
+            side  = b.get("bet_team", "home")
+            fav   = home if side == "home" else away
+            stake = ff(b.get("stake_usd"))
+            odds  = ff(b.get("real_odds"), 2) if b.get("real_odds") else "—"
+            start = fmt_ts(b.get("start_time")) if b.get("start_time") else "—"
+            oc    = oc_badge(b.get("outcome"), b.get("settled"))
+            pnl_v = fp(b.get("pnl")) if b.get("settled") else "⏳"
+            pcls  = pc(b.get("pnl") or 0) if b.get("settled") else "muted"
+            td_rows += f"""<tr>
+              <td class="muted">{start} UTC</td>
+              <td><b>{home} vs {away}</b><br><small class="muted">{b.get("league","")}</small></td>
+              <td><span style="color:var(--accent);font-weight:600">→ {fav}</span></td>
+              <td><b>${stake}</b> <span class="muted">@ {odds}</span></td>
+              <td>{oc}</td>
+              <td class="{pcls}">{pnl_v}</td>
+            </tr>"""
+        pnl_color = "pos" if today_pnl >= 0 else "neg"
+        today_html = f"""<div class="card">
+  <h2>📅 Ставки сегодня — {now_utc.strftime("%d.%m.%Y")}</h2>
+  <div style="display:flex;gap:24px;margin-bottom:14px;flex-wrap:wrap">
+    <div class="stat"><div class="val">{len(today_bets)}</div><div class="lbl">Ставок</div></div>
+    <div class="stat"><div class="val">${today_staked:,.0f}</div><div class="lbl">Поставлено</div></div>
+    <div class="stat"><div class="val">{today_settled_n}</div><div class="lbl">Урегулировано</div></div>
+    <div class="stat"><div class="val {pnl_color}">{fp(today_pnl)}</div><div class="lbl">P&amp;L сегодня</div></div>
+  </div>
+  <table><thead><tr>
+    <th>Матч начало</th><th>Матч</th><th>Ставка на</th><th>Сумма @ Коэф</th><th>Итог</th><th>P&amp;L</th>
+  </tr></thead><tbody>{td_rows}</tbody></table>
+</div>"""
+    else:
+        today_html = f"""<div class="card">
+  <h2>📅 Ставки сегодня — {now_utc.strftime("%d.%m.%Y")}</h2>
+  <p class="empty">Сегодня ставок ещё не было</p>
+</div>"""
 
     # ── Active bets HTML (упрощённый вид) ────────────────────────────────────
     if active_bets:
@@ -580,6 +636,9 @@ small{{font-size:11px;}}
 
 <!-- ══ БЛОК 3: АКТИВНЫЕ СТАВКИ ═══════════════════════════════════════════ -->
 {active_html}
+
+<!-- ══ БЛОК 3b: СТАВКИ СЕГОДНЯ ═══════════════════════════════════════════ -->
+{today_html}
 
 <!-- ══ БЛОК 4: ИСТОРИЯ СТАВОК ════════════════════════════════════════════ -->
 <div class="card">
