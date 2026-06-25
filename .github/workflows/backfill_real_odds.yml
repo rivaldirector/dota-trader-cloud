@@ -1,0 +1,40 @@
+name: Backfill Real Odds — elo_paper_bets (BetsAPI ended)
+
+on:
+  workflow_dispatch:   # ручной запуск
+  schedule:
+    - cron: "5 */3 * * *"   # каждые 3 часа (+5 мин после predict)
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install requests python-dotenv
+
+      - name: Write .env
+        env:
+          SUPABASE_URL:      ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+          BETSAPI_TOKEN:     ${{ secrets.BETSAPI_TOKEN }}
+        run: |
+          echo "SUPABASE_URL=${SUPABASE_URL}"           > .env
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> .env
+          echo "BETSAPI_TOKEN=${BETSAPI_TOKEN}"          >> .env
+
+      - name: Backfill real odds for last 7 days bets
+        run: python3 scripts/backfill_real_odds_elo.py
+
+      - name: Summary
+        if: always()
+        run: echo "Backfill real odds finished at $(date -u)"

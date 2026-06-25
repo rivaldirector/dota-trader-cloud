@@ -295,7 +295,7 @@ def dashboard():
     except Exception:
         picks = []
     try:
-        auto_bets = sb("GET", "elo_paper_bets?strategy_name=eq.AUTO_ELO_FLAT&order=start_time.desc&limit=300&select=*")
+        auto_bets = sb("GET", "elo_paper_bets?strategy_name=eq.AUTO_ELO_FLAT&order=start_time.desc&limit=300&select=id,run_ts,home_team,away_team,start_time,bet_team,odds,stake_usd,settled,outcome,pnl,settled_ts,real_odds,real_bookmaker,event_id")
     except Exception:
         auto_bets = []
     # Dedup: один матч может быть записан несколько раз (каждый запуск раз в 2ч).
@@ -494,27 +494,59 @@ def dashboard():
         except Exception:
             st_dt, st_fmt = None, str(st)
         side = b.get("home_team") if b.get("bet_team") == "home" else b.get("away_team")
+
+        # Odds cell: показываем real_odds если есть, иначе notional
+        notional_odds = round(float(b.get("odds") or 0), 3)
+        real_odds_val = b.get("real_odds")
+        real_bm       = b.get("real_bookmaker") or ""
+        if real_odds_val:
+            real_f = round(float(real_odds_val), 3)
+            odds_cell = (
+                f"<span style='color:#22c55e;font-weight:600'>{real_f}</span>"
+                f"<span style='color:#6b7280;font-size:0.8em'> ({real_bm})</span>"
+                f"<br><span style='color:#6b7280;font-size:0.78em'>notional: {notional_odds}</span>"
+            )
+        else:
+            odds_cell = f"<span style='color:#9aa0ad'>{notional_odds}</span><br><span style='color:#555;font-size:0.78em'>нет реальных</span>"
+
         if b.get("settled"):
-            cls = "ok" if b.get("outcome") == "win" else "err"
-            status_s = f"<span class='{cls}'>{b.get('outcome')} ({float(b.get('pnl') or 0):+.2f}$)</span>"
+            outcome  = b.get("outcome")
+            stake_v  = float(b.get("stake_usd") or 20)
+            # P&L по реальным одсам если есть
+            if real_odds_val and outcome:
+                pnl_real = round(stake_v * (float(real_odds_val) - 1), 2) if outcome == "win" else -stake_v
+                pnl_not  = round(float(b.get("pnl") or 0), 2)
+                if outcome == "win":
+                    status_s = (
+                        f"<span class='ok'>WIN</span> "
+                        f"<span style='color:#22c55e;font-weight:600'>+{pnl_real:.2f}$</span>"
+                        f"<span style='color:#6b7280;font-size:0.8em'> (notional: +{pnl_not:.2f}$)</span>"
+                    )
+                else:
+                    status_s = f"<span class='err'>LOSS −{stake_v:.0f}$</span>"
+            else:
+                pnl_v = round(float(b.get("pnl") or 0), 2)
+                cls = "ok" if outcome == "win" else "err"
+                status_s = f"<span class='{cls}'>{outcome} ({pnl_v:+.2f}$)</span>"
         elif st_dt is not None and st_dt <= now:
             elapsed_h = (now - st_dt).total_seconds() / 3600
-            status_s = f"<span style='color:#9aa0ad'>ожидаем результат ({elapsed_h:.0f}ч с начала)</span>"
+            status_s = f"<span style='color:#9aa0ad'>ожидаем результат ({elapsed_h:.0f}ч)</span>"
         elif st_dt is not None:
             until_h = (st_dt - now).total_seconds() / 3600
-            status_s = f"<span style='color:#6b7280'>начнётся через {until_h:.0f}ч</span>"
+            status_s = f"<span style='color:#6b7280'>через {until_h:.0f}ч</span>"
         else:
             status_s = "<span style='color:#9aa0ad'>ожидаем результат</span>"
+
         auto_rows_html += f"""
         <tr>
           <td>{st_fmt}</td>
           <td>{b.get('home_team')} vs {b.get('away_team')}</td>
           <td><b>{side}</b></td>
-          <td>{b.get('odds')}</td>
+          <td style='line-height:1.4'>{odds_cell}</td>
           <td>{status_s}</td>
         </tr>"""
     if not auto_rows_html:
-        auto_rows_html = '<tr><td colspan="5" style="text-align:center;color:#888">Машина пока не приняла ни одного решения — следующий прогон по расписанию (каждые 2ч)</td></tr>'
+        auto_rows_html = '<tr><td colspan="5" style="text-align:center;color:#888">Машина пока не приняла ни одного решения</td></tr>'
 
     html = f"""<!DOCTYPE html>
 <html lang="ru">
