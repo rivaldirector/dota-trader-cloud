@@ -295,7 +295,7 @@ def dashboard():
     except Exception:
         picks = []
     try:
-        auto_bets = sb("GET", "elo_paper_bets?strategy_name=eq.AUTO_ELO_FLAT&order=start_time.desc&limit=300&select=id,run_ts,home_team,away_team,start_time,bet_team,odds,stake_usd,settled,outcome,pnl,settled_ts,real_odds,real_bookmaker,event_id")
+        auto_bets = sb("GET", "elo_paper_bets?strategy_name=eq.AUTO_ELO_FLAT&order=start_time.desc&limit=2000&select=id,run_ts,home_team,away_team,start_time,bet_team,odds,stake_usd,settled,outcome,pnl,settled_ts,real_odds,real_bookmaker,event_id")
     except Exception:
         auto_bets = []
     # Dedup: один матч может быть записан несколько раз (каждый запуск раз в 2ч).
@@ -314,6 +314,16 @@ def dashboard():
     auto_bets = sorted(_ab_seen.values(), key=lambda _b: _b.get("start_time") or 0, reverse=True)
 
     auto_bets_by_event = {b.get("event_id"): b for b in auto_bets if b.get("event_id")}
+
+    def _effective_pnl(b):
+        """P&L с real_odds если доступны, иначе notional из БД."""
+        outcome = b.get("outcome")
+        stake_v = float(b.get("stake_usd") or 20)
+        real_o  = b.get("real_odds")
+        if real_o and outcome:
+            return round(stake_v * (float(real_o) - 1), 2) if outcome == "win" else -stake_v
+        return float(b.get("pnl") or 0)
+
     try:
         rule_c_bets = sb("GET", "elo_paper_bets?strategy_name=in.(M05,M06,M36)&select=id,settled,pnl")
     except Exception:
@@ -447,14 +457,14 @@ def dashboard():
 
     auto_settled = [b for b in auto_bets if b.get("settled")]
     auto_pending = [b for b in auto_bets if not b.get("settled")]
-    auto_pnl = sum(float(b.get("pnl") or 0) for b in auto_settled)
+    auto_pnl = sum(_effective_pnl(b) for b in auto_settled)
     auto_wins = sum(1 for b in auto_settled if b.get("outcome") == "win")
     auto_losses = sum(1 for b in auto_settled if b.get("outcome") == "loss")
     auto_wr = (auto_wins / len(auto_settled) * 100) if auto_settled else None
     auto_bank = round(1000.0 + auto_pnl, 2)
 
-    gains_sum = sum(float(b.get("pnl") or 0) for b in auto_settled if float(b.get("pnl") or 0) > 0)
-    losses_sum = sum(float(b.get("pnl") or 0) for b in auto_settled if float(b.get("pnl") or 0) < 0)
+    gains_sum = sum(_effective_pnl(b) for b in auto_settled if _effective_pnl(b) > 0)
+    losses_sum = sum(_effective_pnl(b) for b in auto_settled if _effective_pnl(b) < 0)
 
     def started_after(b, dt):
         st = b.get("start_time")
@@ -471,8 +481,8 @@ def dashboard():
     week_settled = [b for b in week_bets if b.get("settled")]
     today_staked = sum(float(b.get("stake_usd") or 0) for b in today_bets)
     week_staked = sum(float(b.get("stake_usd") or 0) for b in week_bets)
-    today_pnl = sum(float(b.get("pnl") or 0) for b in today_settled)
-    week_pnl = sum(float(b.get("pnl") or 0) for b in week_settled)
+    today_pnl = sum(_effective_pnl(b) for b in today_settled)
+    week_pnl = sum(_effective_pnl(b) for b in week_settled)
 
     # ---- график банка: хронологически по settled_ts (fallback start_time) ----
     chrono_settled = sorted(
@@ -481,7 +491,7 @@ def dashboard():
     )
     bank_curve, running = [], 1000.0
     for b in chrono_settled:
-        running = round(running + float(b.get("pnl") or 0), 2)
+        running = round(running + _effective_pnl(b), 2)
         bank_curve.append(running)
     bank_chart_svg = render_bank_chart(bank_curve, start=1000.0)
 
@@ -591,12 +601,11 @@ def dashboard():
       {later_rows_html}
     </table>
     <div class="note">
-      Коэф — НЕ рыночная цена (BetsAPI мёртв, живых одсов нет): это приблизительная оценка 1/(model_prob × 1.0585)
-      по тому же среднему историческому оверраунду, что и у автономной машины ниже. "Нет данных" — для команд без
-      Elo-истории прогноз ненадёжен (коинфлип), ставку не показываем. Если по матчу машина уже реально поставила
-      (видно по "Итог/потенциал": win/loss/ожидаем результата) — показаны настоящие данные ставки, а не прогноз.
-      "Потенциал (прогноз, бот ещё не ставил)" — гипотетическая оценка для матчей, до которых бот пока не добрался
-      (прогоняется раз в 2ч). Обновляется 2 раза/день через GitHub Actions (prematch_free_predict.yml).
+      Коэф — приблизительная оценка 1/(model_prob × 1.0585) по среднему историческому оверраунду букмекеров.
+      "Нет данных" — для команд без Elo-истории прогноз ненадёжен (коинфлип), ставку не показываем.
+      Если по матчу машина уже реально поставила (видно по "Итог/потенциал": win/loss/ожидаем результата) —
+      показаны настоящие данные ставки, а не прогноз. Для upcoming-матчей машина также обращается к BetsAPI
+      за реальными котировками в момент ставки. Обновляется каждые 10 мин (prematch_free_predict.yml).
     </div>
   </div>
 
@@ -614,13 +623,12 @@ def dashboard():
       {auto_rows_html}
     </table>
     <div class="note">
-      Машина сама выбирает фаворита по Elo и фиксирует флэт $20 на каждый матч в окне 72ч — каждые 2 часа, без участия человека.
-      "Условные odds" — НЕ рыночная цена (её сейчас просто нет, BetsAPI мёртв): это 1/(model_prob × 1.0585), где 1.0585 —
-      реальный средний оверраунд букмекеров, посчитанный по 68 733 историческим строкам в этой же базе. Главная метрика
-      здесь — <b>winrate</b> (угадывает ли Elo фаворита), а не $ — деньги тут иллюстративные, пока не вернутся живые одсы.
-      Сеттлинг — через бесплатный OpenDota (без BetsAPI/ключа): иногда матч (особенно квалы с неопределённым соперником,
-      типа "Inner Circle x Insanity") просто отсутствует в бесплатной выдаче OpenDota — тогда ставка честно висит
-      "ожидаем результата" дольше обычного, это не баг, а предел бесплатного источника.
+      Машина сама выбирает фаворита по Elo и фиксирует флэт $20 на каждый матч в окне 72ч — каждые 10 мин, без участия человека.
+      В момент ставки машина запрашивает BetsAPI за реальными котировками — если матч найден (зелёный коэф),
+      банк и P&L считаются по ним. Иначе используется notional: 1/(model_prob × 1.0585), где 1.0585 —
+      реальный средний оверраунд букмекеров по 68 733 историческим строкам в этой же базе.
+      Сеттлинг — через бесплатный OpenDota: иногда матч (особенно квалы с неопределённым соперником)
+      отсутствует в выдаче — тогда ставка висит "ожидаем результата" дольше обычного, это не баг.
     </div>
   </div>
 
@@ -641,17 +649,18 @@ def dashboard():
   </div>
 
   <div class="card">
-    <h2>Историческая симуляция — чистый Elo на реальных одсах, 60 дней</h2>
+    <h2>История с запуска — все ставки автономной машины (live)</h2>
     <div class="stats">
-      <div class="stat"><div class="val">377</div><div class="lbl">ставок (flat $20)</div></div>
-      <div class="stat"><div class="val">68.44%</div><div class="lbl">winrate (258/377)</div></div>
-      <div class="stat"><div class="val pos" style="color:#22c55e">+$570.46</div><div class="lbl">P&amp;L (ROI +7.57%)</div></div>
-      <div class="stat"><div class="val">$1,000 → $1,570.46</div><div class="lbl">банк в этой симуляции</div></div>
+      <div class="stat"><div class="val">{len(auto_bets)}</div><div class="lbl">всего решений принято</div></div>
+      <div class="stat"><div class="val">{len(auto_settled)}</div><div class="lbl">урегулировано</div></div>
+      <div class="stat"><div class="val">{f'{auto_wr:.1f}%' if auto_wr is not None else '—'}</div><div class="lbl">winrate ({auto_wins}W / {auto_losses}L)</div></div>
+      <div class="stat"><div class="val {'ok' if auto_pnl >= 0 else 'err'}">{auto_pnl:+,.2f}$</div><div class="lbl">P&amp;L (ROI {auto_pnl / (len(auto_settled) * 20) * 100:+.1f}%)</div></div>
+      <div class="stat"><div class="val">${auto_bank:,.2f}</div><div class="lbl">банк ($1000 → сейчас)</div></div>
     </div>
     <div class="note">
-      Бэктест на РЕАЛЬНЫХ исторических котировках (закэшированы до смерти BetsAPI 17 июня), посчитан 21.06.2026
-      на Mac-пайплайне (scripts/backtest_elo_pure_60d.py). Это задним числом, отдельно от живого банка выше —
-      не смешиваем, чтобы не подменять честный live-трек симуляцией.
+      Считается из всех записей elo_paper_bets (strategy=AUTO_ELO_FLAT) в реальном времени — обновляется при каждом
+      открытии страницы. P&amp;L считается по реальным котировкам (BetsAPI) там где они сохранены, иначе по notional.
+      Старт банка $1000 — условная точка отсчёта с первой ставки машины.
     </div>
   </div>
 
