@@ -2,7 +2,7 @@ name: Elo Auto Pipeline — autonomous flat-bet decide + settle (no BetsAPI)
 
 on:
   schedule:
-    - cron: "15 */2 * * *"   # каждые 2 часа, сдвиг на 15 мин от daily_pipeline
+    - cron: "*/10 * * * *"   # каждые 10 минут
 
   workflow_dispatch:
 
