@@ -316,7 +316,7 @@ def dashboard():
         "elo_paper_bets"
         "?strategy_name=eq.AUTO_ELO_FLAT"
         "&stake_usd=gt.0"
-        "&select=run_ts,home_team,away_team,bet_team,stake_usd,real_odds,"
+        "&select=run_ts,home_team,away_team,bet_team,stake_usd,odds,real_odds,"
         "outcome,pnl,settled,league"
         "&order=run_ts.desc&limit=50"
     )
@@ -358,7 +358,7 @@ def dashboard():
         "?strategy_name=eq.AUTO_ELO_FLAT"
         "&stake_usd=gt.0"
         f"&run_ts=gte.{today_start}"
-        "&select=run_ts,home_team,away_team,bet_team,stake_usd,real_odds,"
+        "&select=run_ts,home_team,away_team,bet_team,stake_usd,odds,real_odds,"
         "outcome,pnl,settled,start_time,league"
         "&order=run_ts.desc&limit=50"
     )
@@ -373,9 +373,8 @@ def dashboard():
         "?strategy_name=eq.AUTO_ELO_FLAT"
         "&settled=eq.false"
         "&stake_usd=gt.0"
-        "&real_odds=not.is.null"
         f"&run_ts=gte.{cutoff_72h}"
-        "&select=start_time,home_team,away_team,bet_team,stake_usd,real_odds,league"
+        "&select=start_time,home_team,away_team,bet_team,stake_usd,odds,real_odds,league"
         "&order=start_time.asc&limit=30"
     )
 
@@ -508,7 +507,8 @@ def dashboard():
             side  = b.get("bet_team", "home")
             fav   = home if side == "home" else away
             stake = ff(b.get("stake_usd"))
-            odds  = ff(b.get("real_odds"), 2) if b.get("real_odds") else "—"
+            _ro = b.get("real_odds") or b.get("odds")
+            odds  = ff(_ro, 2) if _ro else "—"
             start = fmt_ts(b.get("start_time")) if b.get("start_time") else "—"
             oc    = oc_badge(b.get("outcome"), b.get("settled"))
             pnl_v = fp(b.get("pnl")) if b.get("settled") else "⏳"
@@ -552,7 +552,8 @@ def dashboard():
             side = b.get("bet_team","home")
             fav  = home if side == "home" else away
             stake= ff(b.get("stake_usd"))
-            odds = ff(b.get("real_odds"), 2)
+            _ro = b.get("real_odds") or b.get("odds")
+            odds = ff(_ro, 2) if _ro else "—"
             ab_rows += f"""<tr>
               <td class="muted">{ts} UTC</td>
               <td><b>{home} vs {away}</b><br><small class="muted">{b.get("league","")}</small></td>
@@ -580,7 +581,8 @@ def dashboard():
         side  = b.get("bet_team","home")
         fav   = home if side == "home" else away
         stake = ff(b.get("stake_usd"))
-        odds  = ff(b.get("real_odds"), 2)
+        _ro   = b.get("real_odds") or b.get("odds")
+        odds  = ff(_ro, 2) if _ro else "—"
         oc    = oc_badge(b.get("outcome"), b.get("settled"))
         pnl_v = fp(b.get("pnl")) if b.get("settled") else "—"
         pcls  = pc(b.get("pnl") or 0) if b.get("settled") else ""
