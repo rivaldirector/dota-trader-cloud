@@ -495,6 +495,45 @@ def dashboard():
         bank_curve.append(running)
     bank_chart_svg = render_bank_chart(bank_curve, start=1000.0)
 
+    # ---- Недельная разбивка (Виртуальный банк) ----
+    from collections import defaultdict
+    _weekly: dict = defaultdict(lambda: {"bets": 0, "wins": 0, "losses": 0, "pnl": 0.0, "label": ""})
+    for b in auto_bets:
+        _st = b.get("start_time")
+        if not _st:
+            continue
+        try:
+            _dt = datetime.fromtimestamp(_st, tz=timezone.utc)
+            _wk = _dt.strftime("%Y-W%W")
+            _end = _dt + timedelta(days=(6 - _dt.weekday()) % 7)
+            _weekly[_wk]["label"] = f"{_dt.strftime('%d.%m')}–{_end.strftime('%d.%m')}"
+            _weekly[_wk]["bets"] += 1
+            if b.get("settled"):
+                if b.get("outcome") == "win":
+                    _weekly[_wk]["wins"] += 1
+                elif b.get("outcome") == "loss":
+                    _weekly[_wk]["losses"] += 1
+                _weekly[_wk]["pnl"] = round(_weekly[_wk]["pnl"] + _effective_pnl(b), 2)
+        except Exception:
+            pass
+    weekly_rows_html = ""
+    _wb = 1000.0
+    for _wk in sorted(_weekly.keys()):
+        _ws = _weekly[_wk]
+        _wb = round(_wb + _ws["pnl"], 2)
+        _sn = _ws["wins"] + _ws["losses"]
+        _wr = f"{_ws['wins']/_sn*100:.0f}%" if _sn else "—"
+        _pc = "ok" if _ws["pnl"] >= 0 else "err"
+        weekly_rows_html += (
+            f"<tr><td>{_ws['label']}</td>"
+            f"<td>{_ws['bets']} ({_sn} settled)</td>"
+            f"<td>{_wr} ({_ws['wins']}W/{_ws['losses']}L)</td>"
+            f"<td class='{_pc}'>{_ws['pnl']:+.2f}$</td>"
+            f"<td>${_wb:,.2f}</td></tr>"
+        )
+    if not weekly_rows_html:
+        weekly_rows_html = '<tr><td colspan="5" style="text-align:center;color:#888">Нет данных</td></tr>'
+
     auto_rows_html = ""
     for b in auto_bets[:20]:
         st = b.get("start_time")
@@ -665,18 +704,19 @@ def dashboard():
   </div>
 
   <div class="card">
-    <h2>Виртуальный банк (Rule C контур — заморожен, нужны живые одсы)</h2>
+    <h2>Виртуальный банк — разбивка по неделям</h2>
     <div class="stats">
-      <div class="stat"><div class="val">${bank_cur:,.2f}</div><div class="lbl">текущий банк</div></div>
-      <div class="stat"><div class="val">${bank_start:,.2f}</div><div class="lbl">старт</div></div>
-      <div class="stat"><div class="val">{gate_settled}/30</div><div class="lbl">гейт Rule C (settled signals)</div></div>
+      <div class="stat"><div class="val">${auto_bank:,.2f}</div><div class="lbl">текущий банк (старт $1000)</div></div>
+      <div class="stat"><div class="val {'ok' if auto_pnl >= 0 else 'err'}">{auto_pnl:+,.2f}$</div><div class="lbl">чистый P&amp;L за всё время</div></div>
+      <div class="stat"><div class="val">{len(auto_pending)}</div><div class="lbl">ожидают результата</div></div>
     </div>
+    <table style="margin-top:14px">
+      <tr><th>Неделя</th><th>Ставок</th><th>Winrate</th><th>P&amp;L</th><th>Банк</th></tr>
+      {weekly_rows_html}
+    </table>
     <div class="note">
-      Считается СТРОГО по своим ставкам (elo_paper_bets, strategy_name IN M05/M06/M36) — не путать с автономной
-      машиной выше, у них разные банки и разная логика. Rule C требует рыночные коэффициенты для расчёта edge —
-      сигналы не генерируются и банк honestly не двигается, пока не подключён источник одсов (сейчас 0/30 — это
-      ожидаемо, контур не сломан, просто пуст). Отдельно от других таблиц в этой базе (paper_trades/daily_bankroll
-      и т.п. — другие эксперименты, не трогаем).
+      Недельная разбивка ставок AUTO_ELO_FLAT (flat $20). P&amp;L считается по реальным котировкам BetsAPI где они есть,
+      иначе по notional. Банк — нарастающий итог с $1000 старта. Только settled ставки влияют на банк.
     </div>
   </div>
 </body>
