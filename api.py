@@ -248,6 +248,41 @@ def debug_links():
 
 
 # -------------------
+# BETSAPI DEBUG
+# -------------------
+@app.get("/debug/betsapi")
+def debug_betsapi():
+    """Проверяет BetsAPI: токен, sport_id, первые events."""
+    import urllib.parse
+    token = os.getenv("BETSAPI_TOKEN", "")
+    if not token:
+        return {"error": "BETSAPI_TOKEN не задан в Railway env"}
+
+    results = {}
+    # Проверяем несколько sport_id для Dota 2
+    for sid in [151, 12, 161]:
+        try:
+            url = f"https://api.betsapi.com/v3/events/upcoming?token={token}&sport_id={sid}&page=1"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            raw = urllib.request.urlopen(req, timeout=10).read().decode()
+            data = json.loads(raw)
+            events = data.get("results", [])
+            results[f"sport_{sid}"] = {
+                "total": data.get("pager", {}).get("total", "?"),
+                "returned": len(events),
+                "sample": [
+                    {"home": e.get("home",{}).get("name"), "away": e.get("away",{}).get("name"),
+                     "time": e.get("time"), "league": e.get("league",{}).get("name")}
+                    for e in events[:5]
+                ],
+            }
+        except Exception as ex:
+            results[f"sport_{sid}"] = {"error": str(ex)}
+
+    return {"token_prefix": token[:6] + "...", "betsapi": results}
+
+
+# -------------------
 # LIVE DASHBOARD
 # -------------------
 @app.get("/dashboard", response_class=HTMLResponse)
@@ -369,22 +404,25 @@ def dashboard():
     except Exception:
         pass
 
-    # ── Еженедельный график банка ─────────────────────────────────────────────
-    # Группируем settled по ISO-неделе, считаем кумулятивный банк
-    weekly_pnl: dict = defaultdict(float)
+    # ── График банка по дням ──────────────────────────────────────────────────
+    daily_pnl: dict = defaultdict(float)
     for b in all_settled:
         try:
-            dt = datetime.fromisoformat((b["settled_ts"] or "").replace("Z", "+00:00"))
-            wk = dt.strftime("%Y-W%V")
-            weekly_pnl[wk] += float(b.get("pnl") or 0)
+            raw_ts = b.get("settled_ts") or b.get("run_ts") or ""
+            dt = datetime.fromisoformat(raw_ts.replace("Z", "+00:00"))
+            day_key = dt.strftime("%Y-%m-%d")
+            daily_pnl[day_key] += float(b.get("pnl") or 0)
         except Exception:
             pass
-    sorted_weeks = sorted(weekly_pnl.keys())
+    sorted_days = sorted(daily_pnl.keys())
     chart_points = []
     running = START_BANK
-    for wk in sorted_weeks:
-        running += weekly_pnl[wk]
-        label = wk.split("-W")[1] + "нед"
+    # Начальная точка — старт
+    if sorted_days:
+        chart_points.append(("старт", START_BANK))
+    for d in sorted_days:
+        running += daily_pnl[d]
+        label = d[5:]  # MM-DD
         chart_points.append((label, round(running, 2)))
 
     # SVG chart (700×160)
@@ -448,10 +486,23 @@ def dashboard():
         if o == "loss": return '<span class="neg">✗ LOSS</span>'
         return "—"
 
-    # ── Today bets HTML ──────────────────────────────────────────────────────
-    if today_bets:
+    # ── Today bets HTML — дедупликация по матчу, разбивка W/L ───────────────
+    # Оставляем последнюю ставку по каждому уникальному матчу
+    seen_td: set = set()
+    today_unique = []
+    for b in today_bets:
+        key = (b.get("home_team",""), b.get("away_team",""))
+        if key not in seen_td:
+            seen_td.add(key)
+            today_unique.append(b)
+
+    today_wins   = sum(1 for b in today_unique if b.get("outcome") == "win")
+    today_losses = sum(1 for b in today_unique if b.get("outcome") == "loss")
+    today_pending= sum(1 for b in today_unique if not b.get("settled"))
+
+    if today_unique:
         td_rows = ""
-        for b in today_bets:
+        for b in today_unique:
             home  = b.get("home_team", "?")
             away  = b.get("away_team", "?")
             side  = b.get("bet_team", "home")
@@ -474,9 +525,11 @@ def dashboard():
         today_html = f"""<div class="card">
   <h2>📅 Ставки сегодня — {now_utc.strftime("%d.%m.%Y")}</h2>
   <div style="display:flex;gap:24px;margin-bottom:14px;flex-wrap:wrap">
-    <div class="stat"><div class="val">{len(today_bets)}</div><div class="lbl">Ставок</div></div>
+    <div class="stat"><div class="val">{len(today_unique)}</div><div class="lbl">Ставок</div></div>
     <div class="stat"><div class="val">${today_staked:,.0f}</div><div class="lbl">Поставлено</div></div>
-    <div class="stat"><div class="val">{today_settled_n}</div><div class="lbl">Урегулировано</div></div>
+    <div class="stat"><div class="val pos">{today_wins}W</div><div class="lbl">Победы</div></div>
+    <div class="stat"><div class="val neg">{today_losses}L</div><div class="lbl">Поражения</div></div>
+    <div class="stat"><div class="val muted">{today_pending}⏳</div><div class="lbl">Ожидают</div></div>
     <div class="stat"><div class="val {pnl_color}">{fp(today_pnl)}</div><div class="lbl">P&amp;L сегодня</div></div>
   </div>
   <table><thead><tr>
@@ -629,9 +682,9 @@ small{{font-size:11px;}}
 
 <!-- ══ БЛОК 2: ГРАФИК РОСТА БАНКА ════════════════════════════════════════ -->
 <div class="card">
-  <h2>📈 Рост банка — еженедельно</h2>
+  <h2>📈 Рост банка — по дням</h2>
   {chart_svg}
-  <div style="font-size:11px;color:var(--muted);margin-top:8px">Пунктир — стартовый банк $1 000. Каждая точка — конец недели после settle всех ставок.</div>
+  <div style="font-size:11px;color:var(--muted);margin-top:8px">Пунктир — стартовый банк $1 000. Каждая точка — конец дня после settle ставок.</div>
 </div>
 
 <!-- ══ БЛОК 3: АКТИВНЫЕ СТАВКИ ═══════════════════════════════════════════ -->
