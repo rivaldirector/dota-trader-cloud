@@ -298,6 +298,21 @@ def dashboard():
         auto_bets = sb("GET", "elo_paper_bets?strategy_name=eq.AUTO_ELO_FLAT&order=start_time.desc&limit=300&select=*")
     except Exception:
         auto_bets = []
+    # Dedup: один матч может быть записан несколько раз (каждый запуск раз в 2ч).
+    # Оставляем по ключу (home_team, away_team, start_time): settled > pending, затем max id.
+    _ab_seen: dict = {}
+    for _b in auto_bets:
+        _key = (_b.get("home_team", ""), _b.get("away_team", ""), _b.get("start_time"))
+        if _key not in _ab_seen:
+            _ab_seen[_key] = _b
+        else:
+            _ex = _ab_seen[_key]
+            if _b.get("settled") and not _ex.get("settled"):
+                _ab_seen[_key] = _b
+            elif _b.get("settled") == _ex.get("settled") and (_b.get("id") or 0) > (_ex.get("id") or 0):
+                _ab_seen[_key] = _b
+    auto_bets = sorted(_ab_seen.values(), key=lambda _b: _b.get("start_time") or 0, reverse=True)
+
     auto_bets_by_event = {b.get("event_id"): b for b in auto_bets if b.get("event_id")}
     try:
         rule_c_bets = sb("GET", "elo_paper_bets?strategy_name=in.(M05,M06,M36)&select=id,settled,pnl")
@@ -340,46 +355,16 @@ def dashboard():
             else:
                 result_cell = "<span style='color:#9aa0ad'>ставка принята</span>"
         elif has_data and fav_prob is not None:
+            # Прогноз есть, но машина ЕЩЁ не ставила (свежий матч — следующий
+            # прогон по расписанию подхватит) — гипотетическая оценка.
             fav = clean_team_name(p.get("favorite"))
             fav_prob_f = float(fav_prob)
+            odds = round(1.0 / (fav_prob_f * FORECAST_AVG_OVERROUND), 3)
+            profit = round(FORECAST_STAKE_USD * (odds - 1), 2)
             bet_cell = f"<b>{fav}</b>"
-
-            # Если есть реальные коэффы из BetsAPI — показываем их и edge
-            real_odds_fav = p.get("real_odds_fav")
-            edge_pct      = p.get("edge_pct")
-            bookmaker     = p.get("bookmaker") or ""
-            has_real_odds = bool(p.get("has_real_odds")) or bool(real_odds_fav)
-
-            if has_real_odds and real_odds_fav and edge_pct is not None:
-                odds_cell  = str(round(float(real_odds_fav), 3))
-                stake_cell = f"${FORECAST_STAKE_USD:.0f}"
-                edge_f     = float(edge_pct)
-                edge_pct_display = round(edge_f * 100, 1)
-                if edge_f >= 0.05:
-                    edge_color = "#22c55e"   # зелёный — хороший edge ≥5%
-                    edge_label = "value bet"
-                elif edge_f >= 0.02:
-                    edge_color = "#f59e0b"   # жёлтый — слабый edge 2-5%
-                    edge_label = "слабый edge"
-                elif edge_f >= 0:
-                    edge_color = "#9aa0ad"   # серый — около нуля
-                    edge_label = "нейтрально"
-                else:
-                    edge_color = "#ef4444"   # красный — отрицательный edge
-                    edge_label = "против value"
-                bm_short = bookmaker.replace("Sports", "").strip() or bookmaker
-                result_cell = (
-                    f"<span style='color:{edge_color};font-weight:500'>"
-                    f"edge {'+' if edge_f >= 0 else ''}{edge_pct_display}% ({edge_label})</span>"
-                    f"<span style='color:#6b7280;font-size:0.85em'> · {bm_short}</span>"
-                )
-            else:
-                # Fallback: нет реальных коэфов — расчётный как раньше
-                odds = round(1.0 / (fav_prob_f * FORECAST_AVG_OVERROUND), 3)
-                profit = round(FORECAST_STAKE_USD * (odds - 1), 2)
-                stake_cell = f"${FORECAST_STAKE_USD:.0f}"
-                odds_cell  = f"{odds}"
-                result_cell = f"<span style='color:#6b7280'>~потенциал +${profit:,.2f} (расч. коэф)</span>"
+            stake_cell = f"${FORECAST_STAKE_USD:.0f}"
+            odds_cell = f"{odds}"
+            result_cell = f"<span style='color:#6b7280'>потенциал +${profit:,.2f} (прогноз, бот ещё не ставил)</span>"
         else:
             # Нет ни реальной ставки, ни Эло-прогноза — но всё равно копим
             # свою статистику: после того, как матч закончится, отдельный
@@ -407,12 +392,12 @@ def dashboard():
           <td>{result_cell}</td>
         </tr>"""
 
-    # Дедупликация: одна строка на матч. Несколько стратегий могут ставить на
-    # один матч и писать отдельные записи в prematch_model_picks — схлопываем
-    # по ключу (team_1, team_2, starts_at), оставляя наиболее информативную:
-    # 1) если есть реальная ставка AUTO_ELO_FLAT — берём её;
-    # 2) иначе — запись с has_elo_data=True и максимальным favorite_prob;
-    # 3) иначе — любую (они все "нет данных").
+    # Дедупликация: одна строка на матч. Несколько стратегий могут писать
+    # отдельные записи в prematch_model_picks — схлопываем по ключу
+    # (team_1, team_2, starts_at), оставляя наиболее информативную:
+    # 1) реальная ставка AUTO_ELO_FLAT — приоритет;
+    # 2) has_elo_data=True + максимальный favorite_prob;
+    # 3) любая (все "нет данных").
     def _dedup_key(p):
         return (
             clean_team_name(p.get("team_1")),
@@ -431,9 +416,7 @@ def dashboard():
         key = _dedup_key(p)
         if key not in seen_keys or _pick_priority(p) > _pick_priority(seen_keys[key]):
             seen_keys[key] = p
-    deduped_picks = list(seen_keys.values())
-    # сортируем обратно по starts_at (порядок мог нарушиться при дедупе)
-    deduped_picks.sort(key=lambda p: p.get("starts_at", ""))
+    deduped_picks = sorted(seen_keys.values(), key=lambda p: p.get("starts_at", ""))
 
     today_date = now.date()
     today_picks, later_picks = [], []
