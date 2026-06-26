@@ -274,6 +274,8 @@ def main():
     print("\n[4] Запускаю rolling simulation...")
     elo: dict[str, float] = {}               # team_lower → elo
     history: list[tuple[int, str, str, float]] = []  # (ts, home, away, home_won)
+    # Кеш: team_name → список (ts, opponent, won) для быстрого form/h2h
+    team_history: dict[str, list[tuple]] = defaultdict(list)
     bankroll = INITIAL_BANKROLL
     recent_bets: list[dict] = []             # для adaptive Kelly (dict с settled/outcome/stake_usd/pnl)
 
@@ -316,12 +318,30 @@ def main():
         e2 = elo.get(t2_n, START_ELO)
         elo_prob_t1 = elo_exp(e1, e2)
 
-        # ── Сигналы (по истории ДО этого матча) ──────────────────────────────
-        form_t1  = compute_form(t1, history, n=10)
-        form_t2  = compute_form(t2, history, n=10)
-        h2h_t1   = compute_h2h(t1, t2, history, n=8)
-        fat_t1   = compute_fatigue(t1, history, ts)
-        fat_t2   = compute_fatigue(t2, history, ts)
+        # ── Сигналы (по кешу ДО этого матча) — O(1)/O(k) вместо O(n) ─────────
+        def _form(tn: str, n: int = 10) -> Optional[float]:
+            games = team_history[tn]
+            if len(games) < 2:
+                return None
+            recent = games[-n:]
+            return round(sum(w for _, _, w in recent) / len(recent), 4)
+
+        def _h2h(tn1: str, tn2: str, n: int = 8) -> Optional[float]:
+            vs = [(ts2, w) for ts2, opp, w in team_history[tn1] if opp == tn2]
+            if len(vs) < 2:
+                return None
+            recent = vs[-n:]
+            return round(sum(w for _, w in recent) / len(recent), 4)
+
+        def _fatigue(tn: str, cur_ts: int) -> int:
+            cutoff = cur_ts - 7 * 86400
+            return sum(1 for ts2, _, _ in team_history[tn] if ts2 >= cutoff)
+
+        form_t1  = _form(t1_n)
+        form_t2  = _form(t2_n)
+        h2h_t1   = _h2h(t1_n, t2_n)
+        fat_t1   = _fatigue(t1_n, ts)
+        fat_t2   = _fatigue(t2_n, ts)
 
         fav_is_t1  = elo_prob_t1 >= 0.5
         fav        = t1 if fav_is_t1 else t2
@@ -376,6 +396,9 @@ def main():
         elo[t1_n] = new_e1
         elo[t2_n] = new_e2
         history.append((ts, t1_raw, t2_raw, 1.0 if home_won else 0.0))
+        # Быстрый кеш: (ts, opponent_norm, win_flag)
+        team_history[t1_n].append((ts, t2_n, 1.0 if home_won else 0.0))
+        team_history[t2_n].append((ts, t1_n, 0.0 if home_won else 1.0))
 
         # ── Фильтры ──────────────────────────────────────────────────────────
         if edge < edge_min:
