@@ -140,14 +140,32 @@ def _fetch_upcoming():
     return events
 
 
-def _extract_real_odds(odds_data, bet_side):
+_MAP_MARKET_KEYWORDS   = ["map", "game", "carte"]   # ключи для map-level рынков
+_SERIES_SKIP_KEYWORDS  = ["map", "game", "kill", "total", "handicap", "duration",
+                           "carte", "minute", "frag"]  # исключаем для series
+
+def _extract_odds_filtered(odds_data, bet_side, *, market_mode: str = "any") -> tuple:
+    """
+    market_mode:
+      "any"    — любой moneyline (текущее поведение)
+      "series" — только рынки БЕЗ map/game/kill/total ключей
+      "map"    — только рынки СО словом map/game в ключе
+    """
     results = odds_data.get("results", {})
     if not isinstance(results, dict): return None, None
     candidates = []
     for bm_name, bm_data in results.items():
         if not isinstance(bm_data, dict): continue
-        for _m, mdata in bm_data.items():
+        for mkey, mdata in bm_data.items():
             if not isinstance(mdata, dict): continue
+            mkey_l = mkey.lower()
+            # Фильтрация по типу рынка
+            if market_mode == "series":
+                if any(k in mkey_l for k in _SERIES_SKIP_KEYWORDS):
+                    continue
+            elif market_mode == "map":
+                if not any(k in mkey_l for k in _MAP_MARKET_KEYWORDS):
+                    continue
             olist = mdata.get("odds", [])
             if not isinstance(olist, list) or len(olist) < 2: continue
             try:
@@ -162,6 +180,11 @@ def _extract_real_odds(odds_data, bet_side):
     if not candidates: return None, None
     _, best_odds, best_bm = sorted(candidates)[0]
     return round(best_odds, 4), best_bm
+
+
+def _extract_real_odds(odds_data, bet_side):
+    """Обратная совместимость — любой moneyline рынок."""
+    return _extract_odds_filtered(odds_data, bet_side, market_mode="any")
 
 
 def _find_betsapi_event(home: str, away: str, start_ts: int):
@@ -197,13 +220,29 @@ def _get_event_odds_data(event_id: str) -> dict:
     return _bapi("/v2/event/odds/summary", {"event_id": event_id})
 
 
-def lookup_real_odds(home, away, start_ts, bet_side):
+def lookup_real_odds(home, away, start_ts, bet_side, market_mode: str = "any"):
     ev_id, is_rev = _find_betsapi_event(home, away, start_ts)
     if ev_id is None:
         return None, None
     odds_data = _get_event_odds_data(ev_id)
     eff_side = ("away" if bet_side == "home" else "home") if is_rev else bet_side
-    return _extract_real_odds(odds_data, eff_side)
+    return _extract_odds_filtered(odds_data, eff_side, market_mode=market_mode)
+
+
+def lookup_real_odds_both(home, away, start_ts, bet_side):
+    """Возвращает (series_odds, series_bm, map_odds, map_bm, ev_id, is_rev)."""
+    ev_id, is_rev = _find_betsapi_event(home, away, start_ts)
+    if ev_id is None:
+        return None, None, None, None, None, False
+    odds_data = _get_event_odds_data(ev_id)
+    eff_side = ("away" if bet_side == "home" else "home") if is_rev else bet_side
+    s_odds, s_bm = _extract_odds_filtered(odds_data, eff_side, market_mode="series")
+    m_odds, m_bm = _extract_odds_filtered(odds_data, eff_side, market_mode="map")
+    # Fallback: если ни series ни map не нашлись, берём any
+    if s_odds is None and m_odds is None:
+        any_odds, any_bm = _extract_odds_filtered(odds_data, eff_side, market_mode="any")
+        s_odds, s_bm = any_odds, any_bm
+    return s_odds, s_bm, m_odds, m_bm, ev_id, is_rev
 
 
 # Минимальный edge для totals ставок (выше чем moneyline — модель слабее)
@@ -665,12 +704,10 @@ def main():
     existing = sb_get(
         "elo_paper_bets",
         f"strategy_name=eq.{STRATEGY_NAME}&division=eq.{DIVISION}"
-        "&select=event_id,home_team,away_team,start_time",
+        "&select=event_id,home_team,away_team,start_time,stake_usd,bet_market",
     )
     done_ids = {r["event_id"] for r in existing}
-    # Дедупликация по матчу: (norm_home, norm_away, start_hour)
-    # Только для РЕАЛЬНЫХ ставок (stake_usd > 0) — tracking-записи без одсов
-    # не блокируют будущие прогоны, если BetsAPI вдруг вернёт коэффы
+    # Дедупликация по map-ставкам: (norm_home, norm_away, start_hour) — как раньше
     done_matchups: set[tuple[str, str, int]] = {
         (
             normalize_team(r["home_team"]),
@@ -679,6 +716,22 @@ def main():
         )
         for r in existing
         if r.get("start_time") and float(r.get("stake_usd") or 0) > 0
+    }
+    # Дедупликация по series-ставкам: (norm_home, norm_away, date_str) — одна ставка на серию в день
+    existing_series = sb_get(
+        "elo_paper_bets",
+        f"strategy_name=eq.{STRATEGY_NAME}&division=eq.{DIVISION}"
+        "&bet_market=eq.series&stake_usd=gt.0"
+        "&select=home_team,away_team,start_time",
+    )
+    done_series: set[tuple[str, str, str]] = {
+        (
+            normalize_team(r["home_team"]),
+            normalize_team(r["away_team"]),
+            datetime.fromtimestamp(int(r["start_time"] or 0), tz=timezone.utc).strftime("%Y-%m-%d"),
+        )
+        for r in existing_series
+        if r.get("start_time")
     }
 
     # Дневной лимит ставок
@@ -785,143 +838,177 @@ def main():
             fatigue_adj=fat_adj,
         )
 
-        # ── Слой 2: BetsAPI + Edge filter ───────────────────────────────────
-        bet_side  = "home" if fav_is_t1 else "away"
-        real_odds, real_bm = lookup_real_odds(t1, t2, start_ts, bet_side)
+        # ── Слой 2: Определяем тип матча и получаем коэффициенты ────────────
+        bet_side   = "home" if fav_is_t1 else "away"
+        match_type = m.get("matchType", "Bo1")                   # Bo1 / Bo3 / Bo5
+        is_series  = match_type.startswith("Bo") and len(match_type) > 2 and int(match_type[2:]) >= 3
+        date_str   = datetime.fromtimestamp(start_ts, tz=timezone.utc).strftime("%Y-%m-%d")
+        series_key = (normalize_team(t1), normalize_team(t2), date_str)
+        is_first_of_series = is_series and series_key not in done_series
 
-        if not real_odds:
+        # Для серий: одним запросом к BetsAPI получаем series-рынок + map-рынок
+        if is_series:
+            s_odds, s_bm, m_odds, m_bm, _, _ = lookup_real_odds_both(t1, t2, start_ts, bet_side)
+            # map fallback: если нет map-specific odds, используем series для карты
+            real_odds, real_bm = m_odds or s_odds, m_bm or s_bm
+        else:
+            real_odds, real_bm = lookup_real_odds(t1, t2, start_ts, bet_side)
+            s_odds, s_bm = None, None
+
+        if not real_odds and not s_odds:
             skipped_no_odds += 1
-            # Записываем информационную ставку без размера (для трекинга winrate)
             notional_odds = round(1.0 / (comp_prob * AVG_OVERROUND_HIST), 3)
             print(f"  [нет реальных одсов] {t1} vs {t2} — notional={notional_odds}, не ставим")
-            # Пишем с stake=0 чтобы иметь трек прогнозов без $ риска
             rows.append({
-                "run_ts":        datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "strategy_name": STRATEGY_NAME,
-                "event_id":      eid,
-                "division":      DIVISION,
-                "league":        m.get("leagueName"),
-                "home_team": t1, "away_team": t2,
-                "start_time":    start_ts,
-                "bookmaker":     "NOTIONAL_HIST_AVG",
-                "bet_team":      bet_side,
-                "odds":          notional_odds,
-                "market_prob":   round(1.0 / notional_odds, 4),
-                "model_prob":    round(elo_prob_fav, 4),
+                "run_ts":         datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "strategy_name":  STRATEGY_NAME,
+                "event_id":       eid,
+                "division":       DIVISION,
+                "league":         m.get("leagueName"),
+                "home_team": t1,  "away_team": t2,
+                "start_time":     start_ts,
+                "bookmaker":      "NOTIONAL_HIST_AVG",
+                "bet_team":       bet_side,
+                "odds":           notional_odds,
+                "market_prob":    round(1.0 / notional_odds, 4),
+                "model_prob":     round(elo_prob_fav, 4),
                 "composite_prob": comp_prob,
-                "edge":          None,
-                "stake_usd":     0.0,   # не ставим без реальных одсов
-                "settled":       False,
-                "real_odds":     None,
+                "edge":           None,
+                "stake_usd":      0.0,
+                "settled":        False,
+                "real_odds":      None,
                 "real_bookmaker": None,
-                "form_score":    round(form_fav, 4) if form_fav is not None else None,
-                "h2h_score":     round(h2h_fav, 4) if h2h_fav is not None else None,
-                "kelly_f":       None,
-                "league_tier":   get_league_tier(m.get("leagueName"), tiers),
+                "form_score":     round(form_fav, 4) if form_fav is not None else None,
+                "h2h_score":      round(h2h_fav, 4) if h2h_fav is not None else None,
+                "kelly_f":        None,
+                "league_tier":    get_league_tier(m.get("leagueName"), tiers),
+                "bet_market":     "series" if is_series else "moneyline",
             })
             continue
 
-        # Считаем реальный edge
-        real_edge = round(comp_prob * real_odds - 1, 4)
-        tier      = get_league_tier(m.get("leagueName"), tiers)
+        # Общая логика ставки (переиспользуем для series и map)
+        tier     = get_league_tier(m.get("leagueName"), tiers)
         edge_min, kelly_cap = get_tier_params(tier, tiers)
         notional_odds = round(1.0 / (comp_prob * AVG_OVERROUND_HIST), 3)
+        league_name_key = m.get("leagueName") or ""
 
-        if real_edge < edge_min:
-            skipped_no_edge += 1
-            print(f"  [edge мал] {t1} vs {t2}  edge={real_edge:+.1%} < {edge_min:.0%} (T{tier}) — пропуск")
-            continue
+        def _try_place_bet(bet_eid: str, bet_odds: float, bet_bm: str,
+                           bet_mkt: str, label: str) -> float | None:
+            """Проверяет edge/Kelly/лимиты и добавляет строку в rows.
+            Возвращает размер ставки (или 0 при tracking, None при пропуске)."""
+            nonlocal today_staked
+            real_edge_local = round(comp_prob * bet_odds - 1, 4)
+            if real_edge_local < edge_min:
+                print(f"  [edge мал/{label}] {t1} vs {t2}  edge={real_edge_local:+.1%} — пропуск")
+                return None
+            s_local = kelly_stake(
+                p=comp_prob, odds=bet_odds, bankroll=bankroll,
+                fraction=KELLY_FRACTION_DEFAULT, cap=kelly_cap, adaptive_mult=a_mult,
+            )
+            if s_local <= 0:
+                print(f"  [kelly=0/{label}] {t1} vs {t2} — пропуск")
+                return None
+            if team_bets_today[fav_team] >= 2:
+                print(f"  [корреляция/{label}] {fav_team} уже {team_bets_today[fav_team]}× — пропуск")
+                return None
+            budget_used = league_staked_today[league_name_key]
+            budget_max  = daily_cap_usd * 0.30
+            if budget_used + s_local > budget_max:
+                remaining = max(0.0, budget_max - budget_used)
+                if remaining < 1.0:
+                    print(f"  [турнир лимит/{label}] лимит 30% исчерпан")
+                    return None
+                s_local = round(remaining, 1)
+            if today_staked + s_local > daily_cap_usd:
+                print(f"  [дневной лимит/{label}] лимит ${daily_cap_usd:.0f} исчерпан")
+                return None
 
-        # ── Слой 3: Kelly sizing ─────────────────────────────────────────────
-        stake = kelly_stake(
-            p=comp_prob,
-            odds=real_odds,
-            bankroll=bankroll,
-            fraction=KELLY_FRACTION_DEFAULT,
-            cap=kelly_cap,
-            adaptive_mult=a_mult,
-        )
+            b_k = bet_odds - 1.0
+            full_k = (b_k * comp_prob - (1 - comp_prob)) / b_k if b_k > 0 else 0
+            kf = round(min(full_k * KELLY_FRACTION_DEFAULT * a_mult, kelly_cap), 5)
 
-        if stake <= 0:
-            print(f"  [kelly=0] {t1} vs {t2} — Kelly отрицательный, пропуск")
-            continue
+            print(
+                f"\n  ✓ [{label}] {t1} vs {t2}  ({league_name_key[:30]})  "
+                f"{m['_ts'].strftime('%d.%m %H:%M')}Z  T{tier}"
+                f"\n    comp_p={comp_prob:.3f}  real={bet_odds} [{bet_bm}]  "
+                f"edge={real_edge_local:+.1%}  kelly_f={kf:.4f}  stake=${s_local:.0f}"
+            )
 
-        # ── Слой 4a: Корреляционный лимит ───────────────────────────────────
-        if team_bets_today[fav_team] >= 2:
-            skipped_corr += 1
-            print(f"  [корреляция] {fav_team} уже {team_bets_today[fav_team]}× сегодня — пропуск")
-            continue
+            today_staked += s_local
+            team_bets_today[fav_team] += 1
+            league_staked_today[league_name_key] += s_local
 
-        league_name_key    = m.get("leagueName") or ""
-        league_budget_used = league_staked_today[league_name_key]
-        league_budget_max  = daily_cap_usd * 0.30
-        if league_budget_used + stake > league_budget_max:
-            remaining = max(0.0, league_budget_max - league_budget_used)
-            if remaining < 1.0:
-                skipped_corr += 1
-                print(f"  [турнир лимит] {league_name_key[:30]} — лимит 30% исчерпан")
-                continue
-            stake = round(remaining, 1)
-            print(f"  [турнир лимит] {league_name_key[:30]} — ставка срезана до ${stake}")
+            rows.append({
+                "run_ts":         datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "strategy_name":  STRATEGY_NAME,
+                "event_id":       bet_eid,
+                "division":       DIVISION,
+                "league":         m.get("leagueName"),
+                "home_team": t1,  "away_team": t2,
+                "start_time":     start_ts,
+                "bookmaker":      bet_bm,
+                "bet_team":       bet_side,
+                "odds":           notional_odds,
+                "market_prob":    round(comp_prob / bet_odds, 4),
+                "model_prob":     round(elo_prob_fav, 4),
+                "composite_prob": comp_prob,
+                "edge":           real_edge_local,
+                "stake_usd":      s_local,
+                "settled":        False,
+                "real_odds":      bet_odds,
+                "real_bookmaker": bet_bm,
+                "form_score":     round(form_fav, 4) if form_fav is not None else None,
+                "h2h_score":      round(h2h_fav, 4) if h2h_fav is not None else None,
+                "kelly_f":        kf,
+                "league_tier":    tier,
+                "bet_market":     bet_mkt,
+            })
+            return s_local
 
-        # ── Слой 4b: Дневной лимит ───────────────────────────────────────────
-        if today_staked + stake > daily_cap_usd:
-            skipped_daily += 1
-            print(f"  [дневной лимит] {t1} vs {t2} — лимит ${daily_cap_usd:.0f} исчерпан")
-            continue
-        today_staked += stake
-        team_bets_today[fav_team] += 1
-        league_staked_today[league_name_key] += stake
+        # ── Ставка на серию (только первая игра серии сегодня) ───────────────
+        if is_first_of_series and s_odds:
+            series_eid = f"liq_{m.get('hash')}_series"
+            if series_eid not in done_ids:
+                placed = _try_place_bet(series_eid, s_odds, s_bm, "series",
+                                        f"{match_type} СЕРИЯ")
+                if placed is not None:
+                    done_series.add(series_key)
 
-        # ── Расчёт kelly_f для сохранения ────────────────────────────────────
-        b = real_odds - 1.0
-        full_k = (b * comp_prob - (1 - comp_prob)) / b if b > 0 else 0
-        kelly_f_applied = round(min(full_k * KELLY_FRACTION_DEFAULT * a_mult, kelly_cap), 5)
-
-        print(
-            f"\n  ✓ {t1} vs {t2}  ({m.get('leagueName')})  {m['_ts'].strftime('%d.%m %H:%M')}Z  T{tier}"
-            f"\n    elo_p={elo_prob_fav:.3f} form={form_fav:.3f if form_fav else '—'} "
-            f"h2h={h2h_fav:.3f if h2h_fav else '—'} → comp_p={comp_prob:.3f}"
-            f"\n    real={real_odds} [{real_bm}]  edge={real_edge:+.1%}  "
-            f"kelly_f={kelly_f_applied:.4f}  stake=${stake:.0f}  bank=${bankroll:.0f}"
-        )
-
-        rows.append({
-            "run_ts":         datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "strategy_name":  STRATEGY_NAME,
-            "event_id":       eid,
-            "division":       DIVISION,
-            "league":         m.get("leagueName"),
-            "home_team": t1,  "away_team": t2,
-            "start_time":     start_ts,
-            "bookmaker":      real_bm,
-            "bet_team":       bet_side,
-            "odds":           notional_odds,
-            "market_prob":    round(comp_prob / real_odds, 4),
-            "model_prob":     round(elo_prob_fav, 4),
-            "composite_prob": comp_prob,
-            "edge":           real_edge,
-            "stake_usd":      stake,
-            "settled":        False,
-            "real_odds":      real_odds,
-            "real_bookmaker": real_bm,
-            "form_score":     round(form_fav, 4) if form_fav is not None else None,
-            "h2h_score":      round(h2h_fav, 4) if h2h_fav is not None else None,
-            "kelly_f":        kelly_f_applied,
-            "league_tier":    tier,
-        })
-        done_matchups.add(matchup_key)  # не ставим дважды в одном прогоне
+        # ── Ставка на карту (BO3/BO5) или moneyline (BO1) ──────────────────
+        if matchup_key in done_matchups:
+            print(f"  [дубль map-ставки] {t1} vs {t2} — карта этого часа уже в работе")
+        elif real_odds:
+            map_market = f"map{m.get('matchType', 'Bo1')[2:]}" if is_series else "moneyline"
+            # Для BO3/BO5: определяем номер карты по количеству уже существующих
+            # map-ставок на этот матч сегодня
+            existing_maps_today = sum(
+                1 for r in existing
+                if (normalize_team(r.get("home_team","")) == normalize_team(t1)
+                    and normalize_team(r.get("away_team","")) == normalize_team(t2)
+                    and r.get("start_time") and
+                    datetime.fromtimestamp(int(r["start_time"]), tz=timezone.utc).strftime("%Y-%m-%d") == date_str
+                    and (r.get("bet_market") or "").startswith("map"))
+            )
+            if is_series:
+                map_market = f"map{existing_maps_today + 1}"
+            placed = _try_place_bet(eid, real_odds, real_bm, map_market,
+                                    map_market.upper() if is_series else "MONEYLINE")
+            if placed is not None:
+                done_matchups.add(matchup_key)
 
     sb_upsert("elo_paper_bets", rows, on_conflict="strategy_name,event_id,division")
 
     real_bets    = [r for r in rows if r["stake_usd"] > 0]
     track_only   = [r for r in rows if r["stake_usd"] == 0]
-    elo_bets     = [r for r in real_bets if r.get("bet_market", "moneyline") == "moneyline"]
-    totals_bets  = [r for r in real_bets if r.get("bet_market", "moneyline") != "moneyline"]
+    series_bets  = [r for r in real_bets if r.get("bet_market") == "series"]
+    map_bets     = [r for r in real_bets if (r.get("bet_market") or "").startswith("map")]
+    mono_bets    = [r for r in real_bets if r.get("bet_market") == "moneyline"]
+    totals_bets  = [r for r in real_bets if r.get("bet_market") in ("kills", "duration")]
     print(
         f"\n── Итог ──────────────────────────────────────────\n"
         f"  Реальных ставок: {len(real_bets)}"
-        f" (moneyline: {len(elo_bets)}, тоталы: {len(totals_bets)})\n"
+        f" (серия: {len(series_bets)}, карты: {len(map_bets)}, "
+        f"moneyline: {len(mono_bets)}, тоталы: {len(totals_bets)})\n"
         f"  Трекинг без $: {len(track_only)}\n"
         f"  Пропущено (нет Elo/тоталов): {skipped_no_elo}\n"
         f"  Пропущено (нет odds): {skipped_no_odds}\n"

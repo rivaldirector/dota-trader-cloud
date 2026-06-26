@@ -40,6 +40,8 @@ OPENDOTA_PROMATCHES_URL = "https://api.opendota.com/api/proMatches"
 STRATEGY_NAME = "AUTO_ELO_FLAT"
 FUZZY_MIN = 0.72
 SETTLE_BUFFER_SEC = 3 * 3600  # ждём минимум 3ч после старта, чтобы матч точно закончился
+# Для серий ждём дольше — BO3 может идти 4-5 часов
+SERIES_SETTLE_BUFFER_SEC = 6 * 3600
 
 
 def now_iso() -> str:
@@ -62,18 +64,70 @@ def fuzzy(a: str, b: str) -> float:
     return SequenceMatcher(None, (a or "").lower().strip(), (b or "").lower().strip()).ratio()
 
 
+def settle_series_bet(bet: dict, home: str, away: str, st: int,
+                      pro_matches: list) -> tuple[str | None, float | None]:
+    """
+    Для ставок bet_market='series': смотрим ВСЕ матчи команд в окне ±8ч
+    от start_time, определяем победителя серии по большинству карт.
+    Возвращает (winner_side, None) или (None, None) если не можем определить.
+    """
+    team_wins: dict[str, int] = {"home": 0, "away": 0}
+    found_any = False
+    for pm in pro_matches:
+        rn, dn = pm.get("radiant_name"), pm.get("dire_name")
+        if not rn or not dn:
+            continue
+        pm_st = pm.get("start_time", 0)
+        if abs(pm_st - st) > 8 * 3600:
+            continue
+        s_direct = fuzzy(home, rn) + fuzzy(away, dn)
+        s_cross  = fuzzy(home, dn) + fuzzy(away, rn)
+        score, orient = (s_direct, "direct") if s_direct >= s_cross else (s_cross, "cross")
+        if score < 1.3:
+            continue
+        found_any = True
+        radiant_win = bool(pm.get("radiant_win"))
+        home_won = radiant_win if orient == "direct" else (not radiant_win)
+        if home_won:
+            team_wins["home"] += 1
+        else:
+            team_wins["away"] += 1
+
+    if not found_any:
+        return None, None
+    # Нужно знать, что серия завершена: один из участников набрал 2+ карт (BO3) или 3+ (BO5)
+    max_wins = max(team_wins.values())
+    if max_wins < 2:
+        # Серия ещё не завершена — подождём следующего прогона
+        return None, None
+    winner_side = "home" if team_wins["home"] >= team_wins["away"] else "away"
+    print(f"    [series] {home} vs {away}: {team_wins['home']}-{team_wins['away']} карт → {winner_side}")
+    return winner_side, None
+
+
 def main():
     if not all([SUPABASE_URL, SUPABASE_KEY]):
         print("ERROR: missing SUPABASE_URL / SUPABASE_ANON_KEY")
         sys.exit(1)
 
     now_ts = int(datetime.now(timezone.utc).timestamp())
-    pending = sb_get(
+
+    # Pending ставки: series ждут 6ч, map/moneyline — 3ч
+    # Используем or(... is.null) чтобы захватить старые ставки без bet_market
+    pending_map = sb_get(
         "elo_paper_bets",
-        f"strategy_name=eq.{STRATEGY_NAME}&settled=eq.false&"
-        f"start_time=lte.{now_ts - SETTLE_BUFFER_SEC}&select=*",
+        f"strategy_name=eq.{STRATEGY_NAME}&settled=eq.false"
+        f"&start_time=lte.{now_ts - SETTLE_BUFFER_SEC}"
+        f"&or=(bet_market.neq.series,bet_market.is.null)&select=*",
     )
-    print(f"Pending ставок (старше {SETTLE_BUFFER_SEC//3600}ч): {len(pending)}")
+    pending_series = sb_get(
+        "elo_paper_bets",
+        f"strategy_name=eq.{STRATEGY_NAME}&settled=eq.false"
+        f"&start_time=lte.{now_ts - SERIES_SETTLE_BUFFER_SEC}"
+        f"&bet_market=eq.series&select=*",
+    )
+    pending = pending_map + pending_series
+    print(f"Pending map/mono: {len(pending_map)}, series: {len(pending_series)}")
     if not pending:
         return
 
@@ -90,30 +144,41 @@ def main():
     for bet in pending:
         home, away = bet["home_team"], bet["away_team"]
         st = bet["start_time"]
-        best, best_score = None, 0.0
-        for pm in pro_matches:
-            rn, dn = pm.get("radiant_name"), pm.get("dire_name")
-            if not rn or not dn:
+        bet_market = bet.get("bet_market") or "moneyline"
+
+        if bet_market == "series":
+            # Settle по результату серии
+            winner_side, _ = settle_series_bet(bet, home, away, st, pro_matches)
+            if winner_side is None:
+                print(f"  ? [series] {home} vs {away} — серия ещё не завершена или не найдена")
                 continue
-            pm_st = pm.get("start_time", 0) + (pm.get("duration") or 0)
-            if abs(pm_st - st) > 6 * 3600:  # вне разумного окна — не тот матч
+        else:
+            # Settle по результату конкретной карты (текущее поведение)
+            best, best_score, best_orient = None, 0.0, "direct"
+            for pm in pro_matches:
+                rn, dn = pm.get("radiant_name"), pm.get("dire_name")
+                if not rn or not dn:
+                    continue
+                pm_st = pm.get("start_time", 0) + (pm.get("duration") or 0)
+                if abs(pm_st - st) > 6 * 3600:
+                    continue
+                s_direct = fuzzy(home, rn) + fuzzy(away, dn)
+                s_cross  = fuzzy(home, dn) + fuzzy(away, rn)
+                score, orient = (s_direct, "direct") if s_direct >= s_cross else (s_cross, "cross")
+                if score > best_score:
+                    best, best_score, best_orient = pm, score, orient
+
+            if best_score < 1.3 or not best:
+                print(f"  ? {home} vs {away} — не нашли совпадение в OpenDota (score={best_score:.2f})")
                 continue
-            s_direct = fuzzy(home, rn) + fuzzy(away, dn)
-            s_cross = fuzzy(home, dn) + fuzzy(away, rn)
-            score, orient = (s_direct, "direct") if s_direct >= s_cross else (s_cross, "cross")
-            if score > best_score:
-                best, best_score, best_orient = pm, score, orient
 
-        if best_score < 1.3 or not best:
-            print(f"  ? {home} vs {away} — не нашли совпадение в OpenDota (score={best_score:.2f})")
-            continue
+            radiant_win = bool(best.get("radiant_win"))
+            home_won = radiant_win if best_orient == "direct" else (not radiant_win)
+            winner_side = "home" if home_won else "away"
 
-        radiant_win = bool(best.get("radiant_win"))
-        # direct: home=radiant, away=dire | cross: home=dire, away=radiant
-        home_won = radiant_win if best_orient == "direct" else (not radiant_win)
-        winner_side = "home" if home_won else "away"
-
-        odds, stake, bet_team = bet["odds"], bet["stake_usd"], bet["bet_team"]
+        odds  = bet.get("real_odds") or bet["odds"]
+        stake = bet["stake_usd"]
+        bet_team = bet["bet_team"]
         if bet_team == winner_side:
             outcome, pnl = "win", round((odds - 1.0) * stake, 2)
         else:
@@ -123,7 +188,8 @@ def main():
             "settled": True, "outcome": outcome, "pnl": pnl, "settled_ts": now_iso(),
         })
         settled_n += 1
-        print(f"  ✓ {home} vs {away} -> winner={winner_side} ({outcome}, pnl=${pnl:+.2f})")
+        mkt_tag = f"[{bet_market}] " if bet_market != "moneyline" else ""
+        print(f"  ✓ {mkt_tag}{home} vs {away} → {winner_side} ({outcome}, pnl=${pnl:+.2f})")
 
     if settled_n:
         new_total_pnl = sum(
