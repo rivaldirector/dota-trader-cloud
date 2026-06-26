@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import math
 import urllib.request
@@ -445,6 +446,24 @@ def dashboard():
     # ── Расписание haglund.dev (72ч) ─────────────────────────────────────────
     upcoming_schedule = _fetch_haglund_schedule(72)
 
+    # ── Tracking rows (оценены пайплайном, ставки нет — нет реальных одсов) ──
+    tracking_rows = sb_safe(
+        "elo_paper_bets"
+        "?strategy_name=eq.AUTO_ELO_FLAT"
+        "&division=neq.BACKTEST"
+        "&settled=eq.false"
+        "&stake_usd=eq.0"
+        "&select=home_team,away_team,composite_prob,model_prob,form_score,"
+        "h2h_score,bet_team,league_tier,run_ts"
+        "&order=run_ts.desc&limit=200"
+    )
+    def _nt2(s): return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+    tracking_map: dict = {}
+    for _tr in (tracking_rows or []):
+        _key = (_nt2(_tr.get("home_team", "")), _nt2(_tr.get("away_team", "")))
+        if _key not in tracking_map:
+            tracking_map[_key] = _tr
+
     # ── Model config ─────────────────────────────────────────────────────────
     cfg_rows = sb_safe("model_config?select=key,value")
     cfg      = {r["key"]: r["value"] for r in cfg_rows} if cfg_rows else {}
@@ -650,13 +669,31 @@ def dashboard():
     placed_keys = {(b.get("home_team",""), b.get("away_team","")) for b in active_bets}
     for m in upcoming_schedule:
         k = (m["t1"], m["t2"])
+        tk = (_nt2(m["t1"]), _nt2(m["t2"]))
+        tr_row = tracking_map.get(tk)
         already = "✓ В игре" if k in placed_keys else "⏳ Ожидает"
         color   = "pos" if k in placed_keys else "muted"
         ts_str  = m["ts"].strftime("%d.%m %H:%M")
+        # Signal data from tracking row
+        sig_html = ""
+        if tr_row and k not in placed_keys:
+            cp  = tr_row.get("composite_prob")
+            mp  = tr_row.get("model_prob")
+            frm = tr_row.get("form_score")
+            h2h = tr_row.get("h2h_score")
+            side = "дом." if tr_row.get("bet_team") == "home" else "гость"
+            parts = []
+            if mp  is not None: parts.append(f"elo={float(mp):.2f}")
+            if cp  is not None: parts.append(f"p={float(cp):.2f}")
+            if frm is not None: parts.append(f"form={float(frm):.2f}")
+            if h2h is not None: parts.append(f"H2H={float(h2h):.2f}")
+            if parts:
+                sig_html = f'<br><small class="muted">🔍 модель {side}: {" · ".join(parts)}</small>'
         sch_rows += f"""<tr>
           <td class="muted">{ts_str} UTC</td>
           <td><b>{m["t1"]} vs {m["t2"]}</b><br>
               <small class="muted">{m["matchType"]} · {clean_league(m["league"])}</small></td>
+          <td>{sig_html if sig_html else '<span class="muted">нет сигнала</span>'}</td>
           <td class="{color}">{already}</td>
         </tr>"""
 
