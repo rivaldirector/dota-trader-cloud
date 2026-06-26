@@ -275,7 +275,7 @@ def main():
     elo: dict[str, float] = {}               # team_lower → elo
     history: list[tuple[int, str, str, float]] = []  # (ts, home, away, home_won)
     bankroll = INITIAL_BANKROLL
-    recent_bets: list[float] = []            # PnL для adaptive Kelly
+    recent_bets: list[dict] = []             # для adaptive Kelly (dict с settled/outcome/stake_usd/pnl)
 
     # Daily tracking
     day_key: str = ""
@@ -397,7 +397,10 @@ def main():
         pnl       = round((notional_odds - 1.0) * stake, 2) if fav_won else round(-stake, 2)
 
         bankroll  = round(bankroll + pnl, 2)
-        recent_bets.append(pnl)
+        recent_bets.append({
+            "settled": True, "outcome": outcome,
+            "stake_usd": stake, "pnl": pnl, "real_odds": notional_odds,
+        })
         day_staked += stake
         day_bets   += 1
         day_team_bets[fav_n] += 1
