@@ -76,6 +76,9 @@ MAX_BETS_DAY       = 5       # max ставок в день
 MAX_TEAM_BETS_DAY  = 2       # корреляция команды
 MAX_LEAGUE_PCT     = 0.30    # max 30% банка на один турнир в день
 INITIAL_BANKROLL   = 1000.0
+# Elo тренируется на ВСЕЙ истории, ставки только за последние 3 месяца
+# (None = ставим с самого начала)
+BACKTEST_START_TS  = int(datetime(2025, 3, 1, tzinfo=timezone.utc).timestamp())
 
 
 def sb_get(table: str, qs: str) -> list:
@@ -400,6 +403,10 @@ def main():
         # Быстрый кеш: (ts, opponent_norm, win_flag)
         team_history[t1_n].append((ts, t2_n, 1.0 if home_won else 0.0))
         team_history[t2_n].append((ts, t1_n, 0.0 if home_won else 1.0))
+
+        # ── Не ставим до BACKTEST_START_TS (но Elo обновлён выше) ──────────────
+        if ts < BACKTEST_START_TS:
+            continue
 
         # ── Фильтры ──────────────────────────────────────────────────────────
         if edge < edge_min:
