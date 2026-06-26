@@ -78,7 +78,7 @@ MAX_LEAGUE_PCT     = 0.30    # max 30% банка на один турнир в 
 INITIAL_BANKROLL   = 1000.0
 # Elo тренируется на ВСЕЙ истории, ставки только за последние 3 месяца
 # (None = ставим с самого начала)
-BACKTEST_START_TS  = int(datetime(2025, 3, 1, tzinfo=timezone.utc).timestamp())
+BACKTEST_START_TS  = int(datetime(2026, 3, 1, tzinfo=timezone.utc).timestamp())
 
 
 def sb_get(table: str, qs: str) -> list:
