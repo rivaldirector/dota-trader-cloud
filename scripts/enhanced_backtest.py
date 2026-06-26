@@ -193,7 +193,7 @@ def main():
             chunk = sb_get(
                 "betsapi_events",
                 f"sport_tag=eq.dota2&status=eq.ended&winner=neq.&"
-                f"select=id,home_team,away_team,winner,start_time,league_name&"
+                f"select=event_id,home_team,away_team,winner,start_time,league&"
                 f"order=start_time.asc&limit={page}&offset={offset2}",
             )
             if not chunk:
@@ -219,9 +219,9 @@ def main():
             continue
         seen.add(key)
         combined.append({
-            "event_id": f"bapi_{r.get('id', st)}",
+            "event_id": f"bapi_{r.get('event_id', st)}",
             "home_team": t1, "away_team": t2, "winner": w,
-            "start_time": int(st), "league_name": r.get("league_name") or "",
+            "start_time": int(st), "league_name": r.get("league") or "",
         })
 
     for r in all_rows:
@@ -512,4 +512,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import traceback
+    try:
+        main()
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
