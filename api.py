@@ -419,7 +419,7 @@ def dashboard():
     today_bets = sb_safe(
         "elo_paper_bets"
         "?strategy_name=eq.AUTO_ELO_FLAT"
-        "&division=neq.BACKTEST"
+        "&or=(division.eq.FREE,division.is.null)"
         "&stake_usd=gt.0"
         f"&run_ts=gte.{today_start_str}"
         "&select=run_ts,home_team,away_team,bet_team,stake_usd,odds,real_odds,"
@@ -448,9 +448,12 @@ def dashboard():
     # ── Model config ─────────────────────────────────────────────────────────
     cfg_rows = sb_safe("model_config?select=key,value")
     cfg      = {r["key"]: r["value"] for r in cfg_rows} if cfg_rows else {}
-    w_elo    = cfg.get("w_elo", "0.60")
-    w_form   = cfg.get("w_form", "0.25")
-    w_h2h    = cfg.get("w_h2h", "0.15")
+    def _pct(v, d=0):
+        try: return f"{float(v)*100:.{d}f}%"
+        except: return v
+    w_elo    = _pct(cfg.get("w_elo", "0.60"))
+    w_form   = _pct(cfg.get("w_form", "0.25"))
+    w_h2h    = _pct(cfg.get("w_h2h", "0.15"))
     cal_at   = cfg.get("calibrated_at", "—")
     cal_n    = cfg.get("calibration_n", "—")
     cal_loss = cfg.get("calibration_logloss", "—")
@@ -550,6 +553,19 @@ def dashboard():
         if o == "loss": return '<span class="neg">✗ LOSS</span>'
         return "—"
 
+    def clean_league(raw):
+        """Конвертирует Liquipedia-путь в читаемое название."""
+        if not raw:
+            return ""
+        # Убираем "#fragment" и лишние части
+        s = raw.split("#")[0].strip()
+        # Если это путь типа "The International/2026/Europe/Closed Qualifier"
+        # берём последние 2 части
+        parts = [p.strip() for p in s.split("/") if p.strip()]
+        if len(parts) >= 3:
+            return parts[0] + " · " + " · ".join(parts[2:])
+        return " · ".join(parts) if parts else s
+
     # ── Today bets HTML ───────────────────────────────────────────────────────
     today_wins    = sum(1 for b in today_bets if b.get("outcome") == "win")
     today_losses  = sum(1 for b in today_bets if b.get("outcome") == "loss")
@@ -574,7 +590,7 @@ def dashboard():
             cpb   = ff(b.get("composite_prob"), 3) if b.get("composite_prob") else "—"
             td_rows += f"""<tr>
               <td class="muted">{start} UTC</td>
-              <td><b>{home} vs {away}</b><br><small class="muted">{b.get("league","")[:40]}</small></td>
+              <td><b>{home} vs {away}</b><br><small class="muted">{clean_league(b.get("league",""))}</small></td>
               <td><span style="color:var(--accent);font-weight:600">→ {fav}</span><br><small class="muted">{mkt}</small></td>
               <td><b>${stake}</b> <span class="muted">@ {odds}</span><br>
                   <small class="muted">edge {edg} · p={cpb}</small></td>
@@ -622,7 +638,7 @@ def dashboard():
             h2h  = ff(b.get("h2h_score"), 3) if b.get("h2h_score") else "—"
             ab_rows += f"""<tr style="background:rgba(91,140,255,.05)">
               <td class="muted">{ts} UTC</td>
-              <td><b>{home} vs {away}</b><br><small class="muted">{b.get("league","")[:40]}</small></td>
+              <td><b>{home} vs {away}</b><br><small class="muted">{clean_league(b.get("league",""))}</small></td>
               <td><span style="color:var(--accent);font-weight:600">→ {fav}</span><br>
                   <small class="muted">{mkt}</small></td>
               <td><b>${stake}</b> @ {odds}<br>
@@ -640,7 +656,7 @@ def dashboard():
         sch_rows += f"""<tr>
           <td class="muted">{ts_str} UTC</td>
           <td><b>{m["t1"]} vs {m["t2"]}</b><br>
-              <small class="muted">{m["matchType"]} · {m["league"][:40]}</small></td>
+              <small class="muted">{m["matchType"]} · {clean_league(m["league"])}</small></td>
           <td class="{color}">{already}</td>
         </tr>"""
 
@@ -680,7 +696,7 @@ def dashboard():
         hist_rows += f"""<tr{extra}>
           <td class="muted">{ts}</td>
           <td>{div_badge}<b>{home} vs {away}</b><br>
-              <small class="muted">{b.get("league","")[:35]}</small></td>
+              <small class="muted">{clean_league(b.get("league",""))}</small></td>
           <td><span style="color:var(--accent)">→ {fav}</span><br>
               <small class="muted">{mkt}</small></td>
           <td>${stake} <span class="muted">@ {odds}</span><br>
