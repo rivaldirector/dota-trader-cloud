@@ -350,7 +350,7 @@ def dashboard():
     # Единая история: division=BACKTEST (симуляция 3 мес) + division=FREE (live)
     all_settled = sb_safe(
         "elo_paper_bets"
-        "?strategy_name=eq.AUTO_ELO_FLAT"
+        "?strategy_name=in.(AUTO_ELO_FLAT,SIM_3M)"
         "&settled=eq.true"
         "&stake_usd=gt.0"
         "&select=pnl,outcome,stake_usd,run_ts,home_team,away_team,bet_team,"
@@ -384,7 +384,7 @@ def dashboard():
     # ── Последние 100 ставок (история, все div) ──────────────────────────────
     last100 = sb_safe(
         "elo_paper_bets"
-        "?strategy_name=eq.AUTO_ELO_FLAT"
+        "?strategy_name=in.(AUTO_ELO_FLAT,SIM_3M)"
         "&stake_usd=gt.0"
         "&select=run_ts,home_team,away_team,bet_team,stake_usd,odds,real_odds,"
         "outcome,pnl,settled,league,bet_market,edge,composite_prob,form_score,"
