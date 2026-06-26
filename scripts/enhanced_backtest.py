@@ -325,26 +325,50 @@ def main():
 
         fav_is_t1  = elo_prob_t1 >= 0.5
         fav        = t1 if fav_is_t1 else t2
+        und        = t2 if fav_is_t1 else t1
         fav_n      = t1_n if fav_is_t1 else t2_n
+        und_n      = t2_n if fav_is_t1 else t1_n
         elo_p_fav  = elo_prob_t1 if fav_is_t1 else (1 - elo_prob_t1)
+        elo_p_und  = 1.0 - elo_p_fav
         form_fav   = form_t1 if fav_is_t1 else form_t2
+        form_und   = form_t2 if fav_is_t1 else form_t1
         h2h_fav    = h2h_t1 if h2h_t1 is not None else None
         if not fav_is_t1 and h2h_fav is not None:
             h2h_fav = 1 - h2h_fav
+        h2h_und    = (1.0 - h2h_fav) if h2h_fav is not None else None
         fat_fav    = fat_t1 if fav_is_t1 else fat_t2
         fat_opp    = fat_t2 if fav_is_t1 else fat_t1
-        fat_adj    = fatigue_adjustment(fat_fav, fat_opp)
+        fat_adj_fav = fatigue_adjustment(fat_fav, fat_opp)
+        fat_adj_und = fatigue_adjustment(fat_opp, fat_fav)
 
-        comp_p = composite_prob(elo_p_fav, form_fav, h2h_fav,
-                                weights=ENSEMBLE_WEIGHTS, fatigue_adj=fat_adj)
+        # Composite prob для ОБЕИХ сторон
+        comp_p_fav = composite_prob(elo_p_fav, form_fav, h2h_fav,
+                                    weights=ENSEMBLE_WEIGHTS, fatigue_adj=fat_adj_fav)
+        comp_p_und = composite_prob(elo_p_und, form_und, h2h_und,
+                                    weights=ENSEMBLE_WEIGHTS, fatigue_adj=fat_adj_und)
 
-        # Нотиональный коэффициент (рыночный proxy по Elo, а не по composite_prob)
-        # Рынок знает Elo, но не знает form/H2H → мы ищем edge ВНЕ Elo
-        notional_odds = round(1.0 / (elo_p_fav * AVG_OVERROUND_HIST), 4)
-        edge = round(comp_p * notional_odds - 1, 4)
+        # Нотиональные коэффы для ОБЕИХ сторон
+        # Рынок = Elo + overround; мы ищем edge от form/H2H поверх Elo-рынка
+        notional_odds_fav = round(1.0 / (elo_p_fav * AVG_OVERROUND_HIST), 4)
+        notional_odds_und = round(1.0 / max(elo_p_und, 0.05) / AVG_OVERROUND_HIST, 4)
+
+        edge_fav = round(comp_p_fav * notional_odds_fav - 1, 4)
+        edge_und = round(comp_p_und * notional_odds_und - 1, 4)
 
         # Тир лиги
         _tier, edge_min, kelly_cap = get_tier_for_league(league, tiers)
+
+        # ── Выбираем сторону с лучшим edge ───────────────────────────────────
+        if edge_fav >= edge_und:
+            edge          = edge_fav
+            comp_p        = comp_p_fav
+            notional_odds = notional_odds_fav
+            bet_on_fav    = True
+        else:
+            edge          = edge_und
+            comp_p        = comp_p_und
+            notional_odds = notional_odds_und
+            bet_on_fav    = False
 
         # ── Обновляем Elo и history (для СЛЕДУЮЩИХ матчей) ───────────────────
         home_won = normalize_team(winner) == normalize_team(t1_raw)
@@ -369,13 +393,12 @@ def main():
             n_skip_edge += 1
             continue
 
-        # Корреляционный лимит
-        if day_team_bets[fav_n] >= MAX_TEAM_BETS_DAY:
+        # Корреляционный лимит — отслеживаем по команде на которую ставим
+        bet_n_for_corr = fav_n if bet_on_fav else und_n
+        if day_team_bets[bet_n_for_corr] >= MAX_TEAM_BETS_DAY:
             n_skip_corr += 1
             continue
 
-        league_budget_max = bankroll * DAILY_STAKE_CAP * MAX_LEAGUE_PCT / DAILY_STAKE_CAP
-        # Упрощённо: 30% от дневного лимита на турнир
         league_budget_max = bankroll * DAILY_STAKE_CAP * MAX_LEAGUE_PCT
         if day_league_staked[league] + stake > league_budget_max:
             remaining = max(0.0, league_budget_max - day_league_staked[league])
@@ -391,10 +414,17 @@ def main():
             continue
 
         # ── Исход ────────────────────────────────────────────────────────────
-        bet_side  = "home" if fav_is_t1 else "away"
-        fav_won   = (fav_is_t1 and home_won) or (not fav_is_t1 and not home_won)
-        outcome   = "win" if fav_won else "loss"
-        pnl       = round((notional_odds - 1.0) * stake, 2) if fav_won else round(-stake, 2)
+        fav_won = (fav_is_t1 and home_won) or (not fav_is_t1 and not home_won)
+        if bet_on_fav:
+            bet_side   = "home" if fav_is_t1 else "away"
+            bet_winner = fav
+            bet_won    = fav_won
+        else:
+            bet_side   = "away" if fav_is_t1 else "home"
+            bet_winner = und
+            bet_won    = not fav_won
+        outcome = "win" if bet_won else "loss"
+        pnl     = round((notional_odds - 1.0) * stake, 2) if bet_won else round(-stake, 2)
 
         bankroll  = round(bankroll + pnl, 2)
         recent_bets.append({
@@ -403,13 +433,18 @@ def main():
         })
         day_staked += stake
         day_bets   += 1
-        day_team_bets[fav_n] += 1
+        day_team_bets[bet_n_for_corr] += 1
         day_league_staked[league] += stake
         n_bet += 1
 
-        b_raw = notional_odds - 1.0
+        # Для хранения: форма/h2h для ВЫБРАННОЙ стороны
+        form_stored = (form_fav if bet_on_fav else form_und)
+        h2h_stored  = (h2h_fav  if bet_on_fav else h2h_und)
+        elo_stored  = (elo_p_fav if bet_on_fav else elo_p_und)
+
+        b_raw  = notional_odds - 1.0
         full_k = (b_raw * comp_p - (1 - comp_p)) / b_raw if b_raw > 0 else 0
-        kf = round(min(full_k * KELLY_FRACTION_DEFAULT * a_mult, kelly_cap), 5)
+        kf     = round(min(full_k * KELLY_FRACTION_DEFAULT * a_mult, kelly_cap), 5)
 
         run_ts = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         sim_rows.append({
@@ -425,7 +460,7 @@ def main():
             "bet_team":       bet_side,
             "odds":           notional_odds,
             "market_prob":    round(1.0 / notional_odds, 4),
-            "model_prob":     round(elo_p_fav, 4),
+            "model_prob":     round(elo_stored, 4),
             "composite_prob": comp_p,
             "edge":           edge,
             "stake_usd":      round(stake, 2),
@@ -434,17 +469,18 @@ def main():
             "pnl":            pnl,
             "real_odds":      None,
             "real_bookmaker": None,
-            "form_score":     round(form_fav, 4) if form_fav is not None else None,
-            "h2h_score":      round(h2h_fav, 4) if h2h_fav is not None else None,
+            "form_score":     round(form_stored, 4) if form_stored is not None else None,
+            "h2h_score":      round(h2h_stored,  4) if h2h_stored  is not None else None,
             "kelly_f":        kf,
             "league_tier":    _tier,
             "bet_market":     "moneyline",
         })
 
+        side_label = "fav" if bet_on_fav else "UND"
         if n_bet <= 10 or n_bet % 50 == 0:
-            print(f"  [{n_bet:4d}] {t1_raw} vs {t2_raw} — bet={fav}, "
+            print(f"  [{n_bet:4d}] {t1_raw} vs {t2_raw} — bet={bet_winner}({side_label}), "
                   f"comp_p={comp_p:.3f}, odds={notional_odds:.2f}, "
-                  f"edge={edge:+.1%}, stake=${stake:.0f}, {outcome}, "
+                  f"edge={edge:+.1%}, stake=${stake:.1f}, {outcome}, "
                   f"pnl=${pnl:+.2f}, bank=${bankroll:,.0f}")
 
     print(f"\n── Simulation Results ─────────────────────────────────────")
