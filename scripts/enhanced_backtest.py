@@ -171,7 +171,7 @@ def main():
     while True:
         chunk = sb_get(
             "elo_pandascore_history",
-            f"winner=neq.&select=event_id,home_team,away_team,winner,start_time,league_name"
+            f"winner=neq.&select=ps_id,home_team,away_team,winner,start_time,league"
             f"&order=start_time.asc&limit={page}&offset={offset}",
         )
         if not chunk:
@@ -242,9 +242,9 @@ def main():
             continue
         seen.add(key)
         combined.append({
-            "event_id": f"ps_{r.get('event_id', st)}",
+            "event_id": f"ps_{r.get('ps_id', st)}",
             "home_team": t1, "away_team": t2, "winner": w,
-            "start_time": st, "league_name": r.get("league_name") or "",
+            "start_time": st, "league_name": r.get("league") or "",
         })
 
     combined.sort(key=lambda x: x["start_time"])
