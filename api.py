@@ -355,7 +355,7 @@ def dashboard():
         "&stake_usd=gt.0"
         "&select=pnl,outcome,stake_usd,run_ts,home_team,away_team,bet_team,"
         "real_odds,odds,composite_prob,clv,edge,bet_market,form_score,h2h_score,division"
-        "&order=run_ts.asc"
+        "&order=run_ts.asc&limit=20000"
     )
 
     # ── Статистика (все settled) ─────────────────────────────────────────────

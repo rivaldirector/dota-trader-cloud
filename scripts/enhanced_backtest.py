@@ -68,8 +68,9 @@ START_ELO          = 1500.0
 K_FACTOR           = 32.0
 FUZZY_MIN          = 0.72
 AVG_OVERROUND_HIST = 1.0585  # средний overround букмекера по истории
-EDGE_MIN_DEFAULT   = 0.03    # мин. edge для нотиональных коэффов
+EDGE_MIN_DEFAULT   = 0.05    # мин. edge для нотиональных коэффов
 KELLY_CAP          = 0.04    # max 4% банка на ставку
+MIN_UND_ELO_P      = 0.33   # аутсайдер должен иметь ≥33% шанс по Elo (≤3:1)
 DAILY_STAKE_CAP    = 0.20    # max 20% банка в сутки
 MAX_BETS_DAY       = 5       # max ставок в день
 MAX_TEAM_BETS_DAY  = 2       # корреляция команды
@@ -402,6 +403,11 @@ def main():
 
         # ── Фильтры ──────────────────────────────────────────────────────────
         if edge < edge_min:
+            n_skip_edge += 1
+            continue
+
+        # Не ставим на огромных аутсайдеров (Elo < 33%) — форма/H2H там ненадёжна
+        if not bet_on_fav and elo_p_und < MIN_UND_ELO_P:
             n_skip_edge += 1
             continue
 
