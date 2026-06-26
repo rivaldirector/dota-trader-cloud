@@ -138,7 +138,7 @@ def best_elo_match(name: str, elo: dict[str, float]) -> tuple[Optional[str], flo
 
 def fetch_league_tiers() -> list[dict]:
     try:
-        return sb_get("league_tiers", "select=league_pattern,tier,edge_min,kelly_cap&order=tier.asc")
+        return sb_get("league_tiers", "select=pattern,tier,edge_min,kelly_cap&order=tier.asc")
     except Exception as ex:
         print(f"  [WARN] league_tiers: {ex}")
         return []
@@ -150,7 +150,7 @@ def get_tier_for_league(league: str, tiers: list[dict]) -> tuple[int, float, flo
         return (3, EDGE_MIN_DEFAULT, KELLY_CAP)
     lc = league.lower()
     for t in tiers:
-        pat = (t.get("league_pattern") or "").lower()
+        pat = (t.get("pattern") or "").lower()
         if pat and pat in lc:
             return (t.get("tier", 3), float(t.get("edge_min") or EDGE_MIN_DEFAULT),
                     float(t.get("kelly_cap") or KELLY_CAP))
@@ -338,8 +338,9 @@ def main():
         comp_p = composite_prob(elo_p_fav, form_fav, h2h_fav,
                                 weights=ENSEMBLE_WEIGHTS, fatigue_adj=fat_adj)
 
-        # Нотиональный коэффициент (рыночный proxy)
-        notional_odds = round(1.0 / (comp_p * AVG_OVERROUND_HIST), 4)
+        # Нотиональный коэффициент (рыночный proxy по Elo, а не по composite_prob)
+        # Рынок знает Elo, но не знает form/H2H → мы ищем edge ВНЕ Elo
+        notional_odds = round(1.0 / (elo_p_fav * AVG_OVERROUND_HIST), 4)
         edge = round(comp_p * notional_odds - 1, 4)
 
         # Тир лиги
@@ -453,9 +454,11 @@ def main():
     losses = sum(1 for r in sim_rows if r["outcome"] == "loss")
     total_pnl = sum(r["pnl"] for r in sim_rows)
     total_staked = sum(r["stake_usd"] for r in sim_rows)
-    print(f"  Win rate:       {wins}/{wins+losses} = {wins/(wins+losses)*100:.1f}%")
+    wr  = wins/(wins+losses)*100 if (wins+losses) > 0 else 0.0
+    roi = total_pnl/total_staked*100 if total_staked > 0 else 0.0
+    print(f"  Win rate:       {wins}/{wins+losses} = {wr:.1f}%")
     print(f"  PnL:            ${total_pnl:+,.2f}")
-    print(f"  ROI:            {total_pnl/total_staked*100:+.1f}%")
+    print(f"  ROI:            {roi:+.1f}%")
     print(f"  Final bankroll: ${bankroll:,.2f}")
 
     # 5) Удаляем старые бэктест-данные и вставляем новые
