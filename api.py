@@ -69,6 +69,21 @@ def sb_safe(path, default=None):
         return default if default is not None else []
 
 
+def sb_paginate(base_path: str, page_size: int = 1000) -> list:
+    """Пагинированный GET — обходит лимит Supabase 1000 строк."""
+    result, offset = [], 0
+    sep = "&" if "?" in base_path else "?"
+    while True:
+        chunk = sb_safe(f"{base_path}{sep}limit={page_size}&offset={offset}")
+        if not chunk:
+            break
+        result.extend(chunk)
+        if len(chunk) < page_size:
+            break
+        offset += page_size
+    return result
+
+
 # -------------------
 # HEALTH
 # -------------------
@@ -349,14 +364,14 @@ def dashboard():
 
     # ── ВСЕ settled ставки (BACKTEST + LIVE) ─────────────────────────────────
     # Единая история: division=BACKTEST (симуляция 3 мес) + division=FREE (live)
-    all_settled = sb_safe(
+    all_settled = sb_paginate(
         "elo_paper_bets"
         "?strategy_name=in.(AUTO_ELO_FLAT,SIM_3M)"
         "&settled=eq.true"
         "&stake_usd=gt.0"
         "&select=pnl,outcome,stake_usd,run_ts,home_team,away_team,bet_team,"
         "real_odds,odds,composite_prob,clv,edge,bet_market,form_score,h2h_score,division"
-        "&order=run_ts.asc&limit=20000"
+        "&order=run_ts.asc"
     )
 
     # ── Статистика (все settled) ─────────────────────────────────────────────
