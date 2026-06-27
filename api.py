@@ -314,6 +314,7 @@ def _fetch_haglund_schedule(hours: int = 72):
         matches = json.loads(raw)
         now = datetime.now(timezone.utc)
         cutoff = now + timedelta(hours=hours)
+        inplay_cutoff = now - timedelta(hours=3)  # показываем инплей до 3ч назад
         result = []
         for m in matches:
             sa = m.get("startsAt")
@@ -323,7 +324,7 @@ def _fetch_haglund_schedule(hours: int = 72):
                 ts = datetime.fromisoformat(sa.replace("Z", "+00:00"))
             except Exception:
                 continue
-            if now <= ts <= cutoff:
+            if inplay_cutoff <= ts <= cutoff:
                 teams = m.get("teams") or [{}, {}]
                 t1 = (teams[0] or {}).get("name", "TBD")
                 t2 = (teams[1] or {}).get("name", "TBD")
@@ -754,8 +755,10 @@ def dashboard():
             if h2h is not None: parts.append(f"H2H={float(h2h):.2f}")
             if parts:
                 sig_html = f'<br><small class="muted">🔍 модель {side}: {" · ".join(parts)}</small>'
+        is_live = m["ts"] < now_utc
+        live_badge = ' <span style="background:#ff5c5c;color:#fff;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">LIVE</span>' if is_live else ""
         sch_rows += f"""<tr>
-          <td class="muted">{ts_str} UTC</td>
+          <td class="muted">{ts_str} UTC{live_badge}</td>
           <td><b>{m["t1"]} vs {m["t2"]}</b><br>
               <small class="muted">{m["matchType"]} · {clean_league(m["league"])}</small></td>
           <td>{sig_html if sig_html else '<span class="muted">нет сигнала</span>'}</td>
