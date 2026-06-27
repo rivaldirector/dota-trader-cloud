@@ -1,0 +1,902 @@
+[
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.5,
+      "kelly_cap": 0.06,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 246,
+    "wins": 162,
+    "losses": 84,
+    "wr": 65.9,
+    "pnl": 1161.16,
+    "roi": 5.8,
+    "final_bk": 2161.16,
+    "peak": 3048.29
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.5,
+      "kelly_cap": 0.06,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 246,
+    "wins": 162,
+    "losses": 84,
+    "wr": 65.9,
+    "pnl": 1161.16,
+    "roi": 5.8,
+    "final_bk": 2161.16,
+    "peak": 3048.29
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.5,
+      "kelly_cap": 0.06,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 246,
+    "wins": 162,
+    "losses": 84,
+    "wr": 65.9,
+    "pnl": 1161.16,
+    "roi": 5.8,
+    "final_bk": 2161.16,
+    "peak": 3048.29
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.5,
+      "kelly_cap": 0.07,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 246,
+    "wins": 162,
+    "losses": 84,
+    "wr": 65.9,
+    "pnl": 1161.16,
+    "roi": 5.8,
+    "final_bk": 2161.16,
+    "peak": 3048.29
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.5,
+      "kelly_cap": 0.07,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 246,
+    "wins": 162,
+    "losses": 84,
+    "wr": 65.9,
+    "pnl": 1161.16,
+    "roi": 5.8,
+    "final_bk": 2161.16,
+    "peak": 3048.29
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.5,
+      "kelly_cap": 0.07,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 246,
+    "wins": 162,
+    "losses": 84,
+    "wr": 65.9,
+    "pnl": 1161.16,
+    "roi": 5.8,
+    "final_bk": 2161.16,
+    "peak": 3048.29
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.5,
+      "kelly_cap": 0.08,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 246,
+    "wins": 162,
+    "losses": 84,
+    "wr": 65.9,
+    "pnl": 1161.16,
+    "roi": 5.8,
+    "final_bk": 2161.16,
+    "peak": 3048.29
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.5,
+      "kelly_cap": 0.08,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 246,
+    "wins": 162,
+    "losses": 84,
+    "wr": 65.9,
+    "pnl": 1161.16,
+    "roi": 5.8,
+    "final_bk": 2161.16,
+    "peak": 3048.29
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.5,
+      "kelly_cap": 0.08,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 246,
+    "wins": 162,
+    "losses": 84,
+    "wr": 65.9,
+    "pnl": 1161.16,
+    "roi": 5.8,
+    "final_bk": 2161.16,
+    "peak": 3048.29
+  },
+  {
+    "params": {
+      "edge_min": 0.04,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.06,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 233,
+    "wins": 156,
+    "losses": 77,
+    "wr": 67.0,
+    "pnl": 1151.37,
+    "roi": 6.13,
+    "final_bk": 2151.37,
+    "peak": 2758.43
+  },
+  {
+    "params": {
+      "edge_min": 0.04,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.06,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 233,
+    "wins": 156,
+    "losses": 77,
+    "wr": 67.0,
+    "pnl": 1151.37,
+    "roi": 6.13,
+    "final_bk": 2151.37,
+    "peak": 2758.43
+  },
+  {
+    "params": {
+      "edge_min": 0.04,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.06,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 233,
+    "wins": 156,
+    "losses": 77,
+    "wr": 67.0,
+    "pnl": 1151.37,
+    "roi": 6.13,
+    "final_bk": 2151.37,
+    "peak": 2758.43
+  },
+  {
+    "params": {
+      "edge_min": 0.04,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.07,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 233,
+    "wins": 156,
+    "losses": 77,
+    "wr": 67.0,
+    "pnl": 1151.37,
+    "roi": 6.13,
+    "final_bk": 2151.37,
+    "peak": 2758.43
+  },
+  {
+    "params": {
+      "edge_min": 0.04,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.07,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 233,
+    "wins": 156,
+    "losses": 77,
+    "wr": 67.0,
+    "pnl": 1151.37,
+    "roi": 6.13,
+    "final_bk": 2151.37,
+    "peak": 2758.43
+  },
+  {
+    "params": {
+      "edge_min": 0.04,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.07,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 233,
+    "wins": 156,
+    "losses": 77,
+    "wr": 67.0,
+    "pnl": 1151.37,
+    "roi": 6.13,
+    "final_bk": 2151.37,
+    "peak": 2758.43
+  },
+  {
+    "params": {
+      "edge_min": 0.04,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.08,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 233,
+    "wins": 156,
+    "losses": 77,
+    "wr": 67.0,
+    "pnl": 1151.37,
+    "roi": 6.13,
+    "final_bk": 2151.37,
+    "peak": 2758.43
+  },
+  {
+    "params": {
+      "edge_min": 0.04,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.08,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 233,
+    "wins": 156,
+    "losses": 77,
+    "wr": 67.0,
+    "pnl": 1151.37,
+    "roi": 6.13,
+    "final_bk": 2151.37,
+    "peak": 2758.43
+  },
+  {
+    "params": {
+      "edge_min": 0.04,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.08,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 233,
+    "wins": 156,
+    "losses": 77,
+    "wr": 67.0,
+    "pnl": 1151.37,
+    "roi": 6.13,
+    "final_bk": 2151.37,
+    "peak": 2758.43
+  },
+  {
+    "params": {
+      "edge_min": 0.01,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.06,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 283,
+    "wins": 188,
+    "losses": 95,
+    "wr": 66.4,
+    "pnl": 1147.01,
+    "roi": 5.72,
+    "final_bk": 2147.01,
+    "peak": 2781.14
+  },
+  {
+    "params": {
+      "edge_min": 0.01,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.06,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 283,
+    "wins": 188,
+    "losses": 95,
+    "wr": 66.4,
+    "pnl": 1147.01,
+    "roi": 5.72,
+    "final_bk": 2147.01,
+    "peak": 2781.14
+  },
+  {
+    "params": {
+      "edge_min": 0.01,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.06,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 283,
+    "wins": 188,
+    "losses": 95,
+    "wr": 66.4,
+    "pnl": 1147.01,
+    "roi": 5.72,
+    "final_bk": 2147.01,
+    "peak": 2781.14
+  },
+  {
+    "params": {
+      "edge_min": 0.01,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.07,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 283,
+    "wins": 188,
+    "losses": 95,
+    "wr": 66.4,
+    "pnl": 1147.01,
+    "roi": 5.72,
+    "final_bk": 2147.01,
+    "peak": 2781.14
+  },
+  {
+    "params": {
+      "edge_min": 0.01,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.07,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 283,
+    "wins": 188,
+    "losses": 95,
+    "wr": 66.4,
+    "pnl": 1147.01,
+    "roi": 5.72,
+    "final_bk": 2147.01,
+    "peak": 2781.14
+  },
+  {
+    "params": {
+      "edge_min": 0.01,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.07,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 283,
+    "wins": 188,
+    "losses": 95,
+    "wr": 66.4,
+    "pnl": 1147.01,
+    "roi": 5.72,
+    "final_bk": 2147.01,
+    "peak": 2781.14
+  },
+  {
+    "params": {
+      "edge_min": 0.01,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.08,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 283,
+    "wins": 188,
+    "losses": 95,
+    "wr": 66.4,
+    "pnl": 1147.01,
+    "roi": 5.72,
+    "final_bk": 2147.01,
+    "peak": 2781.14
+  },
+  {
+    "params": {
+      "edge_min": 0.01,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.08,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 283,
+    "wins": 188,
+    "losses": 95,
+    "wr": 66.4,
+    "pnl": 1147.01,
+    "roi": 5.72,
+    "final_bk": 2147.01,
+    "peak": 2781.14
+  },
+  {
+    "params": {
+      "edge_min": 0.01,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.08,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 283,
+    "wins": 188,
+    "losses": 95,
+    "wr": 66.4,
+    "pnl": 1147.01,
+    "roi": 5.72,
+    "final_bk": 2147.01,
+    "peak": 2781.14
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.06,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 245,
+    "wins": 161,
+    "losses": 84,
+    "wr": 65.7,
+    "pnl": 1117.55,
+    "roi": 5.49,
+    "final_bk": 2117.55,
+    "peak": 3062.62
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.06,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 245,
+    "wins": 161,
+    "losses": 84,
+    "wr": 65.7,
+    "pnl": 1117.55,
+    "roi": 5.49,
+    "final_bk": 2117.55,
+    "peak": 3062.62
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.06,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 245,
+    "wins": 161,
+    "losses": 84,
+    "wr": 65.7,
+    "pnl": 1117.55,
+    "roi": 5.49,
+    "final_bk": 2117.55,
+    "peak": 3062.62
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.07,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 245,
+    "wins": 161,
+    "losses": 84,
+    "wr": 65.7,
+    "pnl": 1117.55,
+    "roi": 5.49,
+    "final_bk": 2117.55,
+    "peak": 3062.62
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.07,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 245,
+    "wins": 161,
+    "losses": 84,
+    "wr": 65.7,
+    "pnl": 1117.55,
+    "roi": 5.49,
+    "final_bk": 2117.55,
+    "peak": 3062.62
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.07,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 245,
+    "wins": 161,
+    "losses": 84,
+    "wr": 65.7,
+    "pnl": 1117.55,
+    "roi": 5.49,
+    "final_bk": 2117.55,
+    "peak": 3062.62
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.08,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 245,
+    "wins": 161,
+    "losses": 84,
+    "wr": 65.7,
+    "pnl": 1117.55,
+    "roi": 5.49,
+    "final_bk": 2117.55,
+    "peak": 3062.62
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.08,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 245,
+    "wins": 161,
+    "losses": 84,
+    "wr": 65.7,
+    "pnl": 1117.55,
+    "roi": 5.49,
+    "final_bk": 2117.55,
+    "peak": 3062.62
+  },
+  {
+    "params": {
+      "edge_min": 0.03,
+      "kelly_fraction": 0.55,
+      "kelly_cap": 0.08,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.55
+    },
+    "bets": 245,
+    "wins": 161,
+    "losses": 84,
+    "wr": 65.7,
+    "pnl": 1117.55,
+    "roi": 5.49,
+    "final_bk": 2117.55,
+    "peak": 3062.62
+  },
+  {
+    "params": {
+      "edge_min": 0.02,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.06,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 262,
+    "wins": 171,
+    "losses": 91,
+    "wr": 65.3,
+    "pnl": 1112.65,
+    "roi": 5.93,
+    "final_bk": 2112.65,
+    "peak": 2776.86
+  },
+  {
+    "params": {
+      "edge_min": 0.02,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.06,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 262,
+    "wins": 171,
+    "losses": 91,
+    "wr": 65.3,
+    "pnl": 1112.65,
+    "roi": 5.93,
+    "final_bk": 2112.65,
+    "peak": 2776.86
+  },
+  {
+    "params": {
+      "edge_min": 0.02,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.06,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 262,
+    "wins": 171,
+    "losses": 91,
+    "wr": 65.3,
+    "pnl": 1112.65,
+    "roi": 5.93,
+    "final_bk": 2112.65,
+    "peak": 2776.86
+  },
+  {
+    "params": {
+      "edge_min": 0.02,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.07,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 262,
+    "wins": 171,
+    "losses": 91,
+    "wr": 65.3,
+    "pnl": 1112.65,
+    "roi": 5.93,
+    "final_bk": 2112.65,
+    "peak": 2776.86
+  },
+  {
+    "params": {
+      "edge_min": 0.02,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.07,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 262,
+    "wins": 171,
+    "losses": 91,
+    "wr": 65.3,
+    "pnl": 1112.65,
+    "roi": 5.93,
+    "final_bk": 2112.65,
+    "peak": 2776.86
+  },
+  {
+    "params": {
+      "edge_min": 0.02,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.07,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 262,
+    "wins": 171,
+    "losses": 91,
+    "wr": 65.3,
+    "pnl": 1112.65,
+    "roi": 5.93,
+    "final_bk": 2112.65,
+    "peak": 2776.86
+  },
+  {
+    "params": {
+      "edge_min": 0.02,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.08,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 262,
+    "wins": 171,
+    "losses": 91,
+    "wr": 65.3,
+    "pnl": 1112.65,
+    "roi": 5.93,
+    "final_bk": 2112.65,
+    "peak": 2776.86
+  },
+  {
+    "params": {
+      "edge_min": 0.02,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.08,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 262,
+    "wins": 171,
+    "losses": 91,
+    "wr": 65.3,
+    "pnl": 1112.65,
+    "roi": 5.93,
+    "final_bk": 2112.65,
+    "peak": 2776.86
+  },
+  {
+    "params": {
+      "edge_min": 0.02,
+      "kelly_fraction": 0.4,
+      "kelly_cap": 0.08,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 262,
+    "wins": 171,
+    "losses": 91,
+    "wr": 65.3,
+    "pnl": 1112.65,
+    "roi": 5.93,
+    "final_bk": 2112.65,
+    "peak": 2776.86
+  },
+  {
+    "params": {
+      "edge_min": 0.01,
+      "kelly_fraction": 0.45,
+      "kelly_cap": 0.06,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 284,
+    "wins": 186,
+    "losses": 98,
+    "wr": 65.5,
+    "pnl": 1106.96,
+    "roi": 5.75,
+    "final_bk": 2106.96,
+    "peak": 2788.22
+  },
+  {
+    "params": {
+      "edge_min": 0.01,
+      "kelly_fraction": 0.45,
+      "kelly_cap": 0.06,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 284,
+    "wins": 186,
+    "losses": 98,
+    "wr": 65.5,
+    "pnl": 1106.96,
+    "roi": 5.75,
+    "final_bk": 2106.96,
+    "peak": 2788.22
+  },
+  {
+    "params": {
+      "edge_min": 0.01,
+      "kelly_fraction": 0.45,
+      "kelly_cap": 0.06,
+      "comp_min": 0.54,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 284,
+    "wins": 186,
+    "losses": 98,
+    "wr": 65.5,
+    "pnl": 1106.96,
+    "roi": 5.75,
+    "final_bk": 2106.96,
+    "peak": 2788.22
+  },
+  {
+    "params": {
+      "edge_min": 0.01,
+      "kelly_fraction": 0.45,
+      "kelly_cap": 0.07,
+      "comp_min": 0.5,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 284,
+    "wins": 186,
+    "losses": 98,
+    "wr": 65.5,
+    "pnl": 1106.96,
+    "roi": 5.75,
+    "final_bk": 2106.96,
+    "peak": 2788.22
+  },
+  {
+    "params": {
+      "edge_min": 0.01,
+      "kelly_fraction": 0.45,
+      "kelly_cap": 0.07,
+      "comp_min": 0.52,
+      "und_mode": true,
+      "elo_weight": 0.5
+    },
+    "bets": 284,
+    "wins": 186,
+    "losses": 98,
+    "wr": 65.5,
+    "pnl": 1106.96,
+    "roi": 5.75,
+    "final_bk": 2106.96,
+    "peak": 2788.22
+  }
+]

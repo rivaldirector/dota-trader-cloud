@@ -27,9 +27,22 @@ PAPER_DB   = os.path.join(_DIR, '../data/paper_trading.db')
 
 TEST_END   = 1781654399   # 2026-06-15 23:59:59 UTC
 VAL_END    = 1767225599   # 2025-12-31 UTC  (demo-старт для TEST-периода)
+LIVE_SINCE = TEST_END + 1 # граница между demo-backtest и реальными live-сигналами
 K_FACTOR   = 32.0
 START_ELO  = 1000.0
 STAKE_FLAT = 20.0
+
+# ── Риск-контроль ────────────────────────────────────────────────────────────
+# Без этого лимита N коррелированных стратегий (Elo50/75/100 и т.п. — по сути
+# одна и та же идея с разными порогами) могут синхронно поставить на ОДНУ
+# сторону одного матча по $20 каждая. На практике уже бывало 15-18 стратегий
+# сразу — то есть $300-360 экспозиции на одном исходе одного матча. Два таких
+# матча, оба "против" — банк уничтожен за день. MAX_MATCH_STAKE ограничивает
+# суммарную ставку на (матч, сторона) независимо от того, сколько стратегий
+# совпали — это risk-management слой, НЕ изменение логики/фильтров стратегий.
+MAX_MATCH_STAKE = 100.0   # = 5 стратегий по $20 максимум на один исход
+STARTING_BANK   = 1000.0  # см. generate_dashboard.py — единая точка отсчёта банка
+MAX_DAILY_STAKE_PCT = 0.25  # максимум 25% ТЕКУЩЕГО банка новых ставок за 1 календарный день размещения
 
 PREFERRED_BM = ['PinnacleSports', 'Bet365', 'GGBet', 'MelBet', 'YSB88']
 
@@ -122,6 +135,24 @@ class RollingH2H:
             d['w1'] += 1
 
 
+def current_virtual_bank(pcon, live_since):
+    """Текущий виртуальный банк = старт + realized P&L по settled LIVE-ставкам."""
+    pnl = pcon.execute(
+        "SELECT SUM(pnl) FROM paper_bets WHERE settled=1 AND start_time>=?",
+        (live_since,)
+    ).fetchone()[0] or 0.0
+    return STARTING_BANK + pnl
+
+
+def stake_placed_today(pcon, today_str):
+    """Сколько $ уже поставлено СЕГОДНЯ (по дате run_ts) — для дневного лимита."""
+    s = pcon.execute(
+        "SELECT SUM(stake_usd) FROM paper_bets WHERE run_ts LIKE ?",
+        (today_str + '%',)
+    ).fetchone()[0]
+    return s or 0.0
+
+
 # ── Elo/H2H state ─────────────────────────────────────────────────────────────
 
 def build_state(up_to_ts: int):
@@ -162,8 +193,19 @@ def build_state(up_to_ts: int):
 
 # ── Load stable strategies ────────────────────────────────────────────────────
 
+#  M05 = Rule C FROZEN — протокол требует копить settled-сигналы вживую
+#  НЕЗАВИСИМО от VAL/TEST backtest-метрик (см. договорённость:
+#  "Следующий этап исследований начинать только после появления
+#   минимум 30 новых settled Rule C signals"). Поэтому M05 всегда
+#  включён в paper-trading, даже если он не проходит динамический
+#  фильтр стабильности ниже. M06/M36 — соседи из той же Rule-C
+#  семьи, держим их рядом для сравнения, но они НЕ считаются к гейту.
+ALWAYS_INCLUDE = {'M05', 'M06', 'M36'}
+
+
 def load_stable_strategies():
-    """Читает из tournament_metrics 35 стабильных стратегий (VAL>0, TEST>15%)."""
+    """Читает из tournament_metrics стабильные стратегии (VAL>0, TEST>15%)
+    + принудительно включает ALWAYS_INCLUDE (Rule C family) независимо от фильтра."""
     if not os.path.exists(TOURN_DB):
         print("ОШИБКА: tournament_db не найдена. Запусти tournament_* скрипты сначала.")
         sys.exit(1)
@@ -182,6 +224,8 @@ def load_stable_strategies():
     """).fetchall()}
     con.close()
 
+    codes |= ALWAYS_INCLUDE
+
     sys.path.insert(0, os.path.join(_DIR, '..'))
     from scripts.tournament_run_strategies import STRATEGIES, SMETA, BlindMatch
 
@@ -190,8 +234,8 @@ def load_stable_strategies():
         print("ОШИБКА: Нет стабильных стратегий. Проверь tournament_metrics.")
         sys.exit(1)
 
-    print(f"  Стабильных стратегий: {len(paper_strats)} "
-          f"({', '.join(sorted(paper_strats)[:8])}...)", flush=True)
+    forced = sorted(ALWAYS_INCLUDE & paper_strats.keys())
+    print(f"  Стратегий: {len(paper_strats)} (включая принудительно: {forced})", flush=True)
     return paper_strats, SMETA, BlindMatch
 
 
@@ -220,6 +264,17 @@ def mode_bet(since: int):
     done = {r[0] for r in pcon.execute(
         "SELECT DISTINCT event_id FROM paper_bets"
     ).fetchall()}
+
+    # ── Дневной лимит экспозиции = MAX_DAILY_STAKE_PCT от текущего банка ───────
+    today_str = datetime.datetime.utcnow().strftime('%Y-%m-%d')
+    bank_now = current_virtual_bank(pcon, LIVE_SINCE)
+    already_today = stake_placed_today(pcon, today_str)
+    daily_cap = bank_now * MAX_DAILY_STAKE_PCT
+    daily_remaining = max(0.0, daily_cap - already_today)
+    print(f"   Банк сейчас: ${bank_now:,.2f} | дневной лимит: ${daily_cap:,.2f} "
+          f"| уже поставлено сегодня: ${already_today:,.2f} | остаток: ${daily_remaining:,.2f}",
+          flush=True)
+    daily_used = 0.0
 
     print("3. Загружаем paper-матчи (без score/winner — BLIND)...", flush=True)
     # КРИТИЧНО: НЕ запрашиваем score, winner, close_*
@@ -267,7 +322,17 @@ def mode_bet(since: int):
     now_ts = datetime.datetime.utcnow().isoformat()
     total_bets, total_matches = 0, 0
 
-    print("4. Размещаем ставки (результаты не смотрим)...", flush=True)
+    # ════════════════════════════════════════════════════════════════════════
+    #  ПРОХОД 1 — собираем ВСЕ сигналы дня, ничего не пишем в БД.
+    #  Это нужно, чтобы посчитать суммарный спрос на дневной бюджет ДО того,
+    #  как начнём ставить — иначе матчи, что позже по времени, систематически
+    #  обделены (chronological first-come-first-served), хотя сигнал у них
+    #  может быть не хуже.
+    # ════════════════════════════════════════════════════════════════════════
+    print("4a. Собираем сигналы дня (без записи в БД)...", flush=True)
+    decisions = []  # каждый элемент: dict со всеми полями для INSERT + group_key
+    groups: dict[tuple, dict] = {}  # (eid, bet_team) -> {'n': int, 'natural_stake': float}
+
     for eid, home, away, league, st in matches:
         seid = str(eid)
         if seid in done:
@@ -279,19 +344,14 @@ def mode_bet(since: int):
 
         total_matches += 1
 
-        # Elo ПЕРЕД матчем
         eh = elo.get(home, START_ELO)
         ea = elo.get(away, START_ELO)
         ed = abs(eh - ea)
         ep_h = elo_exp(eh, ea)
 
-        # H2H ПЕРЕД матчем
         hn, wh, wa, hd = h2h.get(home, away)
-
-        # Adj prob
         adj_h = (ep_h + wh) / 2.0 if hn >= 3 else ep_h
 
-        # Pre-match history
         hist = hist_map.get(seid, [])
         pre_pts = len(hist)
         latest_pre_prob = None
@@ -300,13 +360,9 @@ def mode_bet(since: int):
             mh, _ = novig(lh, la)
             latest_pre_prob = mh
 
-        # Строим BlindMatch для каждой Division
         bm_order = [b for b in PREFERRED_BM if b in bm_odds] + \
                    [b for b in bm_odds if b not in PREFERRED_BM]
-
-        # Division A — лучший букмекер из PREFERRED
         bm_a = next((b for b in bm_order if b != 'PinnacleSports'), None) or bm_order[0]
-        # Division B/C — Pinnacle
         bm_pin = 'PinnacleSports' if 'PinnacleSports' in bm_odds else None
 
         configs = []
@@ -315,7 +371,6 @@ def mode_bet(since: int):
             mh_a, ma_a = novig(oh_a, oa_a)
             if mh_a:
                 configs.append(('A', bm_a, oh_a, oa_a, mh_a, ma_a))
-
         if bm_pin:
             oh_p, oa_p = bm_odds[bm_pin]
             mh_p, ma_p = novig(oh_p, oa_p)
@@ -325,7 +380,6 @@ def mode_bet(since: int):
 
         for div, bm, oh, oa, mkt_h, mkt_a in configs:
             edge_h = ep_h - mkt_h
-
             m = BlindMatch(
                 event_id=seid, match_date='', split='PAPER',
                 division=div, league=league or '',
@@ -343,18 +397,70 @@ def mode_bet(since: int):
 
             for name, func in paper_strats.items():
                 d = func(m)
-                if d.bet:
-                    pcon.execute("""
-                        INSERT OR IGNORE INTO paper_bets
-                        (run_ts, strategy_name, event_id, division, league,
-                         home_team, away_team, start_time, bookmaker,
-                         bet_team, odds, market_prob, model_prob, edge, stake_usd)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                    """, (now_ts, name, seid, div, league,
-                          home, away, st, bm,
-                          d.bet_team, d.odds, d.market_prob, d.model_prob,
-                          d.edge, STAKE_FLAT))
-                    total_bets += 1
+                if not d.bet:
+                    continue
+                gkey = (seid, d.bet_team)
+                g = groups.setdefault(gkey, {'n': 0, 'natural_stake': 0.0})
+                # Лимит $100 на (матч, сторону) применяется ЗДЕСЬ, на уровне
+                # "сколько сигналов из этой группы вообще допускаем" —
+                # дальше дневное масштабирование уменьшит это пропорционально,
+                # а не отрежет хвост.
+                if g['n'] * STAKE_FLAT >= MAX_MATCH_STAKE:
+                    continue
+                g['n'] += 1
+                g['natural_stake'] = min(g['n'] * STAKE_FLAT, MAX_MATCH_STAKE)
+                decisions.append({
+                    'name': name, 'seid': seid, 'div': div, 'league': league,
+                    'home': home, 'away': away, 'st': st, 'bm': bm,
+                    'bet_team': d.bet_team, 'odds': d.odds,
+                    'market_prob': d.market_prob, 'model_prob': d.model_prob,
+                    'edge': d.edge, 'gkey': gkey,
+                })
+
+    # ════════════════════════════════════════════════════════════════════════
+    #  ПРОХОД 2 — считаем суммарный спрос и общий масштаб на весь день.
+    #  Если спрос больше остатка дневного лимита — ВСЕ группы пропорционально
+    #  уменьшаются на один и тот же коэффициент, а не "ранние матчи забрали
+    #  всё, поздним не хватило".
+    # ════════════════════════════════════════════════════════════════════════
+    total_natural_demand = sum(g['natural_stake'] for g in groups.values())
+    if total_natural_demand <= daily_remaining or total_natural_demand == 0:
+        scale = 1.0
+    else:
+        scale = daily_remaining / total_natural_demand
+
+    print(f"   Сигналов: {len(decisions)} на {len(groups)} (матч,сторона)-групп | "
+          f"natural demand: ${total_natural_demand:,.2f} | "
+          f"остаток дневного лимита: ${daily_remaining:,.2f} | "
+          f"масштаб: {scale*100:.1f}%", flush=True)
+    if scale < 1.0:
+        print(f"   ⚠ Спрос превысил дневной лимит — КАЖДЫЙ сигнал сегодня "
+              f"уменьшен пропорционально до {scale*100:.1f}% от номинала "
+              f"(вместо отсечения поздних матчей)", flush=True)
+
+    # ════════════════════════════════════════════════════════════════════════
+    #  ПРОХОД 3 — пишем в БД с финальным per-bet stake = group_natural_stake
+    #  * scale / group_n (равная доля внутри группы).
+    # ════════════════════════════════════════════════════════════════════════
+    print("4b. Записываем ставки в БД...", flush=True)
+    for dec in decisions:
+        g = groups[dec['gkey']]
+        final_group_stake = g['natural_stake'] * scale
+        per_bet_stake = final_group_stake / g['n'] if g['n'] else 0.0
+        if per_bet_stake <= 0:
+            continue
+        pcon.execute("""
+            INSERT OR IGNORE INTO paper_bets
+            (run_ts, strategy_name, event_id, division, league,
+             home_team, away_team, start_time, bookmaker,
+             bet_team, odds, market_prob, model_prob, edge, stake_usd)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (now_ts, dec['name'], dec['seid'], dec['div'], dec['league'],
+              dec['home'], dec['away'], dec['st'], dec['bm'],
+              dec['bet_team'], dec['odds'], dec['market_prob'], dec['model_prob'],
+              dec['edge'], round(per_bet_stake, 4)))
+        total_bets += 1
+        daily_used += per_bet_stake
 
     pcon.execute("INSERT OR REPLACE INTO paper_meta VALUES ('last_bet_run',?)",
                  (now_ts,))
@@ -506,6 +612,22 @@ def mode_report():
         roi_s = pnl/staked*100 if staked else 0
         flag = '✅' if roi_s > 0 else '❌'
         print(f"{name:<12} {div:<4} {bets:>7} {wr_s:>5.1f}% {pnl:>+9.2f} {roi_s:>+6.1f}% {flag}")
+
+    # ── Гейт: 30 settled Rule C (M05) signals до следующего этапа исследований ──
+    GATE_TARGET = 30
+    settled_m05 = pcon.execute(
+        "SELECT COUNT(*) FROM paper_bets WHERE strategy_name='M05' AND settled=1"
+    ).fetchone()[0] or 0
+    pending_m05 = pcon.execute(
+        "SELECT COUNT(*) FROM paper_bets WHERE strategy_name='M05' AND settled=0"
+    ).fetchone()[0] or 0
+    print(f"\n{'─'*52}")
+    print(f"ГЕЙТ Rule C (M05): {settled_m05}/{GATE_TARGET} settled "
+          f"(+{pending_m05} в ожидании результата)")
+    if settled_m05 >= GATE_TARGET:
+        print("  ✅ Гейт пройден — можно переходить к следующему этапу исследований.")
+    else:
+        print(f"  ⏳ Осталось {GATE_TARGET - settled_m05} settled сигналов.")
 
     pcon.close()
 

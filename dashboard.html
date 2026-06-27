@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="1800">
+<title>Dota2 Paper-Trading Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1115; --card: #171a21; --border: #2a2e38;
+    --text: #e6e8eb; --muted: #8a8f98;
+    --pos: #3ddc84; --neg: #ff5c5c; --accent: #5b8cff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin: 0; padding: 32px;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .updated { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 24px; margin-bottom: 24px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 16px; color: var(--muted);
+              text-transform: uppercase; letter-spacing: .04em; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th { text-align: left; color: var(--muted); font-weight: 500;
+        padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  .bet { font-weight: 600; color: var(--accent); }
+  .pos { color: var(--pos); font-weight: 600; }
+  .neg { color: var(--neg); font-weight: 600; }
+  .empty { text-align: center; color: var(--muted); padding: 24px; }
+  .muted2 { color: var(--muted); font-style: italic; }
+  .note { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
+  .stats { display: flex; gap: 28px; flex-wrap: wrap; }
+  .stat { min-width: 120px; }
+  .stat .val { font-size: 24px; font-weight: 700; }
+  .stat .lbl { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .gate-bar { background: var(--border); border-radius: 6px; height: 10px;
+               overflow: hidden; margin-top: 10px; }
+  .gate-fill { background: var(--accent);
+                height: 100%; width: 0%; }
+</style>
+</head>
+<body>
+  <h1>🎮 Dota 2 — Paper Trading Dashboard</h1>
+  <div class="updated">Обновлено: 2026-06-27 05:54:21 UTC &nbsp;·&nbsp; авто-обновление страницы каждые 30 мин &nbsp;·&nbsp; данные перегенерируются launchd каждые 6ч</div>
+
+  <div class="card">
+    <h2>Предикты — ближайшие 72ч</h2>
+    <table>
+      <tr>
+        <th>Время</th><th>Лига</th><th>Матч</th><th>Ставить</th>
+        <th>Odds</th><th>Mkt%</th><th>Model%</th><th>Edge</th>
+        <th>Стратегии</th><th>BK</th>
+      </tr>
+      <tr><td colspan="10" class="empty">Нет сигналов на ближайшие 48ч</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Виртуальный банк (live, без demo-периода)</h2>
+    <div class="stats">
+      <div class="stat"><div class="val">$1,597.20</div><div class="lbl">текущий банк (старт $1,000)</div></div>
+      <div class="stat"><div class="val pos">$+597.20</div><div class="lbl">изменение за неделю</div></div>
+      <div class="stat"><div class="val pos">$+0.00</div><div class="lbl">изменение за сегодня</div></div>
+      <div class="stat"><div class="val">$20</div><div class="lbl">стейк на 1 сигнал</div></div>
+      <div class="stat"><div class="val">0</div><div class="lbl">открытых ставок ($0 экспозиция)</div></div>
+    </div>
+    <div class="note">Банк считается только по LIVE-сигналам (матчи с 2026-06-17 и позже) — старый demo-backtest на TEST-периоде (Jan-Jun 2026) не входит в этот баланс. Каждый сигнал каждой стратегии — это отдельная виртуальная ставка по $20, поэтому на одном матче может стоять сразу несколько ставок.</div>
+  </div>
+
+  <div class="card">
+    <h2>Ставки, размещённые сегодня (2026-06-27)</h2>
+    <table>
+      <tr>
+        <th>Время матча</th><th>Лига</th><th>Матч</th><th>Ставили на</th>
+        <th>Odds</th><th>Edge</th><th>#Стратегий</th><th>Всего $</th><th>Статус</th>
+      </tr>
+      <tr><td colspan="9" class="empty">Сегодня ставок ещё не размещали</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Elo-прогноз по всему расписанию (не требует живого API)</h2>
+    <table>
+      <tr>
+        <th>Время</th><th>Лига</th><th>Матч</th><th>Elo (Δ)</th>
+        <th>Фаворит по Elo</th><th>Кэш одсов</th><th>Edge</th>
+      </tr>
+      
+            <tr>
+              <td>2026-06-27 06:00 UTC</td>
+              <td>DOTA2 - EPL World Series</td>
+              <td>D family vs Mentality Monster</td>
+              <td>986 / 1037 (-51)</td>
+              <td class="bet">Mentality Monster 57%</td>
+              <td><span class="muted2">нет кэша одсов</span></td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>2026-06-27 11:00 UTC</td>
+              <td>DOTA2 - The International</td>
+              <td>Natus Vincere vs HULIGANI</td>
+              <td>1309 / 1027 (+282)</td>
+              <td class="bet">Natus Vincere 84%</td>
+              <td><span class="muted2">нет кэша одсов</span></td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>2026-06-27 14:00 UTC</td>
+              <td>DOTA2 - The International</td>
+              <td>Power Rangers vs Yellow Submarine</td>
+              <td>1200 / 1218 (-18)</td>
+              <td class="bet">Yellow Submarine 53%</td>
+              <td><span class="muted2">нет кэша одсов</span></td>
+              <td>—</td>
+            </tr>
+    </table>
+    <div class="note">
+      Elo считается из истории матчей в harvest DB (BetsAPI). Расписание добрано из PandaScore
+      (+3 матчей из 54 в кэше, обновлён: 2026-06-27T05:54:20.701990) —
+      закрывает дыру в покрытии BetsAPI. Edge доступен только там, где есть кэшированные одсы (PandaScore коэффициентов не даёт).
+    </div>
+  </div>
+
+  
+  <div class="card">
+    <h2>Историческая симуляция: чистый Elo, последние 60 дней</h2>
+    <div class="stats">
+      <div class="stat"><div class="val">376</div><div class="lbl">ставок (flat $20, только где были реальные котировки)</div></div>
+      <div class="stat"><div class="val">68.35%</div><div class="lbl">win rate (257/376)</div></div>
+      <div class="stat"><div class="val pos">$+551.56</div><div class="lbl">P&amp;L (поставлено $7,520)</div></div>
+      <div class="stat"><div class="val pos">+7.33%</div><div class="lbl">ROI</div></div>
+      <div class="stat"><div class="val">$1,000 → $1,551.56</div><div class="lbl">гипотетический банк</div></div>
+    </div>
+    <div class="note">
+      Гипотетика: если бы мы ВСЕГДА ставили flat $20 на Elo-фаворита (без Rule C / H2H / edge-фильтров),
+      используя Elo, обновлённый объединённой историей BetsAPI + PandaScore (см. scripts/compute_elo_winrate.py,
+      scripts/backtest_elo_pure_60d.py). Это НЕ то же самое, что реальный paper-трейдинг по 35 стратегиям выше —
+      отдельный пример того, на что способна чистая Elo-модель сама по себе. Снимок от 2026-06-22 08:20 UTC,
+      обновляется запуском backtest_elo_pure_60d.py.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Гейт Rule C (M05) — следующий этап исследований</h2>
+    <div class="stats">
+      <div class="stat"><div class="val">0/30</div><div class="lbl">settled signals</div></div>
+      <div class="stat"><div class="val">0</div><div class="lbl">в ожидании результата</div></div>
+    </div>
+    <div class="gate-bar"><div class="gate-fill"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Общий paper P&amp;L (все стратегии, settled)</h2>
+    <div class="stats">
+      <div class="stat"><div class="val">13,699</div><div class="lbl">ставок урегулировано</div></div>
+      <div class="stat"><div class="val">60.4%</div><div class="lbl">win rate</div></div>
+      <div class="stat"><div class="val neg">$-15,490.32</div><div class="lbl">gross P&amp;L</div></div>
+      <div class="stat"><div class="val neg">-5.7%</div><div class="lbl">ROI</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Топ-10 стратегий по P&amp;L</h2>
+    <table>
+      <tr><th>Стратегия</th><th>Div</th><th>Ставок</th><th>Win%</th><th>P&amp;L</th></tr>
+      
+        <tr>
+          <td>M970</td><td>B</td>
+          <td>21</td><td>57.1%</td>
+          <td class="pos">$+134.00</td>
+        </tr>
+        <tr>
+          <td>M969</td><td>A</td>
+          <td>123</td><td>46.3%</td>
+          <td class="pos">$+124.52</td>
+        </tr>
+        <tr>
+          <td>M77</td><td>C</td>
+          <td>63</td><td>66.7%</td>
+          <td class="pos">$+95.58</td>
+        </tr>
+        <tr>
+          <td>M94</td><td>C</td>
+          <td>38</td><td>65.8%</td>
+          <td class="pos">$+72.58</td>
+        </tr>
+        <tr>
+          <td>M52</td><td>B</td>
+          <td>78</td><td>55.1%</td>
+          <td class="pos">$+70.32</td>
+        </tr>
+        <tr>
+          <td>M449</td><td>C</td>
+          <td>72</td><td>65.3%</td>
+          <td class="pos">$+68.96</td>
+        </tr>
+        <tr>
+          <td>M982</td><td>B</td>
+          <td>23</td><td>65.2%</td>
+          <td class="pos">$+66.32</td>
+        </tr>
+        <tr>
+          <td>M641</td><td>C</td>
+          <td>23</td><td>73.9%</td>
+          <td class="pos">$+56.16</td>
+        </tr>
+        <tr>
+          <td>M762</td><td>B</td>
+          <td>28</td><td>67.9%</td>
+          <td class="pos">$+39.34</td>
+        </tr>
+        <tr>
+          <td>M764</td><td>B</td>
+          <td>28</td><td>67.9%</td>
+          <td class="pos">$+39.34</td>
+        </tr>
+    </table>
+  </div>
+
+</body>
+</html>

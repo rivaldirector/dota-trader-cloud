@@ -1,0 +1,34 @@
+name: Grid Search — Parameter Optimization
+
+on:
+  workflow_dispatch:
+
+jobs:
+  grid-search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      SUPABASE_URL:      ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: pip install requests python-dotenv
+
+      - name: Run Grid Search
+        run: python3 scripts/grid_search.py
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grid-results
+          path: scripts/grid_results.json
+          if-no-files-found: warn
