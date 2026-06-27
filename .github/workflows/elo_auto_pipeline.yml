@@ -21,7 +21,7 @@ jobs:
           cache: "pip"
 
       - name: Install dependencies
-        run: pip install requests python-dotenv
+        run: pip install requests python-dotenv fastapi starlette
 
       - name: Write .env
         env:
@@ -39,6 +39,21 @@ jobs:
 
       - name: Place autonomous flat bets on Elo favorites (decide, no review)
         run: python3 scripts/elo_auto_bet.py
+
+      - name: Regenerate dashboard.html
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python3 scripts/gen_dashboard_static.py
+
+      - name: Commit and push dashboard.html
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dashboard.html
+          git diff --cached --quiet && echo "dashboard не изменился" || git commit -m "dashboard: auto-refresh $(date -u '+%Y-%m-%d %H:%M') UTC"
+          git push origin main
 
       - name: Summary
         if: always()
