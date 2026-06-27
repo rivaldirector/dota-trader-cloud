@@ -581,17 +581,21 @@ def main():
         peak = max(peak, running)
 
     try:
-        r = requests.patch(
-            f"{SUPABASE_URL}/rest/v1/bankroll_state?strategy=eq.{STRATEGY_NAME}",
-            headers=SB_HEADERS, json={
-                "balance": new_balance,
-                "peak": round(peak, 2),
-                "total_bets": all_bets,
-                "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            }, timeout=20,
+        # UPSERT: если строки нет — создаём, если есть — обновляем
+        upsert_payload = {
+            "strategy": STRATEGY_NAME,
+            "balance": new_balance,
+            "peak": round(peak, 2),
+            "total_bets": all_bets,
+            "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+        r = requests.post(
+            f"{SUPABASE_URL}/rest/v1/bankroll_state",
+            headers={**SB_HEADERS, "Prefer": "resolution=merge-duplicates,return=minimal"},
+            json=upsert_payload, timeout=20,
         )
-        if r.status_code not in (200, 204):
-            print(f"  [WARN] bankroll_state patch: {r.status_code}")
+        if r.status_code not in (200, 201, 204):
+            print(f"  [WARN] bankroll_state upsert: {r.status_code} {r.text[:100]}")
         else:
             print(f"  bankroll_state: balance=${new_balance:,.2f}, peak=${peak:,.2f}, bets={all_bets}")
     except Exception as ex:
