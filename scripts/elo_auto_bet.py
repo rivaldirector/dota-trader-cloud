@@ -88,6 +88,15 @@ MIN_BANKROLL       = 100.0
 # Дневной лимит — не более 20% банка за сутки
 DAILY_STAKE_CAP    = 0.20
 
+# ── V2 Grid Search Winner params (bank=$2077, WR=65.6%, x2 ROI) ───────────────
+KELLY_FRACTION_LIVE   = 0.50   # было 0.25 → теперь 0.50
+KELLY_CAP_LIVE        = 0.06   # max 6% банка на ставку
+EDGE_MIN_LIVE         = 0.03   # единый порог edge для всех тиров (было 2-5%)
+COMP_MIN_LIVE         = 0.50   # мин. composite prob для ставки
+BET_FAV_ONLY          = True   # ставим только на Elo-фаворита (WR 69% vs 54%)
+ENSEMBLE_WEIGHTS_LIVE = {"elo": 0.55, "form": 0.281, "h2h": 0.169}
+# ─────────────────────────────────────────────────────────────────────────────
+
 
 # ── BetsAPI ──────────────────────────────────────────────────────────────────
 
@@ -657,20 +666,9 @@ def main():
     a_mult = adaptive_kelly_mult(recent_settled)
     print(f"Adaptive Kelly множитель: {a_mult:.2f} (по {len(recent_settled)} settled бетам)")
 
-    # Загружаем калиброванные веса ансамбля из model_config
-    ensemble_weights = {"elo": 0.60, "form": 0.25, "h2h": 0.15}
-    try:
-        cfg = sb_get("model_config", "key=in.(w_elo,w_form,w_h2h)&select=key,value")
-        if cfg:
-            cfg_map = {r["key"]: float(r["value"]) for r in cfg}
-            ensemble_weights = {
-                "elo":  cfg_map.get("w_elo",  0.60),
-                "form": cfg_map.get("w_form", 0.25),
-                "h2h":  cfg_map.get("w_h2h",  0.15),
-            }
-            print(f"Веса ансамбля: elo={ensemble_weights['elo']} form={ensemble_weights['form']} h2h={ensemble_weights['h2h']}")
-    except Exception as e:
-        print(f"  [WARN] model_config: {e}")
+    # V2 победные веса (grid search 960 комбинаций, bank=$2077, WR=65.6%)
+    ensemble_weights = ENSEMBLE_WEIGHTS_LIVE
+    print(f"Веса ансамбля (V2): elo={ensemble_weights['elo']} form={ensemble_weights['form']} h2h={ensemble_weights['h2h']}")
 
     # ── Окно матчей ──────────────────────────────────────────────────────────
     cutoff = datetime.now(timezone.utc) + timedelta(hours=HOURS_AHEAD)
@@ -838,6 +836,12 @@ def main():
             fatigue_adj=fat_adj,
         )
 
+        # V2: пропускаем если composite_prob ниже порога уверенности
+        if comp_prob < COMP_MIN_LIVE:
+            skipped_no_edge += 1
+            print(f"  [comp_prob мал] {t1} vs {t2}  prob={comp_prob:.2%} < {COMP_MIN_LIVE:.0%} — пропуск")
+            continue
+
         # ── Слой 2: Определяем тип матча и получаем коэффициенты ────────────
         bet_side   = "home" if fav_is_t1 else "away"
         match_type = m.get("matchType", "Bo1")                   # Bo1 / Bo3 / Bo5
@@ -888,7 +892,10 @@ def main():
 
         # Общая логика ставки (переиспользуем для series и map)
         tier     = get_league_tier(m.get("leagueName"), tiers)
-        edge_min, kelly_cap = get_tier_params(tier, tiers)
+        _edge_min_tier, _kelly_cap_tier = get_tier_params(tier, tiers)
+        # V2: единый порог вместо тир-зависимого
+        edge_min  = EDGE_MIN_LIVE
+        kelly_cap = KELLY_CAP_LIVE
         notional_odds = round(1.0 / (comp_prob * AVG_OVERROUND_HIST), 3)
         league_name_key = m.get("leagueName") or ""
 
@@ -903,7 +910,7 @@ def main():
                 return None
             s_local = kelly_stake(
                 p=comp_prob, odds=bet_odds, bankroll=bankroll,
-                fraction=KELLY_FRACTION_DEFAULT, cap=kelly_cap, adaptive_mult=a_mult,
+                fraction=KELLY_FRACTION_LIVE, cap=kelly_cap, adaptive_mult=a_mult,
             )
             if s_local <= 0:
                 print(f"  [kelly=0/{label}] {t1} vs {t2} — пропуск")
@@ -925,7 +932,7 @@ def main():
 
             b_k = bet_odds - 1.0
             full_k = (b_k * comp_prob - (1 - comp_prob)) / b_k if b_k > 0 else 0
-            kf = round(min(full_k * KELLY_FRACTION_DEFAULT * a_mult, kelly_cap), 5)
+            kf = round(min(full_k * KELLY_FRACTION_LIVE * a_mult, kelly_cap), 5)
 
             print(
                 f"\n  ✓ [{label}] {t1} vs {t2}  ({league_name_key[:30]})  "
