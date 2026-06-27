@@ -33,7 +33,7 @@ sudo apt-get install -y python3 python3-pip git curl
 
 # ── 2. Python пакеты ──────────────────────────────────────
 echo "[2/8] Устанавливаем Python пакеты..."
-pip3 install playwright python-dotenv requests fastapi uvicorn -q
+pip3 install playwright python-dotenv requests fastapi uvicorn -q --break-system-packages
 
 # ── 3. Playwright Chromium ────────────────────────────────
 echo "[3/8] Устанавливаем Chromium..."
