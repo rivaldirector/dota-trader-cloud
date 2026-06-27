@@ -1,1 +1,1169 @@
-<starlette.responses.HTMLResponse object at 0x102536c70>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="600">
+<title>Dota Trader — Live Dashboard</title>
+<style>
+:root{--bg:#0f1115;--card:#171a21;--border:#2a2e38;--text:#e6e8eb;
+       --muted:#8a8f98;--pos:#3ddc84;--neg:#ff5c5c;--accent:#5b8cff;}
+*{box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      margin:0;padding:24px 32px;max-width:1200px;}
+h1{font-size:22px;margin:0 0 4px;}
+.upd{color:var(--muted);font-size:13px;margin-bottom:24px;}
+.card{background:var(--card);border:1px solid var(--border);
+       border-radius:12px;padding:20px 24px;margin-bottom:20px;}
+.card h2{font-size:13px;margin:0 0 14px;color:var(--muted);
+          text-transform:uppercase;letter-spacing:.05em;}
+.stats{display:flex;gap:24px;flex-wrap:wrap;}
+.stat .val{font-size:22px;font-weight:700;}
+.stat .lbl{font-size:11px;color:var(--muted);margin-top:2px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+th{text-align:left;color:var(--muted);font-weight:500;
+     padding:7px 10px;border-bottom:1px solid var(--border);font-size:11px;}
+td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+.pos{color:var(--pos);font-weight:600;}
+.neg{color:var(--neg);font-weight:600;}
+.muted{color:var(--muted);}
+.empty{text-align:center;color:var(--muted);padding:24px;font-size:13px;}
+small{font-size:11px;}
+.explain{margin-top:14px;border-top:1px solid var(--border);padding-top:14px;}
+.explain dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px;margin:0;}
+.explain dt{color:var(--accent);font-weight:600;white-space:nowrap;}
+.explain dd{color:var(--muted);margin:0;}
+</style>
+</head>
+<body>
+<h1>🎮 Dota Trader — Live Dashboard</h1>
+<div class="upd">Обновлено: 2026-06-27 10:55 UTC &nbsp;·&nbsp; авто-обновление каждые 10 мин</div>
+
+<!-- ══ БЛОК 1: БАНК — ЕДИНАЯ ИСТОРИЯ (BACKTEST + LIVE) ════════════════════ -->
+<div class="card">
+  <h2>💰 Банк — AUTO_ELO_FLAT &nbsp;·&nbsp; 2026-03-01 → 2026-06-26 &nbsp;·&nbsp;
+      266 settled ставок</h2>
+  <div class="stats">
+    <div class="stat"><div class="val">$2,026.39</div><div class="lbl">Текущий банк ($1 000 старт)</div></div>
+    <div class="stat"><div class="val pos">$+1026.39</div><div class="lbl">Итоговый P&amp;L</div></div>
+    <div class="stat"><div class="val pos">+5.4%</div><div class="lbl">ROI (весь период)</div></div>
+    <div class="stat"><div class="val">65.0%</div><div class="lbl">Win rate (173W/93L)</div></div>
+    <div class="stat"><div class="val">$19,145</div><div class="lbl">Всего поставлено</div></div>
+    <div class="stat"><div class="val">$2,863</div><div class="lbl">Пик банка</div></div>
+    <div class="stat"><div class="val neg">29.2%</div><div class="lbl">Макс. просадка</div></div>
+  </div>
+  <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+    <div class="stats">
+      <div class="stat"><div class="val" style="font-size:16px;color:var(--accent)">5W/5L</div><div class="lbl">Live win/loss</div></div>
+      <div class="stat"><div class="val neg" style="font-size:16px">$-51.32</div><div class="lbl">Live P&amp;L</div></div>
+      <div class="stat"><div class="val neg" style="font-size:16px">-25.7%</div><div class="lbl">Live ROI</div></div>
+      <div class="stat"><div class="val" style="font-size:16px">50.0%</div><div class="lbl">Live win rate</div></div>
+      <div style="font-size:11px;color:var(--muted);align-self:flex-end;padding-bottom:4px">
+        BT = симуляция апр-июн на исторических данных (нотион. коэффы)<br>
+        Без BT = живые ставки с реальными коэффами BetsAPI
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ БЛОК 2: НЕДЕЛЯ + СИГНАЛЫ МОДЕЛИ ═══════════════════════════════════ -->
+<div class="grid2">
+  <div class="card">
+    <h2>📅 За последние 7 дней</h2>
+    <div class="stats">
+      <div class="stat"><div class="val">22</div><div class="lbl">Ставок</div></div>
+      <div class="stat"><div class="val neg">$-199.82</div><div class="lbl">P&amp;L</div></div>
+      <div class="stat"><div class="val neg">-22.2%</div><div class="lbl">ROI</div></div>
+      <div class="stat"><div class="val">54.5%</div><div class="lbl">Win rate</div></div>
+    </div>
+    <div class="stats" style="margin-top:14px">
+      <div class="stat"><div class="val pos" style="font-size:16px">$+205.58</div><div class="lbl">Выигрыши</div></div>
+      <div class="stat"><div class="val neg" style="font-size:16px">$-405.40</div><div class="lbl">Проигрыши</div></div>
+      <div class="stat"><div class="val" style="font-size:16px">$901</div><div class="lbl">Поставлено</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>🧠 Модель: сигналы и качество</h2>
+    <div class="stats">
+      <div class="stat"><div class="val">60%</div><div class="lbl">Вес Elo</div></div>
+      <div class="stat"><div class="val">25%</div><div class="lbl">Вес формы</div></div>
+      <div class="stat"><div class="val">15%</div><div class="lbl">Вес H2H</div></div>
+      <div class="stat"><div class="val">0.2284</div><div class="lbl">Brier (live)</div></div>
+      <div class="stat"><div class="val">—</div><div class="lbl">Avg CLV</div></div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:10px">
+      Стратегия: elo 60% + form 25% + H2H 15% + fatigue adj · Kelly fraction=0.25 ·
+      edge-фильтр ≥2-5% (по тиру лиги) · дневной лимит 20% банка
+    </div>
+  </div>
+</div>
+
+<!-- ══ БЛОК 3: ГРАФИК РОСТА БАНКА ════════════════════════════════════════ -->
+<div class="card">
+  <h2>📈 Рост банка — по дням &nbsp;·&nbsp; 2026-03-01 → 2026-06-26</h2>
+  <svg viewBox="0 0 680 156" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:160px">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#3ddc84" stop-opacity="0.3"/>
+    <stop offset="100%" stop-color="#3ddc84" stop-opacity="0"/>
+  </linearGradient></defs>
+  <line x1="10" y1="124.6" x2="670" y2="124.6" stroke="#2a2e38" stroke-width="1" stroke-dasharray="4,3"/>
+  <path d="M 10.0,124.6 L 16.5,128.7 L 23.1,127.1 L 29.6,125.8 L 36.1,124.7 L 42.7,120.3 L 49.2,124.4 L 55.7,121.6 L 62.3,120.2 L 68.8,128.5 L 75.3,123.1 L 81.9,123.8 L 88.4,127.2 L 95.0,124.3 L 101.5,123.2 L 108.0,117.0 L 114.6,114.7 L 121.1,112.1 L 127.6,104.1 L 134.2,106.3 L 140.7,111.2 L 147.2,114.2 L 153.8,112.2 L 160.3,114.3 L 166.8,108.9 L 173.4,102.6 L 179.9,100.0 L 186.4,94.9 L 193.0,100.7 L 199.5,94.2 L 206.0,88.6 L 212.6,84.6 L 219.1,83.4 L 225.6,85.4 L 232.2,82.0 L 238.7,77.1 L 245.2,72.4 L 251.8,62.0 L 258.3,68.6 L 264.9,64.6 L 271.4,72.3 L 277.9,67.1 L 284.5,72.8 L 291.0,71.4 L 297.5,59.0 L 304.1,52.3 L 310.6,37.7 L 317.1,42.7 L 323.7,38.2 L 330.2,54.0 L 336.7,48.3 L 343.3,48.9 L 349.8,51.6 L 356.3,46.7 L 362.9,45.4 L 369.4,30.4 L 375.9,43.1 L 382.5,44.0 L 389.0,35.8 L 395.5,29.6 L 402.1,41.7 L 408.6,39.4 L 415.1,37.7 L 421.7,34.8 L 428.2,31.2 L 434.8,38.2 L 441.3,44.3 L 447.8,45.9 L 454.4,55.7 L 460.9,51.2 L 467.4,48.5 L 474.0,45.4 L 480.5,39.3 L 487.0,50.0 L 493.6,47.6 L 500.1,41.3 L 506.6,33.1 L 513.2,27.1 L 519.7,27.7 L 526.2,16.4 L 532.8,11.3 L 539.3,41.3 L 545.8,27.2 L 552.4,20.8 L 558.9,22.7 L 565.4,20.8 L 572.0,18.9 L 578.5,24.6 L 585.0,22.1 L 591.6,25.1 L 598.1,30.7 L 604.7,31.6 L 611.2,28.9 L 617.7,34.4 L 624.3,34.9 L 630.8,43.3 L 637.3,47.1 L 643.9,46.4 L 650.4,49.2 L 656.9,50.4 L 663.5,49.2 L 670.0,55.8 L 670.0,130 L 10,130 Z" fill="url(#g)"/>
+  <polyline points="10.0,124.6 16.5,128.7 23.1,127.1 29.6,125.8 36.1,124.7 42.7,120.3 49.2,124.4 55.7,121.6 62.3,120.2 68.8,128.5 75.3,123.1 81.9,123.8 88.4,127.2 95.0,124.3 101.5,123.2 108.0,117.0 114.6,114.7 121.1,112.1 127.6,104.1 134.2,106.3 140.7,111.2 147.2,114.2 153.8,112.2 160.3,114.3 166.8,108.9 173.4,102.6 179.9,100.0 186.4,94.9 193.0,100.7 199.5,94.2 206.0,88.6 212.6,84.6 219.1,83.4 225.6,85.4 232.2,82.0 238.7,77.1 245.2,72.4 251.8,62.0 258.3,68.6 264.9,64.6 271.4,72.3 277.9,67.1 284.5,72.8 291.0,71.4 297.5,59.0 304.1,52.3 310.6,37.7 317.1,42.7 323.7,38.2 330.2,54.0 336.7,48.3 343.3,48.9 349.8,51.6 356.3,46.7 362.9,45.4 369.4,30.4 375.9,43.1 382.5,44.0 389.0,35.8 395.5,29.6 402.1,41.7 408.6,39.4 415.1,37.7 421.7,34.8 428.2,31.2 434.8,38.2 441.3,44.3 447.8,45.9 454.4,55.7 460.9,51.2 467.4,48.5 474.0,45.4 480.5,39.3 487.0,50.0 493.6,47.6 500.1,41.3 506.6,33.1 513.2,27.1 519.7,27.7 526.2,16.4 532.8,11.3 539.3,41.3 545.8,27.2 552.4,20.8 558.9,22.7 565.4,20.8 572.0,18.9 578.5,24.6 585.0,22.1 591.6,25.1 598.1,30.7 604.7,31.6 611.2,28.9 617.7,34.4 624.3,34.9 630.8,43.3 637.3,47.1 643.9,46.4 650.4,49.2 656.9,50.4 663.5,49.2 670.0,55.8" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="10.0" cy="124.6" r="3" fill="#3ddc84"/><circle cx="16.5" cy="128.7" r="3" fill="#3ddc84"/><circle cx="23.1" cy="127.1" r="3" fill="#3ddc84"/><circle cx="29.6" cy="125.8" r="3" fill="#3ddc84"/><circle cx="36.1" cy="124.7" r="3" fill="#3ddc84"/><circle cx="42.7" cy="120.3" r="3" fill="#3ddc84"/><circle cx="49.2" cy="124.4" r="3" fill="#3ddc84"/><circle cx="55.7" cy="121.6" r="3" fill="#3ddc84"/><circle cx="62.3" cy="120.2" r="3" fill="#3ddc84"/><circle cx="68.8" cy="128.5" r="3" fill="#3ddc84"/><circle cx="75.3" cy="123.1" r="3" fill="#3ddc84"/><circle cx="81.9" cy="123.8" r="3" fill="#3ddc84"/><circle cx="88.4" cy="127.2" r="3" fill="#3ddc84"/><circle cx="95.0" cy="124.3" r="3" fill="#3ddc84"/><circle cx="101.5" cy="123.2" r="3" fill="#3ddc84"/><circle cx="108.0" cy="117.0" r="3" fill="#3ddc84"/><circle cx="114.6" cy="114.7" r="3" fill="#3ddc84"/><circle cx="121.1" cy="112.1" r="3" fill="#3ddc84"/><circle cx="127.6" cy="104.1" r="3" fill="#3ddc84"/><circle cx="134.2" cy="106.3" r="3" fill="#3ddc84"/><circle cx="140.7" cy="111.2" r="3" fill="#3ddc84"/><circle cx="147.2" cy="114.2" r="3" fill="#3ddc84"/><circle cx="153.8" cy="112.2" r="3" fill="#3ddc84"/><circle cx="160.3" cy="114.3" r="3" fill="#3ddc84"/><circle cx="166.8" cy="108.9" r="3" fill="#3ddc84"/><circle cx="173.4" cy="102.6" r="3" fill="#3ddc84"/><circle cx="179.9" cy="100.0" r="3" fill="#3ddc84"/><circle cx="186.4" cy="94.9" r="3" fill="#3ddc84"/><circle cx="193.0" cy="100.7" r="3" fill="#3ddc84"/><circle cx="199.5" cy="94.2" r="3" fill="#3ddc84"/><circle cx="206.0" cy="88.6" r="3" fill="#3ddc84"/><circle cx="212.6" cy="84.6" r="3" fill="#3ddc84"/><circle cx="219.1" cy="83.4" r="3" fill="#3ddc84"/><circle cx="225.6" cy="85.4" r="3" fill="#3ddc84"/><circle cx="232.2" cy="82.0" r="3" fill="#3ddc84"/><circle cx="238.7" cy="77.1" r="3" fill="#3ddc84"/><circle cx="245.2" cy="72.4" r="3" fill="#3ddc84"/><circle cx="251.8" cy="62.0" r="3" fill="#3ddc84"/><circle cx="258.3" cy="68.6" r="3" fill="#3ddc84"/><circle cx="264.9" cy="64.6" r="3" fill="#3ddc84"/><circle cx="271.4" cy="72.3" r="3" fill="#3ddc84"/><circle cx="277.9" cy="67.1" r="3" fill="#3ddc84"/><circle cx="284.5" cy="72.8" r="3" fill="#3ddc84"/><circle cx="291.0" cy="71.4" r="3" fill="#3ddc84"/><circle cx="297.5" cy="59.0" r="3" fill="#3ddc84"/><circle cx="304.1" cy="52.3" r="3" fill="#3ddc84"/><circle cx="310.6" cy="37.7" r="3" fill="#3ddc84"/><circle cx="317.1" cy="42.7" r="3" fill="#3ddc84"/><circle cx="323.7" cy="38.2" r="3" fill="#3ddc84"/><circle cx="330.2" cy="54.0" r="3" fill="#3ddc84"/><circle cx="336.7" cy="48.3" r="3" fill="#3ddc84"/><circle cx="343.3" cy="48.9" r="3" fill="#3ddc84"/><circle cx="349.8" cy="51.6" r="3" fill="#3ddc84"/><circle cx="356.3" cy="46.7" r="3" fill="#3ddc84"/><circle cx="362.9" cy="45.4" r="3" fill="#3ddc84"/><circle cx="369.4" cy="30.4" r="3" fill="#3ddc84"/><circle cx="375.9" cy="43.1" r="3" fill="#3ddc84"/><circle cx="382.5" cy="44.0" r="3" fill="#3ddc84"/><circle cx="389.0" cy="35.8" r="3" fill="#3ddc84"/><circle cx="395.5" cy="29.6" r="3" fill="#3ddc84"/><circle cx="402.1" cy="41.7" r="3" fill="#3ddc84"/><circle cx="408.6" cy="39.4" r="3" fill="#3ddc84"/><circle cx="415.1" cy="37.7" r="3" fill="#3ddc84"/><circle cx="421.7" cy="34.8" r="3" fill="#3ddc84"/><circle cx="428.2" cy="31.2" r="3" fill="#3ddc84"/><circle cx="434.8" cy="38.2" r="3" fill="#3ddc84"/><circle cx="441.3" cy="44.3" r="3" fill="#3ddc84"/><circle cx="447.8" cy="45.9" r="3" fill="#3ddc84"/><circle cx="454.4" cy="55.7" r="3" fill="#3ddc84"/><circle cx="460.9" cy="51.2" r="3" fill="#3ddc84"/><circle cx="467.4" cy="48.5" r="3" fill="#3ddc84"/><circle cx="474.0" cy="45.4" r="3" fill="#3ddc84"/><circle cx="480.5" cy="39.3" r="3" fill="#3ddc84"/><circle cx="487.0" cy="50.0" r="3" fill="#3ddc84"/><circle cx="493.6" cy="47.6" r="3" fill="#3ddc84"/><circle cx="500.1" cy="41.3" r="3" fill="#3ddc84"/><circle cx="506.6" cy="33.1" r="3" fill="#3ddc84"/><circle cx="513.2" cy="27.1" r="3" fill="#3ddc84"/><circle cx="519.7" cy="27.7" r="3" fill="#3ddc84"/><circle cx="526.2" cy="16.4" r="3" fill="#3ddc84"/><circle cx="532.8" cy="11.3" r="3" fill="#3ddc84"/><circle cx="539.3" cy="41.3" r="3" fill="#3ddc84"/><circle cx="545.8" cy="27.2" r="3" fill="#3ddc84"/><circle cx="552.4" cy="20.8" r="3" fill="#3ddc84"/><circle cx="558.9" cy="22.7" r="3" fill="#3ddc84"/><circle cx="565.4" cy="20.8" r="3" fill="#3ddc84"/><circle cx="572.0" cy="18.9" r="3" fill="#3ddc84"/><circle cx="578.5" cy="24.6" r="3" fill="#3ddc84"/><circle cx="585.0" cy="22.1" r="3" fill="#3ddc84"/><circle cx="591.6" cy="25.1" r="3" fill="#3ddc84"/><circle cx="598.1" cy="30.7" r="3" fill="#3ddc84"/><circle cx="604.7" cy="31.6" r="3" fill="#3ddc84"/><circle cx="611.2" cy="28.9" r="3" fill="#3ddc84"/><circle cx="617.7" cy="34.4" r="3" fill="#3ddc84"/><circle cx="624.3" cy="34.9" r="3" fill="#3ddc84"/><circle cx="630.8" cy="43.3" r="3" fill="#3ddc84"/><circle cx="637.3" cy="47.1" r="3" fill="#3ddc84"/><circle cx="643.9" cy="46.4" r="3" fill="#3ddc84"/><circle cx="650.4" cy="49.2" r="3" fill="#3ddc84"/><circle cx="656.9" cy="50.4" r="3" fill="#3ddc84"/><circle cx="663.5" cy="49.2" r="3" fill="#3ddc84"/><circle cx="670.0" cy="55.8" r="3" fill="#3ddc84"/>
+  <text x="10.0" y="144" fill="#8a8f98" font-size="9" text-anchor="middle">старт</text><text x="88.4" y="144" fill="#8a8f98" font-size="9" text-anchor="middle">03-20</text><text x="166.8" y="144" fill="#8a8f98" font-size="9" text-anchor="middle">04-06</text><text x="245.2" y="144" fill="#8a8f98" font-size="9" text-anchor="middle">04-18</text><text x="323.7" y="144" fill="#8a8f98" font-size="9" text-anchor="middle">04-30</text><text x="402.1" y="144" fill="#8a8f98" font-size="9" text-anchor="middle">05-13</text><text x="480.5" y="144" fill="#8a8f98" font-size="9" text-anchor="middle">05-26</text><text x="558.9" y="144" fill="#8a8f98" font-size="9" text-anchor="middle">06-07</text><text x="637.3" y="144" fill="#8a8f98" font-size="9" text-anchor="middle">06-21</text><text x="670.0" y="144" fill="#8a8f98" font-size="9" text-anchor="middle">06-26</text>
+  <text x="10" y="14" fill="#8a8f98" font-size="9">$2690</text>
+  <text x="10" y="130" fill="#8a8f98" font-size="9">$940</text>
+</svg>
+  <div style="font-size:11px;color:var(--muted);margin-top:8px">
+    Пунктир — стартовый банк $1 000. Каждая точка — конец дня.
+    Серые точки = историческая симуляция [BT], цветные = live ставки.
+  </div>
+</div>
+
+<!-- ══ БЛОК 4: АКТИВНЫЕ СТАВКИ + РАСПИСАНИЕ 72Ч ══════════════════════════ -->
+<div class="card">
+  <h2>⏳ Активные ставки — ближайшие 72ч</h2>
+  <p class="empty">Нет матчей в расписании или все ставки уже сделаны (пайплайн каждые 10 мин)</p>
+</div>
+
+<!-- ══ БЛОК 5: ОТЧЁТ ЗА ДЕНЬ ════════════════════════════════════════════ -->
+<div class="card">
+  <h2>📅 Отчёт за день — 27.06.2026</h2>
+  <p class="empty">Сегодня ставок ещё не было — пайплайн запускается каждые 10 мин</p>
+</div>
+
+<!-- ══ БЛОК 6: ИСТОРИЯ СТАВОК ════════════════════════════════════════════ -->
+<div class="card">
+  <h2>🎯 История ставок &nbsp;·&nbsp; 100 последних</h2>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:10px">
+    <span style="color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px;font-size:9px">BT</span>
+    = Backtest (нотион. коэффы, симуляция) &nbsp;·&nbsp; без значка = live ставка (реальные коэффы BetsAPI)
+  </div>
+  <table>
+    <thead><tr>
+      <th>Время</th><th>Матч / Турнир</th><th>Ставка / Тип рынка</th>
+      <th>Сумма @ Коэф / Edge · Prob</th><th>Итог</th><th>P&amp;L</th>
+    </tr></thead>
+    <tbody><tr>
+          <td class="muted">2026-06-26 03:19</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Mentality Monster vs Ivory</b><br>
+              <small class="muted">DOTA2 - EPL World Series</small></td>
+          <td><span style="color:var(--accent)">→ Ivory</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$98.4 <span class="muted">@ 1.76</span><br>
+              <small class="muted">edge +27.5% · p=0.724</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-98.40</td>
+        </tr><tr>
+          <td class="muted">2026-06-25 12:33</td>
+          <td><b>Virtus.pro vs TEAM VISION</b><br>
+              <small class="muted">The International · Europe</small></td>
+          <td><span style="color:var(--accent)">→ TEAM VISION</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$20.0 <span class="muted">@ 1.06</span><br>
+              <small class="muted">edge -5.2% · p=—</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-20.00</td>
+        </tr><tr>
+          <td class="muted">2026-06-25 12:33</td>
+          <td><b>Team Spirit vs Nigma Galaxy</b><br>
+              <small class="muted">The International · Europe</small></td>
+          <td><span style="color:var(--accent)">→ Team Spirit</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$20.0 <span class="muted">@ 1.62</span><br>
+              <small class="muted">edge -3.4% · p=—</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+12.46</td>
+        </tr><tr>
+          <td class="muted">2026-06-25 11:01</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Team Spirit vs Nigma Galaxy</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Team Spirit</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$39.0 <span class="muted">@ 1.62</span><br>
+              <small class="muted">edge +9.1% · p=0.671</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+24.35</td>
+        </tr><tr>
+          <td class="muted">2026-06-24 17:07</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Power Rangers vs TEAM VISION</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ TEAM VISION</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$107.2 <span class="muted">@ 1.08</span><br>
+              <small class="muted">edge +6.7% · p=0.990</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+8.34</td>
+        </tr><tr>
+          <td class="muted">2026-06-24 16:34</td>
+          <td><b>Power Rangers vs TEAM VISION</b><br>
+              <small class="muted">The International · Europe</small></td>
+          <td><span style="color:var(--accent)">→ TEAM VISION</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$20.0 <span class="muted">@ 1.08</span><br>
+              <small class="muted">edge -5.1% · p=—</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+1.60</td>
+        </tr><tr>
+          <td class="muted">2026-06-24 16:34</td>
+          <td><b>Yellow Submarine vs Virtus.pro</b><br>
+              <small class="muted">The International · Europe</small></td>
+          <td><span style="color:var(--accent)">→ Yellow Submarine</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$20.0 <span class="muted">@ 1.47</span><br>
+              <small class="muted">edge -3.7% · p=—</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-20.00</td>
+        </tr><tr>
+          <td class="muted">2026-06-24 12:30</td>
+          <td><b>Yellow Submarine vs Virtus.pro</b><br>
+              <small class="muted">The International · Europe</small></td>
+          <td><span style="color:var(--accent)">→ Yellow Submarine</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$20.0 <span class="muted">@ 1.47</span><br>
+              <small class="muted">edge -3.7% · p=—</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-20.00</td>
+        </tr><tr>
+          <td class="muted">2026-06-24 09:52</td>
+          <td><b>MOUZ vs Inner Circle x Insanity</b><br>
+              <small class="muted">The International · Europe</small></td>
+          <td><span style="color:var(--accent)">→ MOUZ</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$20.0 <span class="muted">@ 1.63</span><br>
+              <small class="muted">edge -3.4% · p=—</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+12.54</td>
+        </tr><tr>
+          <td class="muted">2026-06-23 16:44</td>
+          <td><b>Nigma Galaxy vs Natus Vincere</b><br>
+              <small class="muted">The International · Europe</small></td>
+          <td><span style="color:var(--accent)">→ Natus Vincere</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$20.0 <span class="muted">@ 1.69</span><br>
+              <small class="muted">edge -3.3% · p=—</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-20.00</td>
+        </tr><tr>
+          <td class="muted">2026-06-23 12:48</td>
+          <td><b>VP.Prodigy vs Team Bald</b><br>
+              <small class="muted">The International · Europe</small></td>
+          <td><span style="color:var(--accent)">→ Team Bald</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$20.0 <span class="muted">@ 1.62</span><br>
+              <small class="muted">edge -3.4% · p=—</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+12.32</td>
+        </tr><tr>
+          <td class="muted">2026-06-23 08:13</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>VP.Prodigy vs Team Bald</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Team Bald</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$2.2 <span class="muted">@ 1.62</span><br>
+              <small class="muted">edge +15.1% · p=0.713</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+1.35</td>
+        </tr><tr>
+          <td class="muted">2026-06-23 07:21</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>OG vs Grind Back</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ OG</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$53.1 <span class="muted">@ 1.70</span><br>
+              <small class="muted">edge +16.8% · p=0.687</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+37.24</td>
+        </tr><tr>
+          <td class="muted">2026-06-23 04:02</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>REKONIX vs Grind Back</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ REKONIX</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$73.2 <span class="muted">@ 1.85</span><br>
+              <small class="muted">edge +38.0% · p=0.747</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-73.20</td>
+        </tr><tr>
+          <td class="muted">2026-06-22 11:24</td>
+          <td><b>Virtus.pro vs Inner Circle x Insanity</b><br>
+              <small class="muted">The International · Europe</small></td>
+          <td><span style="color:var(--accent)">→ Virtus.pro</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$20.0 <span class="muted">@ 1.49</span><br>
+              <small class="muted">edge -3.7% · p=—</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+9.76</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-22 11:24</td>
+          <td><b>REKONIX vs OG</b><br>
+              <small class="muted">The International · Southeast Asia</small></td>
+          <td><span style="color:var(--accent)">→ REKONIX</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$20.0 <span class="muted">@ 1.87</span><br>
+              <small class="muted">edge -3.0% · p=—</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-20.00</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-22 02:05</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Execration vs Mentality Monster</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Execration</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$41.5 <span class="muted">@ 1.50</span><br>
+              <small class="muted">edge +12.8% · p=0.752</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+20.76</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-21 15:09</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>4ikibamboni vs Zero Tenacity</b><br>
+              <small class="muted">DOTA2 - European Pro League</small></td>
+          <td><span style="color:var(--accent)">→ Zero Tenacity</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$47.4 <span class="muted">@ 1.43</span><br>
+              <small class="muted">edge +15.5% · p=0.808</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-47.40</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-21 12:23</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Zero Tenacity vs Flame Team</b><br>
+              <small class="muted">DOTA2 - European Pro League</small></td>
+          <td><span style="color:var(--accent)">→ Zero Tenacity</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$84.9 <span class="muted">@ 1.45</span><br>
+              <small class="muted">edge +23.4% · p=0.852</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+38.09</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-21 10:18</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Enjoy vs Team Bald</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Team Bald</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$46.3 <span class="muted">@ 1.61</span><br>
+              <small class="muted">edge +17.1% · p=0.725</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-46.30</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-20 16:38</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Hive vs Flame Team</b><br>
+              <small class="muted">DOTA2 - European Pro League</small></td>
+          <td><span style="color:var(--accent)">→ Hive</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$40.1 <span class="muted">@ 1.83</span><br>
+              <small class="muted">edge +11.9% · p=0.610</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-40.10</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-20 12:50</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Zero Tenacity vs summer bear</b><br>
+              <small class="muted">DOTA2 - European Pro League</small></td>
+          <td><span style="color:var(--accent)">→ Zero Tenacity</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$67.2 <span class="muted">@ 1.40</span><br>
+              <small class="muted">edge +9.6% · p=0.784</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+26.77</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-20 10:04</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>OG vs InterActive Philippines</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ OG</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$16.4 <span class="muted">@ 1.30</span><br>
+              <small class="muted">edge +14.6% · p=0.883</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+4.90</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-20 05:36</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Mentality Monster vs Direborn</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Direborn</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$116.9 <span class="muted">@ 1.52</span><br>
+              <small class="muted">edge +25.9% · p=0.830</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-116.90</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-19 15:21</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>4ikibamboni vs Flame Team</b><br>
+              <small class="muted">DOTA2 - European Pro League</small></td>
+          <td><span style="color:var(--accent)">→ Flame Team</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$24.1 <span class="muted">@ 1.87</span><br>
+              <small class="muted">edge +3.6% · p=0.553</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-24.10</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-19 02:28</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Team Nemesis vs Amaru Gaming</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Team Nemesis</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$26.0 <span class="muted">@ 1.68</span><br>
+              <small class="muted">edge +22.0% · p=0.727</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-26.00</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-19 02:09</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Grind Back vs Mentality Monster</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Grind Back</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$117.3 <span class="muted">@ 1.36</span><br>
+              <small class="muted">edge +34.7% · p=0.990</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+42.32</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-18 18:15</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Red Hot Chili Pibble vs Team Nemesis</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Team Nemesis</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$103.0 <span class="muted">@ 1.43</span><br>
+              <small class="muted">edge +15.2% · p=0.808</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+43.81</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-18 15:06</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Zero Tenacity vs Flame Team</b><br>
+              <small class="muted">DOTA2 - European Pro League</small></td>
+          <td><span style="color:var(--accent)">→ Zero Tenacity</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$147.0 <span class="muted">@ 1.39</span><br>
+              <small class="muted">edge +23.1% · p=0.888</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-147.00</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-18 06:11</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Team Resilience vs Yakult Brothers</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Team Resilience</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$23.8 <span class="muted">@ 1.87</span><br>
+              <small class="muted">edge +6.8% · p=0.571</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+20.75</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-17 20:43</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Team Nemesis vs PlayTime</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ PlayTime</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$119.4 <span class="muted">@ 1.34</span><br>
+              <small class="muted">edge +9.7% · p=0.821</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+40.14</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-16 20:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>LGD Gaming vs Lindorfitos</b><br>
+              <small class="muted">DOTA2 - TI Quals SA</small></td>
+          <td><span style="color:var(--accent)">→ LGD Gaming</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$142.8 <span class="muted">@ 1.06</span><br>
+              <small class="muted">edge +4.5% · p=0.990</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+8.01</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-16 09:51</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Team Refuser vs Team Resilience</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Team Resilience</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$22.6 <span class="muted">@ 1.47</span><br>
+              <small class="muted">edge +23.7% · p=0.841</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+10.66</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-16 04:01</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Roar Gaming vs Cloud Rising</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Roar Gaming</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$119.6 <span class="muted">@ 1.79</span><br>
+              <small class="muted">edge +7.6% · p=0.600</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-119.60</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-16 03:20</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Mentality Monster vs InterActive Philippines</b><br>
+              <small class="muted">DOTA2 - EPL World Series</small></td>
+          <td><span style="color:var(--accent)">→ InterActive Philippines</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$106.2 <span class="muted">@ 1.83</span><br>
+              <small class="muted">edge +14.6% · p=0.628</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+87.74</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-15 12:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>summer bear vs Hive</b><br>
+              <small class="muted">DOTA2 - European Pro League</small></td>
+          <td><span style="color:var(--accent)">→ Hive</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$153.3 <span class="muted">@ 1.67</span><br>
+              <small class="muted">edge +15.7% · p=0.694</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-153.30</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-15 11:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Vici Gaming vs Grey Track</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Vici Gaming</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$1.3 <span class="muted">@ 1.61</span><br>
+              <small class="muted">edge +16.4% · p=0.725</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+0.79</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-15 09:01</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Yakult Brothers vs Game Master</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Yakult Brothers</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$27.6 <span class="muted">@ 1.82</span><br>
+              <small class="muted">edge +24.8% · p=0.685</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+22.68</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-15 06:37</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Team Resilience vs Cloud Rising</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Team Resilience</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$124.3 <span class="muted">@ 1.37</span><br>
+              <small class="muted">edge +10.8% · p=0.810</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+45.72</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-14 15:15</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>4ikibamboni vs Power Rangers</b><br>
+              <small class="muted">DOTA2 - European Pro League</small></td>
+          <td><span style="color:var(--accent)">→ Power Rangers</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$158.7 <span class="muted">@ 1.24</span><br>
+              <small class="muted">edge +10.5% · p=0.891</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-158.70</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-14 10:16</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Mentality Monster vs Direborn</b><br>
+              <small class="muted">DOTA2 - EPL World Series</small></td>
+          <td><span style="color:var(--accent)">→ Direborn</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$151.8 <span class="muted">@ 1.76</span><br>
+              <small class="muted">edge +21.3% · p=0.690</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+114.87</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-13 09:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Nande+4 vs Noir Esports</b><br>
+              <small class="muted">DOTA2 - European Pro League</small></td>
+          <td><span style="color:var(--accent)">→ Noir Esports</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$145.3 <span class="muted">@ 1.74</span><br>
+              <small class="muted">edge +11.9% · p=0.643</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+107.42</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-13 03:45</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Mit Esports vs  GG Boom</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Mit Esports</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$96.9 <span class="muted">@ 1.73</span><br>
+              <small class="muted">edge +11.8% · p=0.646</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-96.90</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-13 00:45</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Selva Esports vs Estar Backs</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Estar Backs</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$54.2 <span class="muted">@ 1.50</span><br>
+              <small class="muted">edge +2.9% · p=0.686</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+27.13</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-12 13:17</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>MODUS vs 1p2m</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ 1p2m</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$1.7 <span class="muted">@ 1.64</span><br>
+              <small class="muted">edge +2.7% · p=0.626</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-1.70</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-12 13:17</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>summer bear vs Team Bald</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Team Bald</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$35.8 <span class="muted">@ 1.81</span><br>
+              <small class="muted">edge +21.6% · p=0.673</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+28.82</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-12 09:14</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Direborn vs Tekla</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Tekla</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$44.4 <span class="muted">@ 1.83</span><br>
+              <small class="muted">edge +11.8% · p=0.611</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-44.40</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-12 09:12</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>InterActive Philippines vs Seize the day</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Seize the day</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$26.8 <span class="muted">@ 1.68</span><br>
+              <small class="muted">edge +2.9% · p=0.611</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-26.80</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-12 06:02</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Game Master vs Grey Track</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Grey Track</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$40.9 <span class="muted">@ 1.88</span><br>
+              <small class="muted">edge +3.7% · p=0.552</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-40.90</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-11 07:15</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>the bug vs Phenomenon</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Phenomenon</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$46.5 <span class="muted">@ 1.46</span><br>
+              <small class="muted">edge +11.9% · p=0.766</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-46.50</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-11 03:40</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Team Nemesis vs Lindorfitos</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Team Nemesis</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$110.9 <span class="muted">@ 1.67</span><br>
+              <small class="muted">edge +7.8% · p=0.644</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+74.81</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-10 12:01</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Carstensz vs Grind Back</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Grind Back</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$28.6 <span class="muted">@ 1.78</span><br>
+              <small class="muted">edge +28.7% · p=0.723</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-28.60</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-10 09:05</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Grind Back vs Direborn</b><br>
+              <small class="muted">DOTA2 - The International</small></td>
+          <td><span style="color:var(--accent)">→ Grind Back</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$126.0 <span class="muted">@ 1.45</span><br>
+              <small class="muted">edge +6.3% · p=0.736</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+56.13</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-07 17:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Ramzes Club vs VooDooSh Club</b><br>
+              <small class="muted">DOTA2 - Winline Star Series</small></td>
+          <td><span style="color:var(--accent)">→ Ramzes Club</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$143.7 <span class="muted">@ 1.87</span><br>
+              <small class="muted">edge +34.0% · p=0.716</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+125.22</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-07 09:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>BB Team vs LGD Gaming</b><br>
+              <small class="muted">DOTA2 - BLAST Slam</small></td>
+          <td><span style="color:var(--accent)">→ BB Team</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$152.9 <span class="muted">@ 1.64</span><br>
+              <small class="muted">edge +55.6% · p=0.948</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-152.90</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-06 18:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>4ikibabmoni vs Ilbirs</b><br>
+              <small class="muted">DOTA2 - European Pro League</small></td>
+          <td><span style="color:var(--accent)">→ 4ikibabmoni</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$5.4 <span class="muted">@ 1.51</span><br>
+              <small class="muted">edge +9.6% · p=0.724</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+2.77</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-06 14:30</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Aurora vs LGD Gaming</b><br>
+              <small class="muted">DOTA2 - BLAST Slam</small></td>
+          <td><span style="color:var(--accent)">→ Aurora</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$130.7 <span class="muted">@ 1.54</span><br>
+              <small class="muted">edge +5.2% · p=0.685</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-130.70</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-06 09:40</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Rostik999 Club vs VooDooSh Club</b><br>
+              <small class="muted">DOTA2 - Winline Star Series</small></td>
+          <td><span style="color:var(--accent)">→ Rostik999 Club</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$8.0 <span class="muted">@ 1.88</span><br>
+              <small class="muted">edge +4.9% · p=0.558</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-8.00</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-06 09:35</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Ramzes Club vs TPaBoMaH Club</b><br>
+              <small class="muted">DOTA2 - Winline Star Series</small></td>
+          <td><span style="color:var(--accent)">→ Ramzes Club</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$153.1 <span class="muted">@ 1.87</span><br>
+              <small class="muted">edge +13.0% · p=0.606</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+132.57</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-06 09:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>G-Time vs summer bear</b><br>
+              <small class="muted">DOTA2 - European Pro League</small></td>
+          <td><span style="color:var(--accent)">→ summer bear</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$147.3 <span class="muted">@ 1.66</span><br>
+              <small class="muted">edge +19.4% · p=0.718</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+97.76</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-05 09:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>BB Team vs Team Falcons</b><br>
+              <small class="muted">DOTA2 - BLAST Slam</small></td>
+          <td><span style="color:var(--accent)">→ BB Team</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$134.6 <span class="muted">@ 1.87</span><br>
+              <small class="muted">edge +30.0% · p=0.695</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+117.25</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-05 09:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Balu Team vs Hive</b><br>
+              <small class="muted">DOTA2 - European Pro League</small></td>
+          <td><span style="color:var(--accent)">→ Hive</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$141.6 <span class="muted">@ 1.66</span><br>
+              <small class="muted">edge +11.1% · p=0.668</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+94.04</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-04 14:59</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>G-Time vs Balu Team</b><br>
+              <small class="muted">DOTA2 - European Pro League</small></td>
+          <td><span style="color:var(--accent)">→ G-Time</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$143.2 <span class="muted">@ 1.52</span><br>
+              <small class="muted">edge +9.7% · p=0.722</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-143.20</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-04 12:45</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Rostikfacekid Club vs TPaBoMaH Club</b><br>
+              <small class="muted">DOTA2 - Winline Star Series</small></td>
+          <td><span style="color:var(--accent)">→ Rostikfacekid Club</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$142.6 <span class="muted">@ 1.86</span><br>
+              <small class="muted">edge +9.7% · p=0.590</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-142.60</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-04 04:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Grind Back vs Carstensz</b><br>
+              <small class="muted">DOTA2 - Esports World Cup</small></td>
+          <td><span style="color:var(--accent)">→ Grind Back</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$161.4 <span class="muted">@ 1.59</span><br>
+              <small class="muted">edge +10.2% · p=0.692</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-161.40</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-03 21:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Estar_Backs vs Nemesis</b><br>
+              <small class="muted">DOTA2 - EWC Quals SA</small></td>
+          <td><span style="color:var(--accent)">→ Estar_Backs</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$1.5 <span class="muted">@ 1.70</span><br>
+              <small class="muted">edge +8.4% · p=0.636</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-1.50</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-03 12:39</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>by Owl Club vs VooDooSh Club</b><br>
+              <small class="muted">DOTA2 - Winline Star Series</small></td>
+          <td><span style="color:var(--accent)">→ by Owl Club</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$171.8 <span class="muted">@ 1.87</span><br>
+              <small class="muted">edge +13.0% · p=0.603</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-171.80</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-03 01:11</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Red Hot Chili Pibble vs Team Nemesis</b><br>
+              <small class="muted">DOTA2 - Esports World Cup</small></td>
+          <td><span style="color:var(--accent)">→ Team Nemesis</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$163.3 <span class="muted">@ 1.87</span><br>
+              <small class="muted">edge +12.9% · p=0.603</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+142.56</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-03 01:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Estar_Backs vs Hokori</b><br>
+              <small class="muted">DOTA2 - EWC Quals SA</small></td>
+          <td><span style="color:var(--accent)">→ Estar_Backs</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$92.5 <span class="muted">@ 1.59</span><br>
+              <small class="muted">edge +5.2% · p=0.663</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+54.34</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-03 01:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Nemesis vs Red Hot Chili Pibble</b><br>
+              <small class="muted">DOTA2 - EWC Quals SA</small></td>
+          <td><span style="color:var(--accent)">→ Nemesis</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$67.5 <span class="muted">@ 1.76</span><br>
+              <small class="muted">edge +3.9% · p=0.591</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+51.29</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-02 10:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>LGD Gaming vs Natus Vincere</b><br>
+              <small class="muted">DOTA2 - Esports World Cup</small></td>
+          <td><span style="color:var(--accent)">→ Natus Vincere</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$4.7 <span class="muted">@ 1.58</span><br>
+              <small class="muted">edge +56.8% · p=0.990</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-4.70</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-02 09:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Two Move vs MODUS</b><br>
+              <small class="muted">DOTA2 - Esports World Cup</small></td>
+          <td><span style="color:var(--accent)">→ Two Move</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$152.5 <span class="muted">@ 1.52</span><br>
+              <small class="muted">edge +6.5% · p=0.702</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+78.90</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-02 09:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>2Move vs MODUS</b><br>
+              <small class="muted">DOTA2 - EWC Quals EU East</small></td>
+          <td><span style="color:var(--accent)">→ 2Move</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$146.7 <span class="muted">@ 1.65</span><br>
+              <small class="muted">edge +9.0% · p=0.661</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+95.31</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-01 17:08</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Inner Circle x Insanity vs Team G</b><br>
+              <small class="muted">DOTA2 - Esports World Cup</small></td>
+          <td><span style="color:var(--accent)">→ Inner Circle x Insanity</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$22.6 <span class="muted">@ 1.71</span><br>
+              <small class="muted">edge +11.9% · p=0.653</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+16.14</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-01 17:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Enjoy vs Rune Eaters</b><br>
+              <small class="muted">DOTA2 - EWC Quals EU East</small></td>
+          <td><span style="color:var(--accent)">→ Rune Eaters</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$14.9 <span class="muted">@ 1.86</span><br>
+              <small class="muted">edge +3.3% · p=0.555</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-14.90</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-01 11:38</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Ramzes Club vs TPaBoMaH Club</b><br>
+              <small class="muted">DOTA2 - Winline Star Series</small></td>
+          <td><span style="color:var(--accent)">→ TPaBoMaH Club</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$156.0 <span class="muted">@ 1.67</span><br>
+              <small class="muted">edge +10.7% · p=0.662</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-156.00</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-01 09:01</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Enjoy vs Two Move</b><br>
+              <small class="muted">DOTA2 - Esports World Cup</small></td>
+          <td><span style="color:var(--accent)">→ Two Move</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$123.2 <span class="muted">@ 1.50</span><br>
+              <small class="muted">edge +4.9% · p=0.698</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+62.01</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-06-01 09:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Enjoy vs 2Move</b><br>
+              <small class="muted">DOTA2 - EWC Quals EU East</small></td>
+          <td><span style="color:var(--accent)">→ 2Move</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$131.8 <span class="muted">@ 1.64</span><br>
+              <small class="muted">edge +6.9% · p=0.652</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+84.14</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-31 21:21</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Rostik999 Club vs VooDooSh Club</b><br>
+              <small class="muted">DOTA2 - Winline Star Series</small></td>
+          <td><span style="color:var(--accent)">→ VooDooSh Club</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$5.7 <span class="muted">@ 1.66</span><br>
+              <small class="muted">edge +27.0% · p=0.764</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-5.70</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-31 11:03</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>NS Club vs TPaBoMaH Club</b><br>
+              <small class="muted">DOTA2 - Winline Star Series</small></td>
+          <td><span style="color:var(--accent)">→ TPaBoMaH Club</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$141.9 <span class="muted">@ 1.66</span><br>
+              <small class="muted">edge +27.2% · p=0.764</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+94.32</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-30 14:18</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Team Spirit vs Team Yandex</b><br>
+              <small class="muted">DOTA2 - BLAST Slam</small></td>
+          <td><span style="color:var(--accent)">→ Team Yandex</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$7.0 <span class="muted">@ 1.72</span><br>
+              <small class="muted">edge +22.6% · p=0.712</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+5.05</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-30 14:09</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Team Yandex vs Team Spirit</b><br>
+              <small class="muted">DOTA2 - BLAST Slam</small></td>
+          <td><span style="color:var(--accent)">→ Team Yandex</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$134.6 <span class="muted">@ 1.88</span><br>
+              <small class="muted">edge +29.0% · p=0.687</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+118.10</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-29 15:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>BB Team vs GLYPH</b><br>
+              <small class="muted">DOTA2 - BLAST Slam</small></td>
+          <td><span style="color:var(--accent)">→ BB Team</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$5.5 <span class="muted">@ 1.15</span><br>
+              <small class="muted">edge +7.2% · p=0.928</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+0.85</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-29 14:31</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Stray Club vs VooDooSh Club</b><br>
+              <small class="muted">DOTA2 - Winline Star Series</small></td>
+          <td><span style="color:var(--accent)">→ VooDooSh Club</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$47.9 <span class="muted">@ 1.80</span><br>
+              <small class="muted">edge +3.5% · p=0.574</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+38.45</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-29 08:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Tundra Esports vs BB Team</b><br>
+              <small class="muted">DOTA2 - BLAST Slam</small></td>
+          <td><span style="color:var(--accent)">→ BB Team</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$129.0 <span class="muted">@ 1.42</span><br>
+              <small class="muted">edge +17.3% · p=0.828</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+53.79</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-28 10:20</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Aurora vs Team Liquid</b><br>
+              <small class="muted">DOTA2 - BLAST Slam</small></td>
+          <td><span style="color:var(--accent)">→ Team Liquid</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$2.3 <span class="muted">@ 1.63</span><br>
+              <small class="muted">edge +42.2% · p=0.870</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-2.30</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-28 09:10</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Team Yandex vs Tundra Esports</b><br>
+              <small class="muted">DOTA2 - BLAST Slam</small></td>
+          <td><span style="color:var(--accent)">→ Team Yandex</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$126.8 <span class="muted">@ 1.31</span><br>
+              <small class="muted">edge +14.9% · p=0.880</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+38.75</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-27 15:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Team Falcons vs Team Yandex</b><br>
+              <small class="muted">DOTA2 - BLAST Slam</small></td>
+          <td><span style="color:var(--accent)">→ Team Yandex</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$134.9 <span class="muted">@ 1.88</span><br>
+              <small class="muted">edge +55.7% · p=0.830</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-134.90</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-27 11:16</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>NS Club vs by Owl Club</b><br>
+              <small class="muted">DOTA2 - Winline Star Series</small></td>
+          <td><span style="color:var(--accent)">→ NS Club</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$24.7 <span class="muted">@ 1.81</span><br>
+              <small class="muted">edge +3.5% · p=0.573</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-24.70</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-26 11:30</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>GLYPH vs LGD Gaming</b><br>
+              <small class="muted">DOTA2 - BLAST Slam</small></td>
+          <td><span style="color:var(--accent)">→ GLYPH</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$5.3 <span class="muted">@ 1.58</span><br>
+              <small class="muted">edge +5.3% · p=0.666</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-5.30</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-26 10:20</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Team Spirit vs Team Yandex</b><br>
+              <small class="muted">DOTA2 - BLAST Slam</small></td>
+          <td><span style="color:var(--accent)">→ Team Yandex</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$119.6 <span class="muted">@ 1.73</span><br>
+              <small class="muted">edge +41.4% · p=0.818</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+87.10</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-26 09:08</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>BetBoom Team vs LGD Gaming</b><br>
+              <small class="muted">DOTA2 - BLAST Slam</small></td>
+          <td><span style="color:var(--accent)">→ LGD Gaming</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$11.8 <span class="muted">@ 1.73</span><br>
+              <small class="muted">edge +3.1% · p=0.597</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+8.57</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-24 14:12</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>PARIVISION vs Aurora</b><br>
+              <small class="muted">DOTA2 - DreamLeague</small></td>
+          <td><span style="color:var(--accent)">→ PARIVISION</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$29.2 <span class="muted">@ 1.48</span><br>
+              <small class="muted">edge +17.8% · p=0.797</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+13.96</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-24 13:54</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>PARIVISION vs Aurora</b><br>
+              <small class="muted">DOTA2 - DreamLeague</small></td>
+          <td><span style="color:var(--accent)">→ PARIVISION</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$100.9 <span class="muted">@ 1.56</span><br>
+              <small class="muted">edge +21.5% · p=0.778</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+56.67</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-24 04:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Savage Wolves vs Pandawa Lima</b><br>
+              <small class="muted">DOTA2</small></td>
+          <td><span style="color:var(--accent)">→ Savage Wolves</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$24.2 <span class="muted">@ 1.54</span><br>
+              <small class="muted">edge +4.9% · p=0.682</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-24.20</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-23 17:30</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Recrent Team vs by Owl Team</b><br>
+              <small class="muted">DOTA2 - BetBoom Streamers Battle</small></td>
+          <td><span style="color:var(--accent)">→ Recrent Team</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$30.3 <span class="muted">@ 1.87</span><br>
+              <small class="muted">edge +10.1% · p=0.587</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+26.48</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-23 10:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Team Falcons vs PlayTime</b><br>
+              <small class="muted">DOTA2 - DreamLeague</small></td>
+          <td><span style="color:var(--accent)">→ Team Falcons</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$1.4 <span class="muted">@ 1.18</span><br>
+              <small class="muted">edge +16.6% · p=0.990</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+0.25</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-23 09:56</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Team Falcons vs PlayTime</b><br>
+              <small class="muted">DOTA2 - DreamLeague</small></td>
+          <td><span style="color:var(--accent)">→ Team Falcons</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$125.1 <span class="muted">@ 1.20</span><br>
+              <small class="muted">edge +18.5% · p=0.990</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+24.63</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-23 07:00</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>D Family vs Savage Wolves</b><br>
+              <small class="muted">DOTA2</small></td>
+          <td><span style="color:var(--accent)">→ D Family</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$10.8 <span class="muted">@ 1.87</span><br>
+              <small class="muted">edge +3.6% · p=0.553</small></td>
+          <td><span class="neg">✗ LOSS</span></td>
+          <td class="neg">$-10.80</td>
+        </tr><tr class="hist-extra" style="display:none">
+          <td class="muted">2026-05-22 19:06</td>
+          <td><span style="font-size:9px;color:#5b8cff;border:1px solid #5b8cff;border-radius:3px;padding:0 3px">BT</span> <b>Aurora vs Tundra Esports</b><br>
+              <small class="muted">DOTA2 - DreamLeague</small></td>
+          <td><span style="color:var(--accent)">→ Aurora</span><br>
+              <small class="muted">💰 Монейлайн</small></td>
+          <td>$4.8 <span class="muted">@ 1.55</span><br>
+              <small class="muted">edge +50.0% · p=0.966</small></td>
+          <td><span class="pos">✓ WIN</span></td>
+          <td class="pos">$+2.65</td>
+        </tr></tbody>
+  </table>
+  <div style="text-align:center;margin-top:12px">
+  <button onclick="toggleHist(this)" style="background:var(--card);border:1px solid var(--border);
+    color:var(--muted);padding:8px 20px;border-radius:8px;cursor:pointer;font-size:13px">
+    Показать все 100 ставок ▼
+  </button>
+</div>
+</div>
+
+<script>
+function toggleHist(btn) {
+  var rows = document.querySelectorAll('.hist-extra');
+  var hidden = rows[0] && rows[0].style.display === 'none';
+  rows.forEach(function(r){ r.style.display = hidden ? '' : 'none'; });
+  btn.textContent = hidden ? 'Скрыть ▲' : 'Показать все 100 ставок ▼';
+}
+</script>
+</body>
+</html>
