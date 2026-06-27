@@ -839,7 +839,21 @@ def main():
         # V2: пропускаем если composite_prob ниже порога уверенности
         if comp_prob < COMP_MIN_LIVE:
             skipped_no_edge += 1
+            _reason = f"comp_prob {comp_prob:.0%} < {COMP_MIN_LIVE:.0%}"
             print(f"  [comp_prob мал] {t1} vs {t2}  prob={comp_prob:.2%} < {COMP_MIN_LIVE:.0%} — пропуск")
+            rows.append({
+                "run_ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "strategy_name": STRATEGY_NAME, "event_id": eid, "division": DIVISION,
+                "league": m.get("leagueName"), "home_team": t1, "away_team": t2,
+                "start_time": start_ts, "bookmaker": "SKIP", "bet_team": "home" if fav_is_t1 else "away",
+                "odds": None, "market_prob": None, "model_prob": round(elo_prob_fav, 4),
+                "composite_prob": comp_prob, "edge": None, "stake_usd": 0.0, "settled": False,
+                "real_odds": None, "real_bookmaker": None,
+                "form_score": round(form_fav, 4) if form_fav is not None else None,
+                "h2h_score": round(h2h_fav, 4) if h2h_fav is not None else None,
+                "kelly_f": None, "league_tier": get_league_tier(m.get("leagueName"), tiers),
+                "bet_market": "moneyline", "skip_reason": _reason,
+            })
             continue
 
         # ── Слой 2: Определяем тип матча и получаем коэффициенты ────────────
@@ -887,6 +901,7 @@ def main():
                 "kelly_f":        None,
                 "league_tier":    get_league_tier(m.get("leagueName"), tiers),
                 "bet_market":     "series" if is_series else "moneyline",
+                "skip_reason":    "нет коэффов BetsAPI",
             })
             continue
 
@@ -899,6 +914,25 @@ def main():
         notional_odds = round(1.0 / (comp_prob * AVG_OVERROUND_HIST), 3)
         league_name_key = m.get("leagueName") or ""
 
+        def _skip_row(reason: str, bet_odds_: float | None = None, bet_mkt_: str = "moneyline") -> None:
+            """Логирует пропущенный матч в rows с причиной."""
+            edge_ = round(comp_prob * bet_odds_ - 1, 4) if bet_odds_ else None
+            rows.append({
+                "run_ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "strategy_name": STRATEGY_NAME, "event_id": eid, "division": DIVISION,
+                "league": m.get("leagueName"), "home_team": t1, "away_team": t2,
+                "start_time": start_ts, "bookmaker": "SKIP",
+                "bet_team": bet_side,
+                "odds": notional_odds, "market_prob": None,
+                "model_prob": round(elo_prob_fav, 4), "composite_prob": comp_prob,
+                "edge": edge_, "stake_usd": 0.0, "settled": False,
+                "real_odds": bet_odds_, "real_bookmaker": None,
+                "form_score": round(form_fav, 4) if form_fav is not None else None,
+                "h2h_score": round(h2h_fav, 4) if h2h_fav is not None else None,
+                "kelly_f": None, "league_tier": tier, "bet_market": bet_mkt_,
+                "skip_reason": reason,
+            })
+
         def _try_place_bet(bet_eid: str, bet_odds: float, bet_bm: str,
                            bet_mkt: str, label: str) -> float | None:
             """Проверяет edge/Kelly/лимиты и добавляет строку в rows.
@@ -907,6 +941,7 @@ def main():
             real_edge_local = round(comp_prob * bet_odds - 1, 4)
             if real_edge_local < edge_min:
                 print(f"  [edge мал/{label}] {t1} vs {t2}  edge={real_edge_local:+.1%} — пропуск")
+                _skip_row(f"edge {real_edge_local:+.1%} < {edge_min:.0%}", bet_odds, bet_mkt)
                 return None
             s_local = kelly_stake(
                 p=comp_prob, odds=bet_odds, bankroll=bankroll,
@@ -914,9 +949,11 @@ def main():
             )
             if s_local <= 0:
                 print(f"  [kelly=0/{label}] {t1} vs {t2} — пропуск")
+                _skip_row("kelly=0", bet_odds, bet_mkt)
                 return None
             if team_bets_today[fav_team] >= 2:
                 print(f"  [корреляция/{label}] {fav_team} уже {team_bets_today[fav_team]}× — пропуск")
+                _skip_row(f"корреляция: {fav_team} ×{team_bets_today[fav_team]}", bet_odds, bet_mkt)
                 return None
             budget_used = league_staked_today[league_name_key]
             budget_max  = daily_cap_usd * 0.30
@@ -924,10 +961,12 @@ def main():
                 remaining = max(0.0, budget_max - budget_used)
                 if remaining < 1.0:
                     print(f"  [турнир лимит/{label}] лимит 30% исчерпан")
+                    _skip_row("лимит турнира 30%", bet_odds, bet_mkt)
                     return None
                 s_local = round(remaining, 1)
             if today_staked + s_local > daily_cap_usd:
                 print(f"  [дневной лимит/{label}] лимит ${daily_cap_usd:.0f} исчерпан")
+                _skip_row(f"дневной лимит ${daily_cap_usd:.0f}", bet_odds, bet_mkt)
                 return None
 
             b_k = bet_odds - 1.0
@@ -969,6 +1008,7 @@ def main():
                 "kelly_f":        kf,
                 "league_tier":    tier,
                 "bet_market":     bet_mkt,
+                "skip_reason":    None,
             })
             return s_local
 

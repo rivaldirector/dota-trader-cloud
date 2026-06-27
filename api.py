@@ -442,6 +442,18 @@ def dashboard():
         "outcome,pnl,settled,start_time,league,bet_market,edge,composite_prob"
         "&order=run_ts.desc&limit=30"
     )
+    # ── Пропущенные матчи за сегодня (все оценённые но не поставленные) ──────
+    today_skipped = sb_safe(
+        "elo_paper_bets"
+        "?strategy_name=eq.AUTO_ELO_FLAT"
+        "&or=(division.eq.FREE,division.is.null)"
+        "&stake_usd=eq.0"
+        f"&run_ts=gte.{today_start_str}"
+        "&skip_reason=not.is.null"
+        "&select=run_ts,home_team,away_team,bet_team,start_time,league,"
+        "composite_prob,edge,real_odds,skip_reason,bet_market"
+        "&order=start_time.asc&limit=50"
+    )
     today_staked    = sum(float(b.get("stake_usd") or 0) for b in today_bets)
     today_pnl       = round(sum(float(b.get("pnl") or 0) for b in today_bets if b.get("settled")), 2)
     today_settled_n = sum(1 for b in today_bets if b.get("settled"))
@@ -604,6 +616,7 @@ def dashboard():
     today_wins    = sum(1 for b in today_bets if b.get("outcome") == "win")
     today_losses  = sum(1 for b in today_bets if b.get("outcome") == "loss")
     today_pending = sum(1 for b in today_bets if not b.get("settled"))
+    now_ts        = now_utc.timestamp()
 
     if today_bets:
         td_rows = ""
@@ -622,8 +635,12 @@ def dashboard():
             mkt   = _market_label(b.get("bet_market"))
             edg   = f"{float(b['edge'])*100:+.1f}%" if b.get("edge") is not None else "—"
             cpb   = ff(b.get("composite_prob"), 3) if b.get("composite_prob") else "—"
+            # in-play flag
+            st_ts = b.get("start_time")
+            inplay = st_ts and float(st_ts) < now_ts
+            ip_badge = ' <span style="background:#ff5c5c;color:#fff;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">LIVE</span>' if inplay else ""
             td_rows += f"""<tr>
-              <td class="muted">{start} UTC</td>
+              <td class="muted">{start} UTC{ip_badge}</td>
               <td><b>{home} vs {away}</b><br><small class="muted">{clean_league(b.get("league",""))}</small></td>
               <td><span style="color:var(--accent);font-weight:600">→ {fav}</span><br><small class="muted">{mkt}</small></td>
               <td><b>${stake}</b> <span class="muted">@ {odds}</span><br>
@@ -652,6 +669,39 @@ def dashboard():
   <h2>📅 Отчёт за день — {now_utc.strftime("%d.%m.%Y")}</h2>
   <p class="empty">Сегодня ставок ещё не было — пайплайн запускается каждые 10 мин</p>
 </div>"""
+
+    # ── Пропущенные матчи HTML ────────────────────────────────────────────────
+    if today_skipped:
+        sk_rows = ""
+        for b in today_skipped:
+            home   = b.get("home_team", "?")
+            away   = b.get("away_team", "?")
+            side   = b.get("bet_team", "home")
+            fav    = home if side == "home" else away
+            start  = fmt_ts(b.get("start_time")) if b.get("start_time") else "—"
+            st_ts  = b.get("start_time")
+            inplay = st_ts and float(st_ts) < now_ts
+            ip_badge = ' <span style="background:#ff5c5c;color:#fff;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">LIVE</span>' if inplay else ""
+            cpb    = f"{float(b['composite_prob']):.0%}" if b.get("composite_prob") else "—"
+            edg    = f"{float(b['edge'])*100:+.1f}%" if b.get("edge") is not None else "—"
+            ro     = ff(b.get("real_odds"), 2) if b.get("real_odds") else "нет"
+            reason = b.get("skip_reason") or "—"
+            sk_rows += f"""<tr>
+              <td class="muted">{start} UTC{ip_badge}</td>
+              <td><b>{home} vs {away}</b><br><small class="muted">{clean_league(b.get("league",""))}</small></td>
+              <td style="color:var(--accent)">{fav}</td>
+              <td><small>p={cpb} · edge {edg} · odds {ro}</small></td>
+              <td><span style="color:var(--neg);font-size:12px">✗ {reason}</span></td>
+            </tr>"""
+        skipped_html = f"""<div class="card">
+  <h2>🔍 Пропущенные матчи сегодня — {len(today_skipped)} оценено, не поставлено</h2>
+  <table><thead><tr>
+    <th>Начало UTC</th><th>Матч / Турнир</th><th>Фаворит (Elo)</th>
+    <th>Сигнал</th><th>Причина пропуска</th>
+  </tr></thead><tbody>{sk_rows}</tbody></table>
+</div>"""
+    else:
+        skipped_html = ""
 
     # ── Active bets + 72h schedule HTML ──────────────────────────────────────
     ab_rows = ""
@@ -889,6 +939,9 @@ small{{font-size:11px;}}
 
 <!-- ══ БЛОК 5: ОТЧЁТ ЗА ДЕНЬ ════════════════════════════════════════════ -->
 {today_html}
+
+<!-- ══ БЛОК 5б: ПРОПУЩЕННЫЕ МАТЧИ ══════════════════════════════════════ -->
+{skipped_html}
 
 <!-- ══ БЛОК 6: ИСТОРИЯ СТАВОК ════════════════════════════════════════════ -->
 <div class="card">
