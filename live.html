@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Dota Trader — Live Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root { --bg:#0f1115;--card:#171a21;--border:#2a2e38;--text:#e6e8eb;--muted:#8a8f98;--pos:#3ddc84;--neg:#ff5c5c;--accent:#5b8cff;--warn:#f5a623; }
+  *{box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;padding:24px 32px;}
+  h1{font-size:22px;margin:0 0 4px;}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:28px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .sub span{color:var(--text);}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:20px;}
+  .card h2{font-size:13px;margin:0 0 16px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;color:var(--muted);font-weight:500;padding:7px 10px;border-bottom:1px solid var(--border);font-size:12px;}
+  td{padding:8px 10px;border-bottom:1px solid var(--border);}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:rgba(255,255,255,.03);}
+  .pos{color:var(--pos);font-weight:600;}.neg{color:var(--neg);font-weight:600;}
+  .acc{color:var(--accent);}.mut{color:var(--muted);}.warn{color:var(--warn);}
+  .empty{text-align:center;color:var(--muted);padding:24px;}
+  .stats{display:flex;gap:28px;flex-wrap:wrap;}
+  .stat .val{font-size:26px;font-weight:700;}.stat .lbl{font-size:11px;color:var(--muted);margin-top:3px;}
+  .badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;}
+  .badge.W{background:rgba(61,220,132,.15);color:var(--pos);}
+  .badge.L{background:rgba(255,92,92,.15);color:var(--neg);}
+  .badge.open{background:rgba(91,140,255,.15);color:var(--accent);}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media(max-width:900px){.row2{grid-template-columns:1fr;}}
+  canvas{max-height:220px;}
+  .rbtn{background:none;border:1px solid var(--border);color:var(--muted);padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px;}
+  .rbtn:hover{border-color:var(--accent);color:var(--accent);}
+  #err{color:var(--neg);font-size:12px;}
+</style>
+</head>
+<body>
+<h1>🎮 Dota 2 — Live Paper Trading</h1>
+<div class="sub">
+  Обновлено: <span id="upd">загрузка…</span>
+  &nbsp;·&nbsp; авто-обновление каждые 10 мин
+  &nbsp;·&nbsp; VPS пишет данные каждые 10 мин
+  <button class="rbtn" onclick="loadAll()">↻ Обновить</button>
+  <span id="err"></span>
+</div>
+<div class="card">
+  <h2>Виртуальный банк</h2>
+  <div class="stats" id="bank"><div class="stat"><div class="val mut"><span class="spin"></span></div><div class="lbl">загрузка…</div></div></div>
+</div>
+<div class="row2">
+  <div class="card"><h2>График банка</h2><canvas id="ch"></canvas></div>
+  <div class="card"><h2>Открытые ставки</h2><div id="open"><div class="empty"><span class="spin"></span></div></div></div>
+</div>
+<div class="card"><h2>Предикты — ближайшие 72ч</h2><div id="picks"><div class="empty"><span class="spin"></span></div></div></div>
+<div class="card"><h2>Последние 30 сделок</h2><div id="bets"><div class="empty"><span class="spin"></span></div></div></div>
+<script>
+const SB='https://xplqjpftwvtbxmpsddor.supabase.co';
+const K='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhwbHFqcGZ0d3Z0YnhtcHNkZG9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2ODEzMzAsImV4cCI6MjA5NzI1NzMzMH0.6D8cnK7QkXOkS4iQv1oCPc1Aql3z7eH5V1aNPyo2bwI';
+let ci=null;
+async function sb(t,q=''){
+  const r=await fetch(`${SB}/rest/v1/${t}?${q}`,{headers:{apikey:K,Authorization:`Bearer ${K}`}});
+  if(!r.ok)throw new Error(`${t} ${r.status}`);return r.json();
+}
+const fd=s=>{if(!s)return'—';const d=new Date(s);return d.toLocaleString('ru',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC'})+' UTC';};
+const ff=(v,n=2)=>v==null?'—':Number(v).toFixed(n);
+const pc=v=>v==null?'':Number(v)>0?'pos':Number(v)<0?'neg':'';
+async function loadBank(){
+  const r=await sb('bankroll_state','select=*&limit=1&order=updated_at.desc');
+  const el=document.getElementById('bank');
+  if(!r?.length){el.innerHTML='<span class="mut">Нет данных</span>';return;}
+  const b=r[0];const bal=Number(b.balance??b.current_balance??0);const st=Number(b.initial_balance??1000);
+  const pnl=bal-st;const roi=((pnl/st)*100).toFixed(1);
+  const tot=b.total_bets??0;const won=b.wins??b.total_wins??0;
+  const wr=tot>0?((won/tot)*100).toFixed(0)+'%':'—';
+  el.innerHTML=`<div class="stat"><div class="val">$${bal.toFixed(2)}</div><div class="lbl">текущий банк (старт $${st})</div></div>
+  <div class="stat"><div class="val ${pc(pnl)}">${pnl>=0?'+':''}$${pnl.toFixed(2)}</div><div class="lbl">P&L (ROI ${pnl>=0?'+':''}${roi}%)</div></div>
+  <div class="stat"><div class="val">${tot}</div><div class="lbl">ставок сделано</div></div>
+  <div class="stat"><div class="val">${wr}</div><div class="lbl">winrate (${won}/${tot})</div></div>
+  <div class="stat"><div class="val acc">$${b.stake??b.bet_size??20}</div><div class="lbl">стейк</div></div>`;
+}
+async function loadChart(){
+  const bets=await sb('elo_paper_bets','select=created_at,profit,result&order=created_at.asc&limit=300');
+  const s=(bets||[]).filter(b=>b.result==='W'||b.result==='L');
+  if(!s.length)return;
+  let cum=1000;const lbs=['Старт'],dt=[cum];
+  s.forEach(b=>{cum+=Number(b.profit||0);dt.push(+cum.toFixed(2));const d=new Date(b.created_at);lbs.push(`${d.getDate()}.${String(d.getMonth()+1).padStart(2,'0')}`);});
+  const ctx=document.getElementById('ch').getContext('2d');
+  if(ci)ci.destroy();
+  ci=new Chart(ctx,{type:'line',data:{labels:lbs,datasets:[{data:dt,borderColor:'#5b8cff',backgroundColor:'rgba(91,140,255,.1)',borderWidth:2,pointRadius:0,fill:true,tension:.3}]},
+  options:{animation:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{grid:{color:'#2a2e38'},ticks:{color:'#8a8f98',callback:v=>'$'+v}}}}});
+}
+async function loadOpen(){
+  const b=await sb('elo_paper_bets','select=*&result=eq.open&order=match_time.asc&limit=20');
+  const el=document.getElementById('open');
+  if(!b?.length){el.innerHTML='<div class="empty">Нет открытых ставок</div>';return;}
+  el.innerHTML='<table><tr><th>Время</th><th>Матч</th><th>Ставим на</th><th>Коэф</th><th>Стейк</th></tr>'
+    +b.map(x=>`<tr><td class="mut">${fd(x.match_time)}</td><td>${x.home_team||'?'} vs ${x.away_team||'?'}</td><td class="acc">${x.bet_on||x.pick||'—'}</td><td>${ff(x.odds)}</td><td>$${ff(x.stake,0)}</td></tr>`).join('')+'</table>';
+}
+async function loadPicks(){
+  const now=new Date().toISOString();const p72=new Date(Date.now()+72*36e5).toISOString();
+  const p=await sb('prematch_model_picks',`select=*&match_time=gte.${now}&match_time=lte.${p72}&order=match_time.asc&limit=30`);
+  const el=document.getElementById('picks');
+  if(!p?.length){el.innerHTML='<div class="empty">Нет сигналов на ближайшие 72ч</div>';return;}
+  el.innerHTML='<table><tr><th>Время</th><th>Лига</th><th>Матч</th><th>Ставить</th><th>Коэф</th><th>Model%</th><th>Edge</th><th>Kelly</th></tr>'
+    +p.map(x=>{const e=Number(x.edge||0);const ec=e>=.05?'pos':e>=.02?'warn':'mut';
+    return`<tr><td class="mut">${fd(x.match_time)}</td><td class="mut">${x.league||'—'}</td><td>${x.home_team||'?'} vs ${x.away_team||'?'}</td><td class="acc">${x.pick||x.bet_on||'—'}</td><td>${ff(x.real_odds??x.odds)}</td><td>${x.composite_prob?(Number(x.composite_prob)*100).toFixed(0)+'%':'—'}</td><td class="${ec}">${x.edge?(Number(x.edge)*100).toFixed(1)+'%':'—'}</td><td>${x.kelly_f?(Number(x.kelly_f)*100).toFixed(1)+'%':'—'}</td></tr>`;}).join('')+'</table>';
+}
+async function loadBets(){
+  const b=await sb('elo_paper_bets','select=*&order=created_at.desc&limit=30');
+  const el=document.getElementById('bets');
+  if(!b?.length){el.innerHTML='<div class="empty">Нет данных</div>';return;}
+  el.innerHTML='<table><tr><th>Дата</th><th>Матч</th><th>Ставили</th><th>Коэф</th><th>Стейк</th><th>Итог</th><th>P&L</th><th>Edge</th></tr>'
+    +b.map(x=>{const res=x.result||'open';const p=x.profit!=null?Number(x.profit):null;
+    return`<tr><td class="mut">${fd(x.created_at??x.match_time)}</td><td>${x.home_team||'?'} vs ${x.away_team||'?'}</td><td class="acc">${x.bet_on||x.pick||'—'}</td><td>${ff(x.odds)}</td><td>$${ff(x.stake,0)}</td><td><span class="badge ${res}">${res}</span></td><td class="${pc(p)}">${p!=null?(p>=0?'+':'')+'$'+p.toFixed(2):'—'}</td><td class="mut">${x.edge?(Number(x.edge)*100).toFixed(1)+'%':'—'}</td></tr>`;}).join('')+'</table>';
+}
+async function loadAll(){
+  document.getElementById('err').textContent='';
+  try{
+    await Promise.all([loadBank(),loadChart(),loadOpen(),loadPicks(),loadBets()]);
+    document.getElementById('upd').textContent=new Date().toLocaleString('ru',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC'})+' UTC';
+  }catch(e){document.getElementById('err').textContent='⚠ '+e.message;console.error(e);}
+}
+loadAll();
+setInterval(loadAll,600000);
+</script>
+</body>
+</html>
