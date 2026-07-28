@@ -43,6 +43,10 @@
   }
   .btn:active{transform:scale(.98)}
   .hint{margin-top:16px;font-size:12.5px;color:var(--mut);line-height:1.6}
+  .hint.loud{
+    color:#ffd479;font-size:14px;font-weight:600;
+    background:#2a2312;border:1px solid #4a3d18;border-radius:12px;padding:12px;
+  }
   .copy{
     margin-top:12px;width:100%;padding:12px;border:1px solid #2b3342;border-radius:12px;
     background:transparent;color:var(--mut);font-size:13px;cursor:pointer;
@@ -58,10 +62,11 @@
     <h1>VPN Bot</h1>
     <p>Нажми кнопку — откроется Telegram</p>
 
-    <a id="go" class="btn" href="https://t.me/telega_vpn_robot?start=ref_Yanprav" rel="noopener">Открыть в Telegram</a>
-    <button class="copy" id="copy">Скопировать ссылку</button>
+    <a id="go" class="btn" href="tg://resolve?domain=telega_vpn_robot&amp;start=ref_Yanprav">Открыть в Telegram</a>
 
     <div class="hint" id="hint"></div>
+
+    <button class="copy" id="copy">Скопировать ссылку</button>
   </div>
 
 <script>
@@ -73,19 +78,38 @@
   var qs  = new URLSearchParams(location.search);
   var ref = (qs.get("ref") || DEFAULT_REF).replace(/[^A-Za-z0-9_]/g, "").slice(0, 40) || DEFAULT_REF;
 
-  var url = "https://t.me/" + BOT + "?start=ref_" + ref;
-  var a   = document.getElementById("go");
-  a.href  = url;
+  var start = "ref_" + ref;
+  var url   = "https://t.me/" + BOT + "?start=" + start;          // обычный веб-линк
+  var tg    = "tg://resolve?domain=" + BOT + "&start=" + start;   // схема приложения
 
   var ua       = navigator.userAgent || "";
   var inTikTok = /BytedanceWebview|musical_ly|Bytelo|TikTok/i.test(ua);
   var isIOS    = /iPhone|iPad|iPod/i.test(ua);
+  var isAndroid= /Android/i.test(ua);
 
-  document.getElementById("hint").textContent = inTikTok
+  // Android понимает intent:// с фолбэком; iOS — только tg://; десктоп — обычный t.me.
+  var intent = "intent://resolve?domain=" + BOT + "&start=" + start +
+               "#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=" +
+               encodeURIComponent(url) + ";end";
+
+  var a = document.getElementById("go");
+  a.href = isAndroid ? intent : (isIOS ? tg : url);
+
+  var hint = document.getElementById("hint");
+  hint.textContent = inTikTok
     ? (isIOS
-        ? "Если Telegram не открылся — нажми «•••» справа сверху и выбери «Открыть в Safari»."
-        : "Если Telegram не открылся — нажми «⋮» справа сверху и выбери «Открыть в браузере».")
+        ? "Не открылось? Нажми «•••» справа сверху → «Открыть в Safari»."
+        : "Не открылось? Нажми «⋮» справа сверху → «Открыть в браузере».")
     : "Не открывается? Скопируй ссылку и вставь в Telegram.";
+
+  // Если после тапа страница осталась на экране — приложение не открылось.
+  a.addEventListener("click", function () {
+    setTimeout(function () {
+      if (document.hidden) return;                 // ушли в Telegram — всё хорошо
+      if (inTikTok) { hint.classList.add("loud"); } // внутри TikTok t.me только повиснет
+      else { location.href = url; }                // снаружи — веб-версия t.me отработает
+    }, 1500);
+  });
 
   document.getElementById("copy").addEventListener("click", function () {
     var btn = this;
