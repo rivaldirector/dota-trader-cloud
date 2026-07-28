@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Открой в Safari</title>
+<title>Открой в браузере</title>
 <meta name="robots" content="noindex">
 
 <meta property="og:title" content="VPN Bot в Telegram">
@@ -73,7 +73,7 @@
   <div class="wrap">
     <div class="hint" id="hint">
       <span class="dots"><i></i><i></i><i></i></span>
-      <h1 id="title">Нажми <span class="hl">•••</span> сверху<br>и выбери <span class="hl">«Открыть в Safari»</span></h1>
+      <h1 id="title">Нажми <span class="hl">•••</span> сверху<br>и выбери <span class="hl">«Открыть в браузере»</span></h1>
       <p id="sub">Из браузера TikTok Telegram не открывается — это ограничение самого TikTok</p>
       <div class="after">Бот откроется <b>автоматически</b>, ничего вводить не нужно</div>
     </div>
@@ -105,8 +105,6 @@
     if (!isIOS) {
       document.getElementById("title").innerHTML =
         'Нажми <span class="hl">⋮</span> сверху<br>и выбери <span class="hl">«Открыть в браузере»</span>';
-      document.getElementById("sub").textContent =
-        "Из браузера TikTok Telegram не открывается — это ограничение самого TikTok";
       var d = document.querySelector(".dots");
       d.style.flexDirection = "column"; d.style.gap = "4px"; d.style.padding = "13px 10px";
     }
