@@ -163,26 +163,37 @@
   var a = document.getElementById("go");
   a.href = isAndroid ? intent : (isIOS ? tg : url);
 
+  // Тихий переход: iframe не вызывает тост «Выполнить действие не удалось».
+  function trySchema(target) {
+    try {
+      var f = document.createElement("iframe");
+      f.style.display = "none"; f.src = target;
+      document.body.appendChild(f);
+      setTimeout(function () { f.parentNode && f.parentNode.removeChild(f); }, 700);
+    } catch (err) {}
+  }
+
   a.addEventListener("click", function (e) {
     copy(true);
     if (!inWebview) return;                       // снаружи ссылка отработает сама
     e.preventDefault();
 
-    // Тихая попытка: iframe со схемой не вызывает тост «Выполнить действие не удалось».
-    // Прямую навигацию по tg:// внутри вебвью не трогаем — она и есть источник тоста.
-    try {
-      var f = document.createElement("iframe");
-      f.style.display = "none"; f.src = tg;
-      document.body.appendChild(f);
-      setTimeout(function () { f.parentNode && f.parentNode.removeChild(f); }, 800);
-    } catch (err) {}
+    // 1) сразу в Telegram; 2) если схема приложения зарезана — пробуем вынести
+    //    ссылку в системный браузер, оттуда t.me открывается без ограничений.
+    trySchema(tg);
+    setTimeout(function () {
+      if (document.hidden) return;
+      trySchema(isIOS ? "x-safari-" + url                       // Safari
+                      : "intent://" + url.replace(/^https:\/\//, "") +
+                        "#Intent;scheme=https;package=com.android.chrome;end");
+    }, 500);
 
-    // Не открылось за 1.2 с — показываем путь, который срабатывает всегда.
+    // Ничего не сработало — остаётся путь, который срабатывает всегда.
     setTimeout(function () {
       if (document.hidden) return;
       okBox.classList.add("show");
       document.getElementById("arrow").classList.add("show");
-    }, 1200);
+    }, 1600);
   });
 
   document.getElementById("copy").addEventListener("click", function () { copy(false); });
