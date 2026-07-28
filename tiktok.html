@@ -3,102 +3,85 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>VPN Bot — открыть в Telegram</title>
+<title>Открой в Safari</title>
 <meta name="robots" content="noindex">
 
 <meta property="og:title" content="VPN Bot в Telegram">
-<meta property="og:description" content="Ссылка скопирована — вставь в поиск Telegram">
+<meta property="og:description" content="Открой страницу в браузере — бот запустится сам">
 <meta property="og:type" content="website">
 
 <style>
-  :root{
-    --bg:#0d0f14; --card:#161a22; --tg:#2aabee; --tg2:#229ed9;
-    --txt:#eef2f7; --mut:#8b97a8; --warn:#ffd479;
-  }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  :root{ --bg:#0d0f14; --txt:#eef2f7; --mut:#8b97a8; --warn:#ffd479; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;
+    -webkit-user-select:none;user-select:none}
   body{
-    margin:0; min-height:100vh; background:radial-gradient(120% 80% at 50% 0%,#1b2534 0%,var(--bg) 60%);
+    margin:0; min-height:100dvh;
+    background:radial-gradient(120% 70% at 80% 0%,#1e2a3d 0%,var(--bg) 55%);
     color:var(--txt); font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    display:flex; align-items:center; justify-content:center; padding:20px;
-  }
-  .card{
-    width:100%; max-width:400px; background:var(--card); border:1px solid #232a36;
-    border-radius:22px; padding:24px 20px; box-shadow:0 20px 60px rgba(0,0,0,.45);
-  }
-  .logo{
-    width:64px;height:64px;margin:0 auto 14px;border-radius:50%;
-    background:linear-gradient(180deg,var(--tg),var(--tg2));
-    display:flex;align-items:center;justify-content:center;
-  }
-  .logo svg{width:34px;height:34px;fill:#fff}
-  h1{font-size:20px;margin:0 0 4px;text-align:center}
-  .sub{margin:0 0 18px;color:var(--mut);font-size:13.5px;text-align:center}
-
-  .btn{
-    display:block;width:100%;padding:16px;border:0;border-radius:14px;
-    background:linear-gradient(180deg,var(--tg),var(--tg2));color:#fff;
-    font-size:17px;font-weight:700;text-decoration:none;text-align:center;cursor:pointer;
-  }
-  .btn:active{transform:scale(.98)}
-  .btn.sec{
-    background:transparent;border:1px solid #2b3342;color:var(--txt);
-    font-size:15px;font-weight:600;margin-top:10px;padding:14px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px; text-align:center; overflow:hidden;
   }
 
-  .steps{
-    margin:0 0 18px;padding:14px 14px 14px 16px;border-radius:14px;
-    background:#1b2130;border:1px solid #2b3342;
+  /* Стрелка в правый верхний угол — туда, где меню вебвью */
+  .arrow{
+    position:fixed; top:6px; right:14px; width:96px; height:120px;
+    animation:bob 1.15s ease-in-out infinite; pointer-events:none;
   }
-  .steps b{color:var(--warn)}
-  ol{margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.75}
-  ol code{
-    background:#0f1420;border:1px solid #2b3342;border-radius:6px;
-    padding:1px 6px;font-size:13px;
-  }
-  .ok{
-    display:none;margin-top:14px;padding:12px;border-radius:12px;text-align:center;
-    background:#12291b;border:1px solid #1f4a30;color:#7ee2a8;font-size:13.5px;font-weight:600;
-  }
-  .ok.show{display:block}
-  .foot{margin-top:16px;font-size:12px;color:var(--mut);text-align:center;line-height:1.6}
+  .arrow svg{width:100%;height:100%;fill:none;stroke:var(--warn);stroke-width:7;
+             stroke-linecap:round;stroke-linejoin:round}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
 
-  /* Указатель на меню вебвью — появляется, если приложение не открылось */
-  #arrow{
-    display:none; position:fixed; top:10px; right:12px; z-index:9;
-    max-width:230px; padding:12px 14px; border-radius:14px;
-    background:var(--warn); color:#241c00; font-size:14px; font-weight:700; line-height:1.4;
-    box-shadow:0 10px 30px rgba(0,0,0,.5); animation:bob 1.1s ease-in-out infinite;
+  .wrap{margin-top:96px;max-width:420px}
+
+  .dots{
+    display:inline-flex;align-items:center;gap:7px;
+    background:#fff;border-radius:999px;padding:9px 15px;margin-bottom:22px;
   }
-  #arrow.show{display:block}
-  #arrow .tip{
-    position:absolute; top:-8px; right:16px; width:0; height:0;
-    border-left:9px solid transparent; border-right:9px solid transparent;
-    border-bottom:9px solid var(--warn);
+  .dots i{width:7px;height:7px;border-radius:50%;background:#111;display:block}
+
+  h1{
+    font-size:clamp(26px,7.5vw,36px); line-height:1.25; margin:0 0 14px; font-weight:800;
   }
-  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  h1 .hl{color:var(--warn)}
+  p{margin:0;color:var(--mut);font-size:clamp(15px,4vw,17px);line-height:1.6}
+  .after{
+    margin-top:28px;padding-top:20px;border-top:1px solid #232a36;
+    color:var(--mut);font-size:14px;
+  }
+  .after b{color:var(--txt)}
+
+  /* Экран для тех, кто уже в нормальном браузере */
+  .go{display:none}
+  .go a{
+    display:inline-block;margin-top:18px;padding:16px 28px;border-radius:14px;
+    background:linear-gradient(180deg,#2aabee,#229ed9);color:#fff;
+    font-size:17px;font-weight:700;text-decoration:none;
+  }
+  body.browser .arrow,body.browser .dots,body.browser .hint{display:none}
+  body.browser .go{display:block}
+  body.browser .wrap{margin-top:0}
 </style>
 </head>
 <body>
-  <div id="arrow"><span class="tip"></span><span id="arrowtxt"></span></div>
+  <div class="arrow" id="arrow" aria-hidden="true">
+    <svg viewBox="0 0 100 130">
+      <path d="M22 122 C 22 70, 40 30, 84 16"/>
+      <path d="M62 15 L 86 13 L 80 37"/>
+    </svg>
+  </div>
 
-  <div class="card">
-    <div class="logo">
-      <svg viewBox="0 0 24 24"><path d="M9.04 15.47 8.8 19.2c.35 0 .5-.15.68-.33l1.63-1.56 3.38 2.47c.62.34 1.07.16 1.23-.57l2.23-10.45c.22-.98-.36-1.36-.98-1.13L3.5 12.06c-.96.38-.95.9-.16 1.14l3.5 1.09L15 8.9c.4-.24.76-.11.46.15l-6.42 6.42z"/></svg>
+  <div class="wrap">
+    <div class="hint" id="hint">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <h1 id="title">Нажми <span class="hl">•••</span> сверху<br>и выбери <span class="hl">«Открыть в Safari»</span></h1>
+      <p id="sub">Из браузера TikTok Telegram не открывается — это ограничение самого TikTok</p>
+      <div class="after">Бот откроется <b>автоматически</b>, ничего вводить не нужно</div>
     </div>
-    <h1>VPN Bot</h1>
-    <p class="sub" id="sub">Ссылка уже скопирована — осталось вставить в Telegram</p>
 
-    <div class="steps" id="steps">
-      <b>Как открыть за 10 секунд:</b>
-      <ol id="ol"></ol>
+    <div class="go">
+      <h1>Открываем Telegram…</h1>
+      <a id="link" href="https://t.me/telega_vpn_robot?start=ref_Yanprav">Открыть вручную</a>
     </div>
-
-    <a class="btn" id="go" href="https://t.me/telega_vpn_robot?start=ref_Yanprav">Открыть Telegram</a>
-    <button class="btn sec" id="copy">Скопировать ссылку ещё раз</button>
-
-    <div class="ok" id="ok">Скопировано ✓ Теперь открой Telegram и вставь в строку поиска</div>
-
-    <div class="foot" id="foot"></div>
   </div>
 
 <script>
@@ -108,97 +91,31 @@
 
   var qs  = new URLSearchParams(location.search);
   var ref = (qs.get("ref") || DEFAULT_REF).replace(/[^A-Za-z0-9_]/g, "").slice(0, 40) || DEFAULT_REF;
+  var url = "https://t.me/" + BOT + "?start=ref_" + ref;
 
-  var start = "ref_" + ref;
-  var url   = "https://t.me/" + BOT + "?start=" + start;
-  var tg    = "tg://resolve?domain=" + BOT + "&start=" + start;
-  var intent= "intent://resolve?domain=" + BOT + "&start=" + start +
-              "#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=" +
-              encodeURIComponent(url) + ";end";
+  document.getElementById("link").href = url;
 
   var ua        = navigator.userAgent || "";
   var inWebview = /BytedanceWebview|musical_ly|Bytelo|TikTok|FBAN|FBAV|Instagram/i.test(ua);
   var isIOS     = /iPhone|iPad|iPod/i.test(ua);
-  var isAndroid = /Android/i.test(ua);
 
-  var okBox = document.getElementById("ok");
-
-  function copy(silent) {
-    var done = function () { if (!silent) okBox.classList.add("show"); };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(done, legacy);
-    } else { legacy(); }
-    function legacy() {
-      var t = document.createElement("textarea");
-      t.value = url; t.setAttribute("readonly", "");
-      t.style.position = "absolute"; t.style.left = "-9999px";
-      document.body.appendChild(t); t.select(); t.setSelectionRange(0, 99999);
-      try { document.execCommand("copy"); done(); } catch (e) {}
-      document.body.removeChild(t);
-    }
-  }
-
-  // Внутри вебвью соцсети приложение открыть нельзя — ведём через буфер обмена.
-  var ol = document.getElementById("ol");
   if (inWebview) {
-    var menu = isIOS ? "«•••» справа сверху → «Открыть в Safari»"
-                     : "«⋮» справа сверху → «Открыть в браузере»";
-    ol.innerHTML =
-      "<li>Ссылка уже <b>скопирована</b> в буфер</li>" +
-      "<li>Открой <b>Telegram</b> и вставь её в строку поиска</li>" +
-      "<li>Либо: " + menu + "</li>";
-    document.getElementById("foot").textContent =
-      "TikTok не умеет открывать приложения из своего браузера — поэтому через буфер обмена.";
-    document.getElementById("arrowtxt").textContent =
-      isIOS ? "Жми сюда → «Открыть в Safari»" : "Жми сюда → «Открыть в браузере»";
-    copy(true);                                   // копируем сразу при заходе
-  } else {
-    ol.innerHTML =
-      "<li>Нажми <b>«Открыть Telegram»</b></li>" +
-      "<li>Если не открылось — вставь скопированную ссылку в поиск Telegram</li>";
-    document.getElementById("sub").textContent = "Открываем Telegram…";
-    document.getElementById("foot").textContent = "@" + BOT;
+    // Единственный экран: куда нажать. Никаких других действий, чтобы никто
+    // не упёрся в «Выполнить действие не удалось».
+    if (!isIOS) {
+      document.getElementById("title").innerHTML =
+        'Нажми <span class="hl">⋮</span> сверху<br>и выбери <span class="hl">«Открыть в браузере»</span>';
+      document.getElementById("sub").textContent =
+        "Из браузера TikTok Telegram не открывается — это ограничение самого TikTok";
+      var d = document.querySelector(".dots");
+      d.style.flexDirection = "column"; d.style.gap = "4px"; d.style.padding = "13px 10px";
+    }
+    return;
   }
 
-  var a = document.getElementById("go");
-  a.href = isAndroid ? intent : (isIOS ? tg : url);
-
-  // Тихий переход: iframe не вызывает тост «Выполнить действие не удалось».
-  function trySchema(target) {
-    try {
-      var f = document.createElement("iframe");
-      f.style.display = "none"; f.src = target;
-      document.body.appendChild(f);
-      setTimeout(function () { f.parentNode && f.parentNode.removeChild(f); }, 700);
-    } catch (err) {}
-  }
-
-  a.addEventListener("click", function (e) {
-    copy(true);
-    if (!inWebview) return;                       // снаружи ссылка отработает сама
-    e.preventDefault();
-
-    // 1) сразу в Telegram; 2) если схема приложения зарезана — пробуем вынести
-    //    ссылку в системный браузер, оттуда t.me открывается без ограничений.
-    trySchema(tg);
-    setTimeout(function () {
-      if (document.hidden) return;
-      trySchema(isIOS ? "x-safari-" + url                       // Safari
-                      : "intent://" + url.replace(/^https:\/\//, "") +
-                        "#Intent;scheme=https;package=com.android.chrome;end");
-    }, 500);
-
-    // Ничего не сработало — остаётся путь, который срабатывает всегда.
-    setTimeout(function () {
-      if (document.hidden) return;
-      okBox.classList.add("show");
-      document.getElementById("arrow").classList.add("show");
-    }, 1600);
-  });
-
-  document.getElementById("copy").addEventListener("click", function () { copy(false); });
-
-  if (!inWebview) { setTimeout(function () { location.href = url; }, 500); }
+  // Уже в нормальном браузере — уводим в Telegram сразу.
+  document.body.className = "browser";
+  setTimeout(function () { location.replace(url); }, 250);
 })();
 </script>
 </body>
