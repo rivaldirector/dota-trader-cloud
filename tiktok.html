@@ -6,52 +6,61 @@
 <title>VPN Bot — открыть в Telegram</title>
 <meta name="robots" content="noindex">
 
-<!-- превью при шаринге -->
 <meta property="og:title" content="VPN Bot в Telegram">
-<meta property="og:description" content="Жми кнопку — бот откроется в Telegram">
+<meta property="og:description" content="Ссылка скопирована — вставь в поиск Telegram">
 <meta property="og:type" content="website">
 
 <style>
   :root{
     --bg:#0d0f14; --card:#161a22; --tg:#2aabee; --tg2:#229ed9;
-    --txt:#eef2f7; --mut:#8b97a8;
+    --txt:#eef2f7; --mut:#8b97a8; --warn:#ffd479;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%}
   body{
-    margin:0; background:radial-gradient(120% 80% at 50% 0%,#1b2534 0%,var(--bg) 60%);
+    margin:0; min-height:100vh; background:radial-gradient(120% 80% at 50% 0%,#1b2534 0%,var(--bg) 60%);
     color:var(--txt); font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    display:flex; align-items:center; justify-content:center; padding:24px;
+    display:flex; align-items:center; justify-content:center; padding:20px;
   }
   .card{
-    width:100%; max-width:380px; background:var(--card); border:1px solid #232a36;
-    border-radius:22px; padding:28px 22px; text-align:center;
-    box-shadow:0 20px 60px rgba(0,0,0,.45);
+    width:100%; max-width:400px; background:var(--card); border:1px solid #232a36;
+    border-radius:22px; padding:24px 20px; box-shadow:0 20px 60px rgba(0,0,0,.45);
   }
   .logo{
-    width:74px;height:74px;margin:0 auto 16px;border-radius:50%;
+    width:64px;height:64px;margin:0 auto 14px;border-radius:50%;
     background:linear-gradient(180deg,var(--tg),var(--tg2));
     display:flex;align-items:center;justify-content:center;
   }
-  .logo svg{width:40px;height:40px;fill:#fff}
-  h1{font-size:21px;margin:0 0 6px;font-weight:700}
-  p{margin:0 0 20px;color:var(--mut);font-size:14px}
+  .logo svg{width:34px;height:34px;fill:#fff}
+  h1{font-size:20px;margin:0 0 4px;text-align:center}
+  .sub{margin:0 0 18px;color:var(--mut);font-size:13.5px;text-align:center}
+
   .btn{
     display:block;width:100%;padding:16px;border:0;border-radius:14px;
     background:linear-gradient(180deg,var(--tg),var(--tg2));color:#fff;
-    font-size:17px;font-weight:700;text-decoration:none;cursor:pointer;
+    font-size:17px;font-weight:700;text-decoration:none;text-align:center;cursor:pointer;
   }
   .btn:active{transform:scale(.98)}
-  .hint{margin-top:16px;font-size:12.5px;color:var(--mut);line-height:1.6}
-  .hint.loud{
-    color:#ffd479;font-size:14px;font-weight:600;
-    background:#2a2312;border:1px solid #4a3d18;border-radius:12px;padding:12px;
+  .btn.sec{
+    background:transparent;border:1px solid #2b3342;color:var(--txt);
+    font-size:15px;font-weight:600;margin-top:10px;padding:14px;
   }
-  .copy{
-    margin-top:12px;width:100%;padding:12px;border:1px solid #2b3342;border-radius:12px;
-    background:transparent;color:var(--mut);font-size:13px;cursor:pointer;
+
+  .steps{
+    margin:0 0 18px;padding:14px 14px 14px 16px;border-radius:14px;
+    background:#1b2130;border:1px solid #2b3342;
   }
-  .copy:active{background:#1d2431}
+  .steps b{color:var(--warn)}
+  ol{margin:8px 0 0;padding-left:20px;font-size:14px;line-height:1.75}
+  ol code{
+    background:#0f1420;border:1px solid #2b3342;border-radius:6px;
+    padding:1px 6px;font-size:13px;
+  }
+  .ok{
+    display:none;margin-top:14px;padding:12px;border-radius:12px;text-align:center;
+    background:#12291b;border:1px solid #1f4a30;color:#7ee2a8;font-size:13.5px;font-weight:600;
+  }
+  .ok.show{display:block}
+  .foot{margin-top:16px;font-size:12px;color:var(--mut);text-align:center;line-height:1.6}
 </style>
 </head>
 <body>
@@ -60,13 +69,19 @@
       <svg viewBox="0 0 24 24"><path d="M9.04 15.47 8.8 19.2c.35 0 .5-.15.68-.33l1.63-1.56 3.38 2.47c.62.34 1.07.16 1.23-.57l2.23-10.45c.22-.98-.36-1.36-.98-1.13L3.5 12.06c-.96.38-.95.9-.16 1.14l3.5 1.09L15 8.9c.4-.24.76-.11.46.15l-6.42 6.42z"/></svg>
     </div>
     <h1>VPN Bot</h1>
-    <p>Нажми кнопку — откроется Telegram</p>
+    <p class="sub" id="sub">Ссылка уже скопирована — осталось вставить в Telegram</p>
 
-    <a id="go" class="btn" href="tg://resolve?domain=telega_vpn_robot&amp;start=ref_Yanprav">Открыть в Telegram</a>
+    <div class="steps" id="steps">
+      <b>Как открыть за 10 секунд:</b>
+      <ol id="ol"></ol>
+    </div>
 
-    <div class="hint" id="hint"></div>
+    <a class="btn" id="go" href="https://t.me/telega_vpn_robot?start=ref_Yanprav">Открыть Telegram</a>
+    <button class="btn sec" id="copy">Скопировать ссылку ещё раз</button>
 
-    <button class="copy" id="copy">Скопировать ссылку</button>
+    <div class="ok" id="ok">Скопировано ✓ Теперь открой Telegram и вставь в строку поиска</div>
+
+    <div class="foot" id="foot"></div>
   </div>
 
 <script>
@@ -74,59 +89,79 @@
   var BOT = "telega_vpn_robot";
   var DEFAULT_REF = "Yanprav";
 
-  // ?ref=xxx или ?utm_source=tiktok -> подставляем метку в start
   var qs  = new URLSearchParams(location.search);
   var ref = (qs.get("ref") || DEFAULT_REF).replace(/[^A-Za-z0-9_]/g, "").slice(0, 40) || DEFAULT_REF;
 
   var start = "ref_" + ref;
-  var url   = "https://t.me/" + BOT + "?start=" + start;          // обычный веб-линк
-  var tg    = "tg://resolve?domain=" + BOT + "&start=" + start;   // схема приложения
+  var url   = "https://t.me/" + BOT + "?start=" + start;
+  var tg    = "tg://resolve?domain=" + BOT + "&start=" + start;
+  var intent= "intent://resolve?domain=" + BOT + "&start=" + start +
+              "#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=" +
+              encodeURIComponent(url) + ";end";
 
-  var ua       = navigator.userAgent || "";
-  var inTikTok = /BytedanceWebview|musical_ly|Bytelo|TikTok/i.test(ua);
-  var isIOS    = /iPhone|iPad|iPod/i.test(ua);
-  var isAndroid= /Android/i.test(ua);
+  var ua        = navigator.userAgent || "";
+  var inWebview = /BytedanceWebview|musical_ly|Bytelo|TikTok|FBAN|FBAV|Instagram/i.test(ua);
+  var isIOS     = /iPhone|iPad|iPod/i.test(ua);
+  var isAndroid = /Android/i.test(ua);
 
-  // Android понимает intent:// с фолбэком; iOS — только tg://; десктоп — обычный t.me.
-  var intent = "intent://resolve?domain=" + BOT + "&start=" + start +
-               "#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=" +
-               encodeURIComponent(url) + ";end";
+  var okBox = document.getElementById("ok");
+
+  function copy(silent) {
+    var done = function () { if (!silent) okBox.classList.add("show"); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done, legacy);
+    } else { legacy(); }
+    function legacy() {
+      var t = document.createElement("textarea");
+      t.value = url; t.setAttribute("readonly", "");
+      t.style.position = "absolute"; t.style.left = "-9999px";
+      document.body.appendChild(t); t.select(); t.setSelectionRange(0, 99999);
+      try { document.execCommand("copy"); done(); } catch (e) {}
+      document.body.removeChild(t);
+    }
+  }
+
+  // Внутри вебвью соцсети приложение открыть нельзя — ведём через буфер обмена.
+  var ol = document.getElementById("ol");
+  if (inWebview) {
+    var menu = isIOS ? "«•••» справа сверху → «Открыть в Safari»"
+                     : "«⋮» справа сверху → «Открыть в браузере»";
+    ol.innerHTML =
+      "<li>Ссылка уже <b>скопирована</b> в буфер</li>" +
+      "<li>Открой <b>Telegram</b> и вставь её в строку поиска</li>" +
+      "<li>Либо: " + menu + "</li>";
+    document.getElementById("foot").textContent =
+      "TikTok не умеет открывать приложения из своего браузера — поэтому через буфер обмена.";
+    copy(true);                                   // копируем сразу при заходе
+  } else {
+    ol.innerHTML =
+      "<li>Нажми <b>«Открыть Telegram»</b></li>" +
+      "<li>Если не открылось — вставь скопированную ссылку в поиск Telegram</li>";
+    document.getElementById("sub").textContent = "Открываем Telegram…";
+    document.getElementById("foot").textContent = "@" + BOT;
+  }
 
   var a = document.getElementById("go");
   a.href = isAndroid ? intent : (isIOS ? tg : url);
 
-  var hint = document.getElementById("hint");
-  hint.textContent = inTikTok
-    ? (isIOS
-        ? "Не открылось? Нажми «•••» справа сверху → «Открыть в Safari»."
-        : "Не открылось? Нажми «⋮» справа сверху → «Открыть в браузере».")
-    : "Не открывается? Скопируй ссылку и вставь в Telegram.";
-
-  // Если после тапа страница осталась на экране — приложение не открылось.
-  a.addEventListener("click", function () {
-    setTimeout(function () {
-      if (document.hidden) return;                 // ушли в Telegram — всё хорошо
-      if (inTikTok) { hint.classList.add("loud"); } // внутри TikTok t.me только повиснет
-      else { location.href = url; }                // снаружи — веб-версия t.me отработает
-    }, 1500);
+  a.addEventListener("click", function (e) {
+    copy(true);
+    if (!inWebview) return;                       // снаружи ссылка отработает сама
+    e.preventDefault();
+    // Каскад: iframe-навигация проходит там, где location.href режется.
+    try {
+      var f = document.createElement("iframe");
+      f.style.display = "none"; f.src = tg;
+      document.body.appendChild(f);
+      setTimeout(function () { f.parentNode && f.parentNode.removeChild(f); }, 800);
+    } catch (err) {}
+    setTimeout(function () { if (!document.hidden) { try { location.href = a.href; } catch (e2) {} } }, 300);
+    setTimeout(function () { if (!document.hidden) { okBox.classList.add("show"); } }, 1600);
   });
 
-  document.getElementById("copy").addEventListener("click", function () {
-    var btn = this;
-    var done = function () { btn.textContent = "Ссылка скопирована ✓"; };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(done, fallback);
-    } else { fallback(); }
-    function fallback() {
-      var t = document.createElement("textarea");
-      t.value = url; document.body.appendChild(t); t.select();
-      try { document.execCommand("copy"); done(); } catch (e) { btn.textContent = url; }
-      document.body.removeChild(t);
-    }
-  });
+  document.getElementById("copy").addEventListener("click", function () { copy(false); });
 
-  // Вне TikTok-вебвью уводим сразу; внутри — ждём тап (webview режет авто-редирект).
-  if (!inTikTok) { setTimeout(function () { location.replace(url); }, 400); }
+  if (!inWebview) { setTimeout(function () { location.href = url; }, 500); }
 })();
 </script>
 </body>
