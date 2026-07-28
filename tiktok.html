@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VPN Bot — открыть в Telegram</title>
+<meta name="robots" content="noindex">
+
+<!-- превью при шаринге -->
+<meta property="og:title" content="VPN Bot в Telegram">
+<meta property="og:description" content="Жми кнопку — бот откроется в Telegram">
+<meta property="og:type" content="website">
+
+<style>
+  :root{
+    --bg:#0d0f14; --card:#161a22; --tg:#2aabee; --tg2:#229ed9;
+    --txt:#eef2f7; --mut:#8b97a8;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0; background:radial-gradient(120% 80% at 50% 0%,#1b2534 0%,var(--bg) 60%);
+    color:var(--txt); font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .card{
+    width:100%; max-width:380px; background:var(--card); border:1px solid #232a36;
+    border-radius:22px; padding:28px 22px; text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.45);
+  }
+  .logo{
+    width:74px;height:74px;margin:0 auto 16px;border-radius:50%;
+    background:linear-gradient(180deg,var(--tg),var(--tg2));
+    display:flex;align-items:center;justify-content:center;
+  }
+  .logo svg{width:40px;height:40px;fill:#fff}
+  h1{font-size:21px;margin:0 0 6px;font-weight:700}
+  p{margin:0 0 20px;color:var(--mut);font-size:14px}
+  .btn{
+    display:block;width:100%;padding:16px;border:0;border-radius:14px;
+    background:linear-gradient(180deg,var(--tg),var(--tg2));color:#fff;
+    font-size:17px;font-weight:700;text-decoration:none;cursor:pointer;
+  }
+  .btn:active{transform:scale(.98)}
+  .hint{margin-top:16px;font-size:12.5px;color:var(--mut);line-height:1.6}
+  .copy{
+    margin-top:12px;width:100%;padding:12px;border:1px solid #2b3342;border-radius:12px;
+    background:transparent;color:var(--mut);font-size:13px;cursor:pointer;
+  }
+  .copy:active{background:#1d2431}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M9.04 15.47 8.8 19.2c.35 0 .5-.15.68-.33l1.63-1.56 3.38 2.47c.62.34 1.07.16 1.23-.57l2.23-10.45c.22-.98-.36-1.36-.98-1.13L3.5 12.06c-.96.38-.95.9-.16 1.14l3.5 1.09L15 8.9c.4-.24.76-.11.46.15l-6.42 6.42z"/></svg>
+    </div>
+    <h1>VPN Bot</h1>
+    <p>Нажми кнопку — откроется Telegram</p>
+
+    <a id="go" class="btn" href="https://t.me/telega_vpn_robot?start=ref_Yanprav" rel="noopener">Открыть в Telegram</a>
+    <button class="copy" id="copy">Скопировать ссылку</button>
+
+    <div class="hint" id="hint"></div>
+  </div>
+
+<script>
+(function () {
+  var BOT = "telega_vpn_robot";
+  var DEFAULT_REF = "Yanprav";
+
+  // ?ref=xxx или ?utm_source=tiktok -> подставляем метку в start
+  var qs  = new URLSearchParams(location.search);
+  var ref = (qs.get("ref") || DEFAULT_REF).replace(/[^A-Za-z0-9_]/g, "").slice(0, 40) || DEFAULT_REF;
+
+  var url = "https://t.me/" + BOT + "?start=ref_" + ref;
+  var a   = document.getElementById("go");
+  a.href  = url;
+
+  var ua       = navigator.userAgent || "";
+  var inTikTok = /BytedanceWebview|musical_ly|Bytelo|TikTok/i.test(ua);
+  var isIOS    = /iPhone|iPad|iPod/i.test(ua);
+
+  document.getElementById("hint").textContent = inTikTok
+    ? (isIOS
+        ? "Если Telegram не открылся — нажми «•••» справа сверху и выбери «Открыть в Safari»."
+        : "Если Telegram не открылся — нажми «⋮» справа сверху и выбери «Открыть в браузере».")
+    : "Не открывается? Скопируй ссылку и вставь в Telegram.";
+
+  document.getElementById("copy").addEventListener("click", function () {
+    var btn = this;
+    var done = function () { btn.textContent = "Ссылка скопирована ✓"; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done, fallback);
+    } else { fallback(); }
+    function fallback() {
+      var t = document.createElement("textarea");
+      t.value = url; document.body.appendChild(t); t.select();
+      try { document.execCommand("copy"); done(); } catch (e) { btn.textContent = url; }
+      document.body.removeChild(t);
+    }
+  });
+
+  // Вне TikTok-вебвью уводим сразу; внутри — ждём тап (webview режет авто-редирект).
+  if (!inTikTok) { setTimeout(function () { location.replace(url); }, 400); }
+})();
+</script>
+</body>
+</html>

@@ -974,3 +974,47 @@ function toggleHist(btn) {{
 </body>
 </html>"""
     return HTMLResponse(content=html)
+
+
+# -------------------
+# TIKTOK -> TELEGRAM BOT LINK
+# -------------------
+TG_BOT_USERNAME = os.getenv("TG_BOT_USERNAME", "telega_vpn_robot")
+TG_DEFAULT_REF = os.getenv("TG_DEFAULT_REF", "Yanprav")
+
+_TIKTOK_PAGE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tiktok.html")
+
+
+def _tg_deeplink(ref: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_]", "", ref or "")[:40] or TG_DEFAULT_REF
+    return f"https://t.me/{TG_BOT_USERNAME}?start=ref_{safe}"
+
+
+def _landing(ref: str) -> HTMLResponse:
+    """Отдаёт tiktok.html; если файла нет — минимальный редирект."""
+    try:
+        with open(_TIKTOK_PAGE, encoding="utf-8") as f:
+            html = f.read().replace(
+                f'var DEFAULT_REF = "{TG_DEFAULT_REF}";',
+                f'var DEFAULT_REF = "{re.sub(r"[^A-Za-z0-9_]", "", ref)[:40] or TG_DEFAULT_REF}";',
+            )
+    except OSError:
+        url = _tg_deeplink(ref)
+        html = (
+            f'<!DOCTYPE html><meta charset="utf-8">'
+            f'<meta http-equiv="refresh" content="0;url={url}">'
+            f'<a href="{url}">Открыть в Telegram</a>'
+        )
+    return HTMLResponse(content=html, headers={"Cache-Control": "public, max-age=300"})
+
+
+@app.get("/tt", response_class=HTMLResponse)
+def tiktok_link():
+    """Ссылка для био TikTok -> бот с меткой ref_Yanprav."""
+    return _landing(TG_DEFAULT_REF)
+
+
+@app.get("/go/{ref}", response_class=HTMLResponse)
+def tiktok_link_ref(ref: str):
+    """То же, но со своей меткой источника: /go/tiktok, /go/Yanprav и т.д."""
+    return _landing(ref)
