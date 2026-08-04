@@ -62,7 +62,7 @@ from signals import (
 )
 
 SUPABASE_URL  = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY  = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_KEY  = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY", "")
 BETSAPI_TOKEN = os.getenv("BETSAPI_TOKEN", "")
 
 SB_HEADERS = {

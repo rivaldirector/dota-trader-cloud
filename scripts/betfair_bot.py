@@ -38,7 +38,7 @@ from betfair_client import BetfairClient, BetfairError, parse_market, MIN_AVAILA
 
 BETSAPI_TOKEN  = os.getenv("BETSAPI_TOKEN", "")
 SUPABASE_URL   = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY   = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_KEY   = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY", "")
 
 EDGE_THRESHOLD = float(os.getenv("EDGE_THRESHOLD", "0.05"))   # 5%
 KELLY_FRACTION = float(os.getenv("KELLY_FRACTION", "0.25"))   # quarter Kelly

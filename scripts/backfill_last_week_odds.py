@@ -29,7 +29,7 @@ from daily_pipeline_lib import check_betsapi_alive, sb_set_pipeline_status
 
 BETSAPI_TOKEN = os.getenv("BETSAPI_TOKEN", "")
 SUPABASE_URL  = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY  = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_KEY  = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY", "")
 REQ_INTERVAL  = 2.0
 BATCH_LIMIT   = int(os.getenv("BATCH_LIMIT", "0")) or None  # cap events fetched this run (0 = no cap)
 

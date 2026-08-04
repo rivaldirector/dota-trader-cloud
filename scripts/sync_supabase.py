@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv(".env")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY")
 DB_PATH = os.getenv("DATABASE_PATH", "storage/dota_trader.sqlite3")
 
 if not SUPABASE_URL or not SUPABASE_KEY:

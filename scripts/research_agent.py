@@ -23,7 +23,7 @@ ROOT = Path(__file__).parent.parent
 load_dotenv(ROOT / ".env")
 
 URL = os.getenv("SUPABASE_URL", "")
-KEY = os.getenv("SUPABASE_ANON_KEY", "")
+KEY = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY", "")
 
 if not URL or not KEY:
     print("ERROR: SUPABASE_URL / SUPABASE_ANON_KEY не найдены в .env")

@@ -30,7 +30,7 @@ load_dotenv(ROOT / ".env")
 
 BETSAPI_TOKEN = os.getenv("BETSAPI_TOKEN", "")
 SUPABASE_URL  = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY  = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_KEY  = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY", "")
 
 if not all([BETSAPI_TOKEN, SUPABASE_URL, SUPABASE_KEY]):
     print("ERROR: Missing env vars. Check .env")
