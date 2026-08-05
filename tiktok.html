@@ -75,7 +75,7 @@
       <span class="dots"><i></i><i></i><i></i></span>
       <h1 id="title">Нажми <span class="hl">•••</span> сверху<br>и выбери <span class="hl">«Открыть в браузере»</span></h1>
       <p id="sub">Из браузера TikTok Telegram не открывается — это ограничение самого TikTok</p>
-      <div class="after">Бот откроется <b>автоматически</b>, ничего вводить не нужно</div>
+      <div class="after" id="after">Бот откроется <b>автоматически</b>, ничего вводить не нужно</div>
     </div>
 
     <div class="go">
@@ -91,9 +91,20 @@
 
   var qs  = new URLSearchParams(location.search);
   var ref = (qs.get("ref") || DEFAULT_REF).replace(/[^A-Za-z0-9_]/g, "").slice(0, 40) || DEFAULT_REF;
-  var url = "https://t.me/" + BOT + "?start=ref_" + ref;
+
+  // ?to=username — увести на канал/другой аккаунт вместо бота.
+  // Допускаем «+» и «-»: у приватных каналов ссылка вида t.me/+AbCdEf.
+  var to  = (qs.get("to") || "").replace(/^@/, "").replace(/[^A-Za-z0-9_+-]/g, "").slice(0, 64);
+
+  var url = to ? "https://t.me/" + to
+               : "https://t.me/" + BOT + "?start=ref_" + ref;
 
   document.getElementById("link").href = url;
+
+  if (to) {
+    document.getElementById("after").innerHTML =
+      "Канал откроется <b>автоматически</b>, ничего вводить не нужно";
+  }
 
   var ua        = navigator.userAgent || "";
   var inWebview = /BytedanceWebview|musical_ly|Bytelo|TikTok|FBAN|FBAV|Instagram/i.test(ua);
