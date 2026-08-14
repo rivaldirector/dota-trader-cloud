@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Открой в браузере</title>
+<meta name="robots" content="noindex">
+
+<meta property="og:title" content="@lookup_markets в Telegram">
+<meta property="og:description" content="Открой страницу в браузере — бот запустится сам">
+<meta property="og:type" content="website">
+
+<style>
+  :root{ --bg:#0d0f14; --txt:#eef2f7; --mut:#8b97a8; --warn:#ffd479; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;
+    -webkit-user-select:none;user-select:none}
+  body{
+    margin:0; min-height:100dvh;
+    background:radial-gradient(120% 70% at 80% 0%,#1e2a3d 0%,var(--bg) 55%);
+    color:var(--txt); font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px; text-align:center; overflow:hidden;
+  }
+
+  /* Стрелка в правый верхний угол — туда, где меню вебвью */
+  .arrow{
+    position:fixed; top:6px; right:14px; width:96px; height:120px;
+    animation:bob 1.15s ease-in-out infinite; pointer-events:none;
+  }
+  .arrow svg{width:100%;height:100%;fill:none;stroke:var(--warn);stroke-width:7;
+             stroke-linecap:round;stroke-linejoin:round}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+
+  .wrap{margin-top:96px;max-width:420px}
+
+  .dots{
+    display:inline-flex;align-items:center;gap:7px;
+    background:#fff;border-radius:999px;padding:9px 15px;margin-bottom:22px;
+  }
+  .dots i{width:7px;height:7px;border-radius:50%;background:#111;display:block}
+
+  h1{
+    font-size:clamp(26px,7.5vw,36px); line-height:1.25; margin:0 0 14px; font-weight:800;
+  }
+  h1 .hl{color:var(--warn)}
+  p{margin:0;color:var(--mut);font-size:clamp(15px,4vw,17px);line-height:1.6}
+  .after{
+    margin-top:28px;padding-top:20px;border-top:1px solid #232a36;
+    color:var(--mut);font-size:14px;
+  }
+  .after b{color:var(--txt)}
+
+  /* Экран для тех, кто уже в нормальном браузере */
+  .go{display:none}
+  .go a{
+    display:inline-block;margin-top:18px;padding:16px 28px;border-radius:14px;
+    background:linear-gradient(180deg,#2aabee,#229ed9);color:#fff;
+    font-size:17px;font-weight:700;text-decoration:none;
+  }
+  body.browser .arrow,body.browser .dots,body.browser .hint{display:none}
+  body.browser .go{display:block}
+  body.browser .wrap{margin-top:0}
+</style>
+</head>
+<body>
+  <div class="arrow" id="arrow" aria-hidden="true">
+    <svg viewBox="0 0 100 130">
+      <path d="M22 122 C 22 70, 40 30, 84 16"/>
+      <path d="M62 15 L 86 13 L 80 37"/>
+    </svg>
+  </div>
+
+  <div class="wrap">
+    <div class="hint" id="hint">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <h1 id="title">Нажми <span class="hl">•••</span> сверху<br>и выбери <span class="hl">«Открыть в браузере»</span></h1>
+      <p id="sub">Из браузера TikTok Telegram не открывается — это ограничение самого TikTok</p>
+      <div class="after" id="after">Бот откроется <b>автоматически</b>, ничего вводить не нужно</div>
+    </div>
+
+    <div class="go">
+      <h1>Открываем Telegram…</h1>
+      <a id="link" href="https://t.me/telega_vpn_robot?start=ref_Yanprav">Открыть вручную</a>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var BOT = "telega_vpn_robot";
+  var DEFAULT_REF = "Yanprav";
+
+  var qs  = new URLSearchParams(location.search);
+  var ref = (qs.get("ref") || DEFAULT_REF).replace(/[^A-Za-z0-9_]/g, "").slice(0, 40) || DEFAULT_REF;
+
+  // ?to=username — увести на канал/другой аккаунт вместо бота.
+  // Допускаем «+» и «-»: у приватных каналов ссылка вида t.me/+AbCdEf.
+  var to  = (qs.get("to") || "lookup_markets").replace(/^@/, "").replace(/[^A-Za-z0-9_+-]/g, "").slice(0, 64);
+
+  var url = to ? "https://t.me/" + to
+               : "https://t.me/" + BOT + "?start=ref_" + ref;
+
+  document.getElementById("link").href = url;
+
+  if (to) {
+    document.getElementById("after").innerHTML =
+      "Канал откроется <b>автоматически</b>, ничего вводить не нужно";
+  }
+
+  var ua        = navigator.userAgent || "";
+  var inWebview = /BytedanceWebview|musical_ly|Bytelo|TikTok|FBAN|FBAV|Instagram/i.test(ua);
+  var isIOS     = /iPhone|iPad|iPod/i.test(ua);
+
+  if (inWebview) {
+    // Единственный экран: куда нажать. Никаких других действий, чтобы никто
+    // не упёрся в «Выполнить действие не удалось».
+    if (!isIOS) {
+      document.getElementById("title").innerHTML =
+        'Нажми <span class="hl">⋮</span> сверху<br>и выбери <span class="hl">«Открыть в браузере»</span>';
+      var d = document.querySelector(".dots");
+      d.style.flexDirection = "column"; d.style.gap = "4px"; d.style.padding = "13px 10px";
+    }
+    return;
+  }
+
+  // Уже в нормальном браузере — уводим в Telegram сразу.
+  document.body.className = "browser";
+  setTimeout(function () { location.replace(url); }, 250);
+})();
+</script>
+</body>
+</html>

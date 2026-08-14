@@ -21,6 +21,7 @@ SRC = ROOT / "tiktok.html"
 LANDINGS = {
     "tt": "",
     "lookup": "lookup_platform",
+    "markets": "lookup_markets",
 }
 
 ANCHOR = 'var to  = (qs.get("to") || "")'
