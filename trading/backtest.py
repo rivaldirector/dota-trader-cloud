@@ -151,13 +151,17 @@ def run_backtest(candles: Sequence[dict], *, initial_equity=10.0, risk_fraction=
 def main():
     parser = argparse.ArgumentParser(description="Bybit public-data historical backtest")
     parser.add_argument("--symbol", default="BTCUSDT")
-    parser.add_argument("--interval", default="1")
-    parser.add_argument("--bars", type=int, default=60000)
+    parser.add_argument("--interval", default="5")
+    parser.add_argument("--bars", type=int, default=50000)
     parser.add_argument("--equity", type=float, default=10.0)
     parser.add_argument("--output", default="reports/bybit_backtest.json")
     args = parser.parse_args()
-    candles = download_history(BybitPublicClient(), args.symbol, args.interval, args.bars)
-    result = run_backtest(candles, initial_equity=args.equity)
+    client = BybitPublicClient()
+    candles = download_history(client, args.symbol, args.interval, args.bars)
+    instrument = client.instrument_info(args.symbol)
+    result = run_backtest(candles, initial_equity=args.equity,
+                          min_notional=instrument["min_notional"])
+    result["instrument"] = instrument
     result["data"] = {"symbol": args.symbol, "category": "linear",
                       "interval": args.interval, "bars": len(candles),
                       "from_ms": candles[0]["start"] if candles else None,
