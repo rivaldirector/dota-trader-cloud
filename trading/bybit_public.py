@@ -55,6 +55,25 @@ class BybitPublicClient:
         interval_ms = self._interval_ms(interval)
         return [c for c in candles if c["start"] + interval_ms <= now_ms]
 
+    def instrument_info(self, symbol: str = "BTCUSDT", category: str = "linear") -> dict[str, Any]:
+        result = self._get(
+            "/v5/market/instruments-info", {"category": category, "symbol": symbol}
+        )
+        rows = result.get("list", [])
+        if not rows:
+            raise RuntimeError(f"No instrument specification returned for {symbol}")
+        row = rows[0]
+        lot = row.get("lotSizeFilter", {})
+        price = row.get("priceFilter", {})
+        return {
+            "symbol": row.get("symbol"),
+            "status": row.get("status"),
+            "min_order_qty": float(lot.get("minOrderQty", 0) or 0),
+            "qty_step": float(lot.get("qtyStep", 0) or 0),
+            "min_notional": float(lot.get("minNotionalValue", 0) or 0),
+            "tick_size": float(price.get("tickSize", 0) or 0),
+        }
+
     def ticker(self, symbol: str = "BTCUSDT", category: str = "linear") -> dict[str, float]:
         result = self._get(
             "/v5/market/tickers", {"category": category, "symbol": symbol}
